@@ -31,6 +31,7 @@ void AudioEngine::prepare(const EngineConfig& config) {
     features_.prepare(sr);
     micTransform_.prepare(sr, config_.maxBlockSize);
     roomMemory_.prepare(sr);
+    world_.prepare(sr);
     prepared_ = true;
 }
 
@@ -302,6 +303,9 @@ void AudioEngine::processBlock(const float* const* inputs, int numInputs,
     } else {
         for (auto& l : layers_) { l.gain.beginBlock(); for (int i = 0; i < numFrames; ++i) l.gain.next(); }
     }
+
+    // World music streams independently of the song transport.
+    world_.processAdd(busBuffers_[static_cast<int>(Bus::Music)], numFrames);
 
     if (bedEnabled_.load(std::memory_order_relaxed)) bed_.processAdd(busBuffers_[static_cast<int>(Bus::Atmosphere)], numFrames);
 

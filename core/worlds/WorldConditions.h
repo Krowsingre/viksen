@@ -17,6 +17,8 @@ namespace atmos::core {
 
 struct ConditionContext {
     int localHour = 12;                // 0..23
+    bool micActive = false;            // mic-derived states are meaningful
+    std::optional<double> intensity;   // exercise intensity 0..1 when Health/Watch is on
     double daysSinceUnixEpochUtc = 0;  // current time, for the moon phase
     EnvironmentStateSnapshot env;
     double totalListeningSeconds = 0;
@@ -24,7 +26,8 @@ struct ConditionContext {
 };
 
 struct Condition {
-    enum class Type { TimeWindow, Quiet, Loud, Still, Moving, MoonPhase, LunarDay, ListeningAtLeast, ConsecutiveWorldsAtLeast };
+    enum class Type { TimeWindow, Quiet, Loud, Still, Moving, MoonPhase, LunarDay, ListeningAtLeast, ConsecutiveWorldsAtLeast,
+                      IntensityAtLeast };
     Type type;
     // TimeWindow: from/to hour (wraps midnight). MoonPhase: a = phase index 0..7.
     // LunarDay: from/to lunar day 1..30 (wraps). Others: a = threshold.
@@ -36,6 +39,10 @@ struct ConditionSet {
     Json unknown = Json::array(); // conditions this build does not understand (preserved)
 
     bool evaluate(const ConditionContext& c) const;
+    // True when every input the set depends on is currently available (e.g. "quiet"
+    // needs the mic on, "still" needs motion sensing). Used so reactive rules fall
+    // back to the authored mix instead of reacting to sensors that are off.
+    bool inputsAvailable(const ConditionContext& c) const;
     // Unknown conditions make the set unsatisfiable on this build (never "free unlock").
     bool hasUnknown() const { return !unknown.empty(); }
 };

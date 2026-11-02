@@ -9,11 +9,20 @@ namespace atmos::core {
 
 LiveSession::LiveSession(double sampleRate, int maxBlockSize) { rebuild(sampleRate, maxBlockSize); }
 
+LiveSession::~LiveSession() { stopFeeder(); }
+
 void LiveSession::rebuild(double sampleRate, int maxBlockSize) {
+    // The World stream feeds the old engine's player: stop it first and resume
+    // at the same musical position with decoders for the new rate.
+    const bool worldWasPlaying = feeder_ && feeder_->running();
+    double resumeSeconds = 0.0;
+    if (feeder_) resumeSeconds = static_cast<double>(feeder_->playbackFrame()) / feeder_->rate();
+    stopFeeder();
     engine_ = std::make_unique<AudioEngine>();
     applySettings(); // before prepare(): smoothers start at their targets
     engine_->prepare({sampleRate, maxBlockSize});
     if (original_) engine_->setLayer(kTrackSlot, prepareClipForEngine(*original_, sampleRate), Bus::Music, 0);
+    if (worldWasPlaying) startFeeder(static_cast<int64_t>(resumeSeconds * sampleRate), nullptr);
 }
 
 bool LiveSession::rebuildIfNeeded(double sampleRate, int maxBlockSize) {
@@ -104,6 +113,120 @@ void LiveSession::setMotionAvailable(bool available) { states_.setMotionAvailabl
 void LiveSession::setListenerYaw(float degrees) {
     listenerYaw_ = degrees;
     engine_->roomMemory().listenerYawDeg.store(degrees, std::memory_order_relaxed);
+}
+
+// ---------------------------------------------------------------- Worlds
+
+void LiveSession::stopFeeder() {
+    if (feeder_) {
+        resumeFrame_ = feeder_->playbackFrame();
+        feeder_->stop();
+        feeder_.reset();
+    }
+}
+
+bool LiveSession::startFeeder(int64_t fromFrame, std::string* error) {
+    if (!world_ || !worldFactory_) return false;
+    std::string err;
+    auto decoders = worldFactory_(sampleRate(), err);
+    if (decoders.empty() || decoders.size() != world_->stems.size()) {
+        if (error) *error = err.empty() ? "could not open the World's audio" : err;
+        return false;
+    }
+    const double rate = sampleRate();
+    const int64_t loopStart = static_cast<int64_t>(world_->loopFromSeconds * rate);
+    const int64_t loopEnd = world_->loopToSeconds ? static_cast<int64_t>(*world_->loopToSeconds * rate) : 0;
+    feeder_ = std::make_unique<WorldFeeder>(engine_->worldPlayer(), std::move(decoders), loopStart, loopEnd);
+    for (int i = 0; i < static_cast<int>(world_->stems.size()); ++i)
+        engine_->worldPlayer().setStemGain(i, director_ ? director_->linearGain(i) * static_cast<float>(lifecycle_ ? lifecycle_->gain() : 0.0) : 0.0f);
+    feeder_->start(fromFrame);
+    return true;
+}
+
+bool LiveSession::loadWorld(const WorldManifest& world, StemDecoderFactory factory, std::string* error) {
+    unloadWorld();
+    world_ = world;
+    worldFactory_ = std::move(factory);
+    director_ = std::make_unique<WorldDirector>(world);
+    resumeFrame_ = 0;
+    // Validate that the audio opens now rather than on first play.
+    std::string err;
+    auto probe = worldFactory_(sampleRate(), err);
+    if (probe.size() != world.stems.size()) {
+        if (error) *error = err.empty() ? "could not open the World's audio" : err;
+        unloadWorld();
+        return false;
+    }
+    return true;
+}
+
+void LiveSession::unloadWorld() {
+    stopFeeder();
+    for (int i = 0; i < WorldStreamPlayer::kMaxStems; ++i) engine_->worldPlayer().setStemGain(i, 0.0f);
+    world_.reset();
+    worldFactory_ = nullptr;
+    director_.reset();
+    lifecycle_.reset();
+    resumeFrame_ = 0;
+}
+
+void LiveSession::startWorld() {
+    if (!world_) return;
+    LifecycleTiming timing;
+    timing.fadeInSeconds = 3.0;
+    timing.fadeOutSeconds = 2.5;
+    lifecycle_ = std::make_unique<WorldLifecycle>(timing);
+    lifecycle_->setStayForever(true);   // the listener decides when to leave
+    if (!feeder_) startFeeder(resumeFrame_, nullptr);
+}
+
+void LiveSession::stopWorld() {
+    if (lifecycle_) lifecycle_->requestExit();
+}
+
+void LiveSession::updateWorld(double dt, const ConditionContext& context) {
+    if (!world_ || !director_) return;
+    if (!lifecycle_) {
+        director_->snapToTargets(context);
+        return;
+    }
+    director_->update(context, dt);
+    lifecycle_->update(true, dt);
+    const float master = static_cast<float>(lifecycle_->gain());
+    for (int i = 0; i < director_->stemCount(); ++i)
+        engine_->worldPlayer().setStemGain(i, director_->linearGain(i) * master);
+    if (lifecycle_->finished()) {
+        stopFeeder();
+        lifecycle_.reset();
+    }
+}
+
+WorldStatus LiveSession::worldStatus() const {
+    WorldStatus st;
+    if (!world_) return st;
+    st.loaded = true;
+    st.id = world_->id;
+    st.name = world_->name;
+    st.playing = lifecycle_ != nullptr;
+    st.master = lifecycle_ ? static_cast<float>(lifecycle_->gain()) : 0.0f;
+    const WorldStreamPlayer& p = const_cast<AudioEngine&>(*engine_).worldPlayer();
+    st.underruns = p.underruns();
+    if (feeder_) {
+        st.positionSeconds = static_cast<double>(feeder_->playbackFrame()) / feeder_->rate();
+        st.lengthSeconds = static_cast<double>(feeder_->loopEnd()) / feeder_->rate();
+    } else {
+        st.positionSeconds = static_cast<double>(resumeFrame_) / sampleRate();
+    }
+    for (int i = 0; i < static_cast<int>(world_->stems.size()); ++i) {
+        WorldStemStatus s;
+        s.id = world_->stems[static_cast<size_t>(i)].id;
+        s.title = world_->stems[static_cast<size_t>(i)].title;
+        s.gainDb = director_ ? director_->currentDb(i) : -60.0f;
+        s.peak = p.stemPeak(i);
+        if (director_) s.reasons = director_->reasons(i);
+        st.stems.push_back(std::move(s));
+    }
+    return st;
 }
 
 } // namespace atmos::core

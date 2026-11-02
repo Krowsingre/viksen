@@ -33,6 +33,8 @@ final class EngineController {
     private(set) var trackName: String?
     private(set) var isLoadingTrack = false
     private(set) var meters = AtmosMeterSnapshot()
+    private(set) var worldStatus = AtmosWorldStatus()
+    private(set) var worlds: [AtmosWorldInfo] = []
     private(set) var route = AtmosRouteInfo()
     private(set) var statusMessage: String?
     var lastError: String?
@@ -71,7 +73,7 @@ final class EngineController {
     var healthEnabled = false {
         didSet {
             healthEnabled ? health.start() : health.stop()
-            if !healthEnabled { currentIntensity = nil; applyBed() }
+            if !healthEnabled { currentIntensity = nil; bridge.setExerciseIntensity(-1); applyBed() }
         }
     }
     /// Exercise intensity brightens and thickens the atmosphere bed.
@@ -96,8 +98,10 @@ final class EngineController {
         watch.activate()
         health.onIntensity = { [weak self] i in
             self?.currentIntensity = i
+            self?.bridge.setExerciseIntensity(i)
             self?.applyBed()
         }
+        worlds = bridge.availableWorlds()
         weather.onMood = { [weak self] _, _ in self?.applyBed() }
         meterTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshMeters() }
@@ -235,7 +239,27 @@ final class EngineController {
 
     private func refreshMeters() {
         meters = bridge.meters()
+        worldStatus = bridge.worldStatus()
     }
+
+    // MARK: Worlds
+
+    /// Enters a World: loads its music, starts audio if needed and fades it in.
+    func enterWorld(_ world: AtmosWorldInfo) {
+        if worldStatus.loaded && worldStatus.worldID == world.worldID && worldStatus.playing { return }
+        do {
+            try bridge.loadWorld(world.worldID)
+            if trackName != nil { bridge.pause() }   // one music source at a time
+            if !audioRunning { startAudio() }
+            bridge.clearPanic()
+            bridge.startWorld()
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Leaves the current World with a fade-out.
+    func leaveWorld() { bridge.stopWorld() }
 
     private func bridgeStateDidChange(_ reason: String) {
         statusMessage = reason

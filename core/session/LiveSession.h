@@ -8,11 +8,18 @@
 // Threading: all methods on one control thread. rebuild() must only be called
 // while no audio callback is running.
 
+#include <functional>
+#include <optional>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "engine/audio/AudioEngine.h"
 #include "engine/environment/MotionAnalyzer.h"
 #include "engine/reactive/EnvironmentStates.h"
+#include "core/worlds/WorldDirector.h"
+#include "core/worlds/WorldFeeder.h"
+#include "core/worlds/WorldLifecycle.h"
 
 namespace atmos::core {
 
@@ -36,6 +43,28 @@ struct LiveSettings {
     float roomMemoryPitch = -12.0f;
     bool micEnabled = false;
     bool looping = false;
+};
+
+// Creates decoders for every stem of a World, producing audio at `rate`.
+// Returns an empty vector (and sets error) on failure.
+using StemDecoderFactory =
+    std::function<std::vector<std::unique_ptr<StemDecoder>>(double rate, std::string& error)>;
+
+struct WorldStemStatus {
+    std::string id, title;
+    float gainDb = -60.0f;
+    float peak = 0.0f;
+    std::vector<std::string> reasons;
+};
+
+struct WorldStatus {
+    bool loaded = false;
+    bool playing = false;           // fading in, active or fading out
+    std::string id, name;
+    double positionSeconds = 0.0, lengthSeconds = 0.0;
+    float master = 0.0f;
+    uint64_t underruns = 0;
+    std::vector<WorldStemStatus> stems;
 };
 
 class LiveSession {
@@ -92,8 +121,20 @@ public:
     EnvironmentStateSnapshot environmentStates() const { return states_.snapshot(); }
     unsigned freeFallEvents() const { return motion_.freeFallEvents(); }
 
+    // ---- Worlds (built-in music re-mixed by the surroundings) ----
+    bool loadWorld(const WorldManifest& world, StemDecoderFactory factory, std::string* error = nullptr);
+    void unloadWorld();
+    void startWorld();                 // fades in from the loop start (or resumes)
+    void stopWorld();                  // fades out, then stops streaming
+    // Call regularly (e.g. 30 Hz): advances rule fades and the lifecycle.
+    void updateWorld(double dtSeconds, const ConditionContext& context);
+    WorldStatus worldStatus() const;
+    ~LiveSession();
+
 private:
     void applySettings();
+    void stopFeeder();
+    bool startFeeder(int64_t fromFrame, std::string* error);
 
     std::unique_ptr<AudioEngine> engine_;
     LiveSettings settings_;
@@ -101,6 +142,13 @@ private:
     EnvironmentStates states_;
     MotionAnalyzer motion_;
     float listenerYaw_ = 0.0f;
+
+    std::optional<WorldManifest> world_;
+    StemDecoderFactory worldFactory_;
+    std::unique_ptr<WorldFeeder> feeder_;
+    std::unique_ptr<WorldDirector> director_;
+    std::unique_ptr<WorldLifecycle> lifecycle_;
+    int64_t resumeFrame_ = 0;
 };
 
 } // namespace atmos::core

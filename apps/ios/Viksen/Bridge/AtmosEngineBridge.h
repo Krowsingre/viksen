@@ -42,6 +42,36 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic) NSInteger lunarDay;            // 1..30
 @end
 
+@interface AtmosWorldInfo : NSObject
+@property (nonatomic, copy) NSString *worldID;
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, copy) NSString *artist;
+@property (nonatomic, copy) NSString *musicalKey;
+@property (nonatomic, copy) NSString *tier;          // "free", "experience", "studio"
+@property (nonatomic) double tempo;
+@property (nonatomic) NSInteger stemCount;
+@property (nonatomic) BOOL audioAvailable;           // all stem files are in this build
+@end
+
+@interface AtmosWorldStemStatus : NSObject
+@property (nonatomic, copy) NSString *title;
+@property (nonatomic) float gainDb;
+@property (nonatomic) float peak;
+@property (nonatomic, copy) NSArray<NSString *> *reasons;
+@end
+
+@interface AtmosWorldStatus : NSObject
+@property (nonatomic) BOOL loaded;
+@property (nonatomic) BOOL playing;
+@property (nonatomic, copy) NSString *worldID;
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic) double positionSeconds;
+@property (nonatomic) double lengthSeconds;
+@property (nonatomic) float master;
+@property (nonatomic) uint64_t underruns;
+@property (nonatomic, copy) NSArray<AtmosWorldStemStatus *> *stems;
+@end
+
 @protocol AtmosEngineBridgeDelegate <NSObject>
 // Something outside the user's direct control changed (interruption, route, reset).
 - (void)engineBridgeStateDidChange:(NSString *)reason;
@@ -105,7 +135,17 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 - (void)panic;        // immediate silence
 - (void)clearPanic;
 
-- (AtmosMeterSnapshot *)meters NS_SWIFT_NAME(meters()); // also frees retired audio buffers
+- (AtmosMeterSnapshot *)meters NS_SWIFT_NAME(meters()); // also frees retired audio buffers; advances Worlds
+
+// ---- Worlds (built-in music that reacts to the surroundings) ----
+- (NSArray<AtmosWorldInfo *> *)availableWorlds;
+- (BOOL)loadWorld:(NSString *)worldID error:(NSError **)error NS_SWIFT_NAME(loadWorld(_:));
+- (void)startWorld;
+- (void)stopWorld;
+- (void)unloadWorld;
+- (AtmosWorldStatus *)worldStatus;
+// Exercise intensity 0...1 from Health / Apple Watch; negative = unknown.
+- (void)setExerciseIntensity:(double)intensity;
 @end
 
 NS_ASSUME_NONNULL_END

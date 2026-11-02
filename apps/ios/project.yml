@@ -45,6 +45,11 @@ targets:
     platform: iOS
     sources:
       - path: Viksen
+        excludes: ["Resources/Worlds/**"]
+      # Worlds are copied as a folder so each World keeps its own directory.
+      - path: Viksen/Resources/Worlds
+        type: folder
+        buildPhase: resources
     dependencies:
       - target: AtmosEngine
       - target: ViksenWatch

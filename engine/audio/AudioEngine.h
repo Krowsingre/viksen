@@ -20,6 +20,7 @@
 #include "engine/audio/AudioClip.h"
 #include "engine/audio/Parameter.h"
 #include "engine/audio/SpscQueue.h"
+#include "engine/audio/WorldStreamPlayer.h"
 #include "engine/dsp/Limiter.h"
 #include "engine/environment/FeatureExtractor.h"
 #include "engine/environment/MicTransform.h"
@@ -94,6 +95,9 @@ public:
     // Wiped automatically whenever the mic stops being consumed.
     RoomMemory& roomMemory() noexcept { return roomMemory_; }
 
+    // ---- World music (streamed stems on the music bus) ----
+    WorldStreamPlayer& worldPlayer() noexcept { return world_; }
+
     // ---- Atmosphere generator (any thread) ----
     void setAtmosphereBedEnabled(bool enabled) noexcept { bedEnabled_.store(enabled, std::memory_order_relaxed); }
     bool atmosphereBedEnabled() const noexcept { return bedEnabled_.load(std::memory_order_relaxed); }
@@ -157,6 +161,7 @@ private:
     FeatureExtractor features_;
     MicTransform micTransform_;
     RoomMemory roomMemory_;
+    WorldStreamPlayer world_;
     bool micWasActive_ = false;
 
     std::array<AudioBuffer, kNumBuses> busBuffers_;

@@ -1,0 +1,30 @@
+{
+  "format": "atmos.world",
+  "schemaVersion": 1,
+  "id": "hinds-of-morrow",
+  "name": "The Hinds of Morrow",
+  "artist": "",
+  "tier": "free",
+  "music": { "tempo": 110, "key": "G minor", "loop": { "fromSeconds": 0, "toSeconds": null } },
+  "fadeSeconds": 4,
+  "stems": [
+    { "id": "keyboard",   "file": "keyboard.m4a",   "title": "Keyboard" },
+    { "id": "strings",    "file": "strings.m4a",    "title": "Strings" },
+    { "id": "woodwinds",  "file": "woodwinds.m4a",  "title": "Woodwinds" },
+    { "id": "synth",      "file": "synth.m4a",      "title": "Synth" },
+    { "id": "guitar",     "file": "guitar.m4a",     "title": "Guitar" },
+    { "id": "bass",       "file": "bass.m4a",       "title": "Bass" },
+    { "id": "percussion", "file": "percussion.m4a", "title": "Percussion" }
+  ],
+  "rules": [
+    { "stem": "strings",    "when": { "all": [ { "type": "quiet" } ] },  "gainDb": 0,  "otherwiseDb": -8,  "label": "Strings bloom when it is quiet" },
+    { "stem": "woodwinds",  "when": { "all": [ { "type": "quiet" } ] },  "gainDb": 0,  "otherwiseDb": -60, "label": "Woodwinds drift in when it is quiet" },
+    { "stem": "woodwinds",  "when": { "all": [ { "type": "still" } ] },  "gainDb": 0,  "otherwiseDb": -60, "label": "Woodwinds drift in when you are still" },
+    { "stem": "synth",      "when": { "all": [ { "type": "loud" } ] },   "gainDb": 0,  "otherwiseDb": -10, "label": "Synth rises with loud surroundings" },
+    { "stem": "guitar",     "when": { "all": [ { "type": "moving" } ] }, "gainDb": 0,  "otherwiseDb": -14, "label": "Guitar joins when you move" },
+    { "stem": "bass",       "when": { "all": [ { "type": "moving" } ] }, "gainDb": 0,  "otherwiseDb": -10, "label": "Bass follows your movement" },
+    { "stem": "bass",       "when": { "all": [ { "type": "intensityAtLeast", "value": 0.35 } ] }, "gainDb": 2, "otherwiseDb": -10, "label": "Bass drives harder as you work out" },
+    { "stem": "percussion", "when": { "all": [ { "type": "moving" } ] }, "gainDb": 0,  "otherwiseDb": -60, "label": "Percussion starts when you move" },
+    { "stem": "percussion", "when": { "all": [ { "type": "intensityAtLeast", "value": 0.5 } ] },  "gainDb": 2, "otherwiseDb": -60, "label": "Percussion pushes with your heart rate" }
+  ]
+}

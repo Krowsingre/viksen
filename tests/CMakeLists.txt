@@ -5,6 +5,7 @@ add_executable(atmos_tests
   unit/ProjectTests.cpp
   unit/LiveSessionTests.cpp
   unit/ReactiveTests.cpp
+  unit/WorldTests.cpp
   integration/RoundTripTests.cpp
 )
 target_link_libraries(atmos_tests PRIVATE atmos_core)

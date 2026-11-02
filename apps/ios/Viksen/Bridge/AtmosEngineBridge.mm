@@ -12,11 +12,43 @@
 #include "core/session/LiveSession.h"
 #include "platform/ios/IOSAudioIO.h"
 #include "platform/ios/IOSMediaDecoder.h"
+#include "platform/ios/IOSStemDecoder.h"
+#include "core/worlds/WorldManifest.h"
 #include "core/worlds/WorldConditions.h"
 #import "platform/ios/IOSMotion.h"
 
 using atmos::Bus;
 using atmos::core::LiveSession;
+
+@implementation AtmosWorldInfo
+@end
+@implementation AtmosWorldStemStatus
+@end
+@implementation AtmosWorldStatus
+- (instancetype)init {
+    if ((self = [super init])) { _worldID = @""; _name = @""; _stems = @[]; }
+    return self;
+}
+@end
+
+namespace {
+NSURL* worldsFolder() { return [[NSBundle mainBundle] URLForResource:@"Worlds" withExtension:nil]; }
+
+std::optional<atmos::core::WorldManifest> readWorld(NSURL* folder, std::string* error) {
+    NSData* data = [NSData dataWithContentsOfURL:[folder URLByAppendingPathComponent:@"world.json"]];
+    if (!data) { if (error) *error = "world.json missing"; return std::nullopt; }
+    const auto j = atmos::core::Json::parse(static_cast<const char*>(data.bytes), static_cast<const char*>(data.bytes) + data.length,
+                                            nullptr, false);
+    if (j.is_discarded()) { if (error) *error = "world.json is not valid JSON"; return std::nullopt; }
+    return atmos::core::parseWorld(j, error);
+}
+
+bool stemsPresent(NSURL* folder, const atmos::core::WorldManifest& w) {
+    for (const auto& s : w.stems)
+        if (![[NSFileManager defaultManager] fileExistsAtPath:[folder URLByAppendingPathComponent:@(s.file.c_str())].path]) return false;
+    return true;
+}
+} // namespace
 
 @implementation AtmosMeterSnapshot
 - (instancetype)init {
@@ -47,6 +79,7 @@ NSError* makeError(const std::string& msg) {
     NSString *_loadedTrackName;
     AtmosMotionSource *_motion;
     CFTimeInterval _lastMeterTime;
+    double _intensity;
 }
 
 - (instancetype)init {
@@ -56,6 +89,7 @@ NSError* makeError(const std::string& msg) {
         _session = std::make_unique<LiveSession>(48000.0, atmos::ios::IOSAudioIO::kMaxFramesPerSlice);
         _io = std::make_unique<atmos::ios::IOSAudioIO>(_session->engine());
         _motion = [AtmosMotionSource new];
+        _intensity = -1;
     }
     return self;
 }
@@ -251,6 +285,15 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     _lastMeterTime = now;
     _session->updateEnvironment(dt);
     const atmos::EnvironmentStateSnapshot st = _session->environmentStates();
+    {
+        atmos::core::ConditionContext ctx;
+        ctx.env = st;
+        ctx.micActive = engine.meters().micActive && self.audioRunning;
+        if (_intensity >= 0) ctx.intensity = _intensity;
+        ctx.localHour = static_cast<int>([[NSCalendar currentCalendar] component:NSCalendarUnitHour fromDate:[NSDate date]]);
+        ctx.daysSinceUnixEpochUtc = [NSDate date].timeIntervalSince1970 / 86400.0;
+        _session->updateWorld(dt, ctx);
+    }
     const atmos::EngineMeters m = engine.meters();
     const atmos::EnvironmentFeatures f = engine.environmentFeatures();
     const double rate = _session->sampleRate();
@@ -279,6 +322,87 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     const double days = [NSDate date].timeIntervalSince1970 / 86400.0;
     s.moonPhaseId = @(atmos::core::moonPhaseId(atmos::core::moonPhaseName(days)));
     s.lunarDay = atmos::core::lunarDay(days);
+    return s;
+}
+
+// ------------------------------------------------------------------ Worlds
+
+- (NSArray<AtmosWorldInfo *> *)availableWorlds {
+    NSMutableArray *out = [NSMutableArray array];
+    NSURL *root = worldsFolder();
+    if (!root) return out;
+    NSArray<NSURL *> *dirs = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:root includingPropertiesForKeys:nil
+                                                                              options:NSDirectoryEnumerationSkipsHiddenFiles error:nil];
+    for (NSURL *dir in dirs) {
+        auto w = readWorld(dir, nullptr);
+        if (!w) continue;
+        AtmosWorldInfo *info = [AtmosWorldInfo new];
+        info.worldID = @(w->id.c_str());
+        info.name = @(w->name.c_str());
+        info.artist = @(w->artist.c_str());
+        info.musicalKey = @(w->key.c_str());
+        info.tier = @(w->tier.c_str());
+        info.tempo = w->tempo;
+        info.stemCount = static_cast<NSInteger>(w->stems.size());
+        info.audioAvailable = stemsPresent(dir, *w);
+        [out addObject:info];
+    }
+    [out sortUsingComparator:^NSComparisonResult(AtmosWorldInfo *a, AtmosWorldInfo *b) { return [a.name compare:b.name]; }];
+    return out;
+}
+
+- (BOOL)loadWorld:(NSString *)worldID error:(NSError **)error {
+    NSURL *folder = [worldsFolder() URLByAppendingPathComponent:worldID];
+    std::string err;
+    auto w = readWorld(folder, &err);
+    if (!w) { if (error) *error = makeError(err); return NO; }
+    if (!stemsPresent(folder, *w)) {
+        if (error) *error = makeError("This build does not include the World's music yet.");
+        return NO;
+    }
+    std::vector<std::string> files;
+    for (const auto &s : w->stems) files.push_back(s.file);
+    atmos::core::StemDecoderFactory factory = [folder, files](double rate, std::string &e) {
+        std::vector<std::unique_ptr<atmos::core::StemDecoder>> v;
+        for (const auto &f : files) {
+            auto d = atmos::ios::makeStemDecoder([folder URLByAppendingPathComponent:@(f.c_str())], rate, e);
+            if (!d) return std::vector<std::unique_ptr<atmos::core::StemDecoder>>{};
+            v.push_back(std::move(d));
+        }
+        return v;
+    };
+    if (!_session->loadWorld(*w, factory, &err)) { if (error) *error = makeError(err); return NO; }
+    return YES;
+}
+
+- (void)startWorld { _session->startWorld(); }
+- (void)stopWorld { _session->stopWorld(); }
+- (void)unloadWorld { _session->unloadWorld(); }
+- (void)setExerciseIntensity:(double)intensity { _intensity = intensity; }
+
+- (AtmosWorldStatus *)worldStatus {
+    const atmos::core::WorldStatus st = _session->worldStatus();
+    AtmosWorldStatus *s = [AtmosWorldStatus new];
+    s.loaded = st.loaded;
+    s.playing = st.playing;
+    s.worldID = @(st.id.c_str());
+    s.name = @(st.name.c_str());
+    s.positionSeconds = st.positionSeconds;
+    s.lengthSeconds = st.lengthSeconds;
+    s.master = st.master;
+    s.underruns = st.underruns;
+    NSMutableArray *stems = [NSMutableArray array];
+    for (const auto &x : st.stems) {
+        AtmosWorldStemStatus *t = [AtmosWorldStemStatus new];
+        t.title = @(x.title.c_str());
+        t.gainDb = x.gainDb;
+        t.peak = x.peak;
+        NSMutableArray *r = [NSMutableArray array];
+        for (const auto &reason : x.reasons) [r addObject:@(reason.c_str())];
+        t.reasons = r;
+        [stems addObject:t];
+    }
+    s.stems = stems;
     return s;
 }
 

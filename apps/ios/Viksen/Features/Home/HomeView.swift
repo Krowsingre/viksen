@@ -24,7 +24,7 @@ struct HomeView: View {
                                     "play.fill", .experience)
                         destination("Studio", "Layers, spatial audio and effects (in development).",
                                     "slider.horizontal.3", .studio)
-                        destination("Worlds", "Reactive sound environments (in development).",
+                        destination("Worlds", "Music that re-mixes itself around you.",
                                     "square.stack.3d.up", .worlds)
                         if let name = engine.trackName {
                             nowPlaying(name)

@@ -1,6 +1,7 @@
 # Shared real-time engine. No platform, UI, file-format or product dependencies.
 add_library(atmos_engine STATIC
   audio/AudioEngine.cpp
+  audio/WorldStreamPlayer.cpp
   dsp/Limiter.cpp
   dsp/Resampler.cpp
   environment/FeatureExtractor.cpp

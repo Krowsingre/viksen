@@ -20,6 +20,7 @@ constexpr TypeName kNames[] = {
     {Condition::Type::LunarDay, "lunarDay"},
     {Condition::Type::ListeningAtLeast, "listeningAtLeast"},
     {Condition::Type::ConsecutiveWorldsAtLeast, "consecutiveWorldsAtLeast"},
+    {Condition::Type::IntensityAtLeast, "intensityAtLeast"},
 };
 } // namespace
 
@@ -73,8 +74,23 @@ bool ConditionSet::evaluate(const ConditionContext& c) const {
             }
             case Condition::Type::ListeningAtLeast: ok = c.totalListeningSeconds >= k.a; break;
             case Condition::Type::ConsecutiveWorldsAtLeast: ok = c.consecutiveWorlds >= static_cast<int>(k.a); break;
+            case Condition::Type::IntensityAtLeast: ok = c.intensity && *c.intensity >= k.a; break;
         }
         if (!ok) return false;
+    }
+    return true;
+}
+
+bool ConditionSet::inputsAvailable(const ConditionContext& c) const {
+    for (const auto& k : all) {
+        switch (k.type) {
+            case Condition::Type::Quiet:
+            case Condition::Type::Loud: if (!c.micActive) return false; break;
+            case Condition::Type::Still:
+            case Condition::Type::Moving: if (!c.env.motionAvailable) return false; break;
+            case Condition::Type::IntensityAtLeast: if (!c.intensity) return false; break;
+            default: break;
+        }
     }
     return true;
 }
@@ -106,6 +122,8 @@ std::optional<ConditionSet> parseConditions(const Json& j, std::string* error) {
                 cond.a = c.value("seconds", 0.0);
             } else if (n.t == Condition::Type::ConsecutiveWorldsAtLeast) {
                 cond.a = c.value("count", 0.0);
+            } else if (n.t == Condition::Type::IntensityAtLeast) {
+                cond.a = c.value("value", 0.5);
             }
             set.all.push_back(cond);
             known = true;
@@ -125,6 +143,7 @@ Json conditionsToJson(const ConditionSet& s) {
         if (c.type == Condition::Type::MoonPhase) o["phase"] = moonPhaseId(static_cast<MoonPhaseName>(static_cast<int>(c.a)));
         if (c.type == Condition::Type::ListeningAtLeast) o["seconds"] = c.a;
         if (c.type == Condition::Type::ConsecutiveWorldsAtLeast) o["count"] = c.a;
+        if (c.type == Condition::Type::IntensityAtLeast) o["value"] = c.a;
         all.push_back(o);
     }
     for (const auto& u : s.unknown) all.push_back(u);

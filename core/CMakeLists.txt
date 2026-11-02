@@ -9,6 +9,9 @@ add_library(atmos_core STATIC
   session/LiveSession.cpp
   worlds/WorldLifecycle.cpp
   worlds/WorldConditions.cpp
+  worlds/WorldManifest.cpp
+  worlds/WorldDirector.cpp
+  worlds/WorldFeeder.cpp
 )
 target_include_directories(atmos_core PUBLIC ${PROJECT_SOURCE_DIR})
 target_include_directories(atmos_core SYSTEM PUBLIC ${PROJECT_SOURCE_DIR}/third_party)
