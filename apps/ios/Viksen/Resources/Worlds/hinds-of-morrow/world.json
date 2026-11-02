@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "id": "hinds-of-morrow",
   "name": "The Hinds of Morrow",
-  "artist": "",
+  "artist": "Krowsingre",
   "tier": "free",
   "music": { "tempo": 110, "key": "G minor", "loop": { "fromSeconds": 0, "toSeconds": null } },
   "fadeSeconds": 4,
