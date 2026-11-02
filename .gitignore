@@ -1,0 +1,13 @@
+build*/
+out/
+cmake-build-*/
+.vs/
+.vscode/
+.idea/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+.DS_Store
+*.swp
+compile_commands.json
