@@ -58,3 +58,20 @@ TEST_CASE("session/garbage live settings fall back to defaults") {
     CHECK(s.bedLevel == 0.6f);              // clamped to the slider range (hearing safety)
     CHECK(s.limiterCeilingDb == 0.0f);      // never above 0 dBFS
 }
+
+TEST_CASE("session/Studio stems with mixer state round-trip; validation passes") {
+    std::vector<SessionStem> stems = {
+        {SessionTrack{"assets/audio/drums.wav", "drums.wav", {48000, 2, 1000, Json::object()}}, -3.5f, false},
+        {SessionTrack{"assets/audio/bass.wav", "bass.wav", {48000, 2, 900, Json::object()}}, 0.0f, true},
+    };
+    auto m = makeSessionProject("Stems", LiveSettings{}, std::nullopt, "", 48000, stems);
+    CHECK(validate(m).empty());
+    ProjectManifest back;
+    REQUIRE(manifestFromJson(manifestToJson(m), back).ok);
+    auto r = readSessionProject(back);
+    CHECK(!r.track.has_value());
+    REQUIRE(r.stems.size() == 2);
+    CHECK(r.stems[0].file.packagedPath == "assets/audio/drums.wav");
+    CHECK_NEAR(r.stems[0].gainDb, -3.5, 1e-6);
+    CHECK(r.stems[1].muted);
+}

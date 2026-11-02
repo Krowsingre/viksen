@@ -43,6 +43,10 @@ void WorldDirector::snapToTargets(const ConditionContext& c) {
     current_ = target_;
 }
 
+void WorldDirector::setBaseGainDb(int stem, float db) {
+    if (stem >= 0 && stem < static_cast<int>(w_.stems.size())) w_.stems[static_cast<size_t>(stem)].baseGainDb = db;
+}
+
 float WorldDirector::linearGain(int stem) const {
     const float db = current_[static_cast<size_t>(stem)];
     return db <= kSilenceDb + 0.01f ? 0.0f : std::pow(10.0f, db / 20.0f);

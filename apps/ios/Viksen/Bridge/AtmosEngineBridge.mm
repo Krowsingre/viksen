@@ -5,7 +5,9 @@
 
 #include <algorithm>
 
+#include <algorithm>
 #include <memory>
+#include <set>
 #include <string>
 
 #include "core/assets/ClipPreparation.h"
@@ -400,39 +402,66 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 - (BOOL)takeRecordingInterrupted { return _session->takeRecordingInterrupted(); }
 
 - (BOOL)saveProjectAtURL:(NSURL *)packageURL name:(NSString *)name songURL:(NSURL *)songURL
-             dimensionID:(NSString *)dimensionID error:(NSError **)error {
+             dimensionID:(NSString *)dimensionID stems:(NSArray<NSDictionary<NSString *, id> *> *)stemList
+                   error:(NSError **)error {
     namespace fs = std::filesystem;
     using namespace atmos::core;
     const fs::path pkg(packageURL.fileSystemRepresentation);
-    std::optional<SessionTrack> track;
-    if (songURL) {
-        const fs::path src(songURL.fileSystemRepresentation);
-        std::error_code ec;
-        // Reuse the copy already in the package when it is the same file (autosave).
-        std::string rel;
-        ProjectManifest old;
-        if (ProjectPackage::load(pkg, old).ok) {
-            const auto prev = readSessionProject(old).track;
-            if (prev && fs::exists(pkg / prev->packagedPath, ec) && fs::path(prev->packagedPath).filename() == src.filename() &&
-                fs::file_size(pkg / prev->packagedPath, ec) == fs::file_size(src, ec))
-                rel = prev->packagedPath;
+    std::error_code ec;
+    fs::create_directories(pkg / "assets" / "audio", ec);
+    // Files already in the package (same name and size) are reused; everything else is copied in.
+    ProjectManifest old;
+    std::vector<std::string> keep;
+    std::set<std::string> oldPaths;
+    if (ProjectPackage::load(pkg, old).ok)
+        for (const auto &src : old.sources) oldPaths.insert(src.path);
+    auto importOrReuse = [&](NSURL *url, std::string &rel) -> bool {
+        const fs::path src(url.fileSystemRepresentation);
+        for (const auto &p : oldPaths) {
+            if (fs::path(p).filename() == src.filename() && fs::exists(pkg / p, ec) &&
+                fs::file_size(pkg / p, ec) == fs::file_size(src, ec)) { rel = p; return true; }
         }
-        if (rel.empty()) {
-            // Remove stale song copies before importing the new one.
-            for (auto &e : fs::directory_iterator(pkg / "assets" / "audio", ec)) fs::remove(e.path(), ec);
-            const auto r = ProjectPackage::importAsset(pkg, src, rel);
-            if (!r.ok) { if (error) *error = makeError(r.error); return NO; }
+        if (fs::equivalent(src.parent_path(), pkg / "assets" / "audio", ec)) {  // already inside this package
+            rel = (fs::path("assets") / "audio" / src.filename()).generic_string();
+            return true;
         }
+        const auto r = ProjectPackage::importAsset(pkg, src, rel);
+        if (!r.ok && error) *error = makeError(r.error);
+        return r.ok;
+    };
+    auto mediaOf = [](NSURL *url) {
         MediaInfo media;
-        if (AVAudioFile *f = [[AVAudioFile alloc] initForReading:songURL error:nil]) {
+        if (AVAudioFile *f = [[AVAudioFile alloc] initForReading:url error:nil]) {
             media.sampleRate = f.fileFormat.sampleRate;
             media.channels = static_cast<int>(f.fileFormat.channelCount);
             media.frames = f.length;
         }
-        track = SessionTrack{rel, songURL.lastPathComponent.UTF8String, media};
+        return media;
+    };
+    std::optional<SessionTrack> track;
+    if (songURL) {
+        std::string rel;
+        if (!importOrReuse(songURL, rel)) return NO;
+        keep.push_back(rel);
+        track = SessionTrack{rel, songURL.lastPathComponent.UTF8String, mediaOf(songURL)};
+    }
+    std::vector<SessionStem> stems;
+    for (NSDictionary *d in stemList) {
+        NSURL *u = d[@"url"];
+        if (![u isKindOfClass:[NSURL class]]) continue;
+        std::string rel;
+        if (!importOrReuse(u, rel)) return NO;
+        keep.push_back(rel);
+        stems.push_back({SessionTrack{rel, u.lastPathComponent.UTF8String, mediaOf(u)},
+                         [d[@"gainDb"] floatValue], [d[@"muted"] boolValue]});
+    }
+    // Drop audio no longer referenced (e.g. a replaced song).
+    for (auto &e : fs::directory_iterator(pkg / "assets" / "audio", ec)) {
+        const std::string rel = (fs::path("assets") / "audio" / e.path().filename()).generic_string();
+        if (std::find(keep.begin(), keep.end(), rel) == keep.end()) fs::remove(e.path(), ec);
     }
     auto m = makeSessionProject(name.UTF8String, _session->settings(), track,
-                                dimensionID ? dimensionID.UTF8String : "", _session->sampleRate());
+                                dimensionID ? dimensionID.UTF8String : "", _session->sampleRate(), stems);
     const auto r = ProjectPackage::save(pkg, m);
     if (!r.ok) { if (error) *error = makeError(r.error); return NO; }
     return YES;
@@ -452,6 +481,13 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         if (std::filesystem::exists(file)) out[@"song"] = [NSURL fileURLWithPath:@(file.c_str())];
     }
     if (!restore.dimensionId.empty()) out[@"dimension"] = @(restore.dimensionId.c_str());
+    NSMutableArray *stems = [NSMutableArray array];
+    for (const auto &st : restore.stems) {
+        const auto file = pkg / st.file.packagedPath;
+        if (!std::filesystem::exists(file)) continue;
+        [stems addObject:@{ @"url": [NSURL fileURLWithPath:@(file.c_str())], @"gainDb": @(st.gainDb), @"muted": @(st.muted) }];
+    }
+    out[@"stems"] = stems;
     return out;
 }
 
@@ -466,6 +502,48 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         @"roomMemoryEnabled": @(s.roomMemoryEnabled), @"roomMemoryLevel": @(s.roomMemoryLevel),
         @"roomMemoryPitch": @(s.roomMemoryPitch), @"looping": @(s.looping),
     };
+}
+
+- (BOOL)loadStudioStems:(NSArray<NSURL *> *)urls error:(NSError **)error {
+    using namespace atmos::core;
+    if (urls.count == 0 || urls.count > 8) { if (error) *error = makeError("Choose between 1 and 8 stems."); return NO; }
+    WorldManifest w;
+    w.id = "studio";
+    w.name = "Studio";
+    w.tier = "studio";
+    w.fadeSeconds = 0.25f;   // mixer moves are near-immediate
+    std::vector<NSURL *> files;
+    const float n = static_cast<float>(urls.count);
+    for (NSUInteger i = 0; i < urls.count; ++i) {
+        WorldStem st;
+        st.id = "stem" + std::to_string(i);
+        st.file = urls[i].lastPathComponent.UTF8String;
+        st.title = [urls[i].lastPathComponent stringByDeletingPathExtension].UTF8String;
+        // Spread across a frontal arc by default; the canvas can move them.
+        st.azimuthDeg = n > 1 ? -70.0f + 140.0f * static_cast<float>(i) / (n - 1) : 0.0f;
+        st.distanceM = 1.6f;
+        st.widthDeg = 40.0f;
+        w.stems.push_back(st);
+        files.push_back(urls[i]);
+    }
+    StemDecoderFactory factory = [files](double rate, std::string &e) {
+        std::vector<std::unique_ptr<StemDecoder>> v;
+        for (NSURL *u : files) {
+            auto d = atmos::ios::makeStemDecoder(u, rate, e);
+            if (!d) return std::vector<std::unique_ptr<StemDecoder>>{};
+            v.push_back(std::move(d));
+        }
+        return v;
+    };
+    std::string err;
+    if (!_session->loadWorld(w, factory, &err)) { if (error) *error = makeError(err); return NO; }
+    return YES;
+}
+- (void)studioPlay { _session->startWorld(true); }
+- (void)studioPause { _session->stopWorld(true); }
+- (void)studioSeekToSeconds:(double)seconds { _session->seekWorld(seconds); }
+- (void)setStem:(NSInteger)index gainDb:(float)gainDb muted:(BOOL)muted {
+    _session->setWorldStemLevel(static_cast<int>(index), gainDb, muted);
 }
 
 - (void)resetStemPositions { _session->resetWorldStemPositions(); }

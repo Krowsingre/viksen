@@ -194,18 +194,42 @@ void LiveSession::unloadWorld() {
     resumeFrame_ = 0;
 }
 
-void LiveSession::startWorld() {
+void LiveSession::startWorld(bool quick) {
     if (!world_) return;
     LifecycleTiming timing;
-    timing.fadeInSeconds = 3.0;
-    timing.fadeOutSeconds = 2.5;
+    timing.fadeInSeconds = quick ? 0.15 : 3.0;
+    timing.fadeOutSeconds = quick ? 0.15 : 2.5;
     lifecycle_ = std::make_unique<WorldLifecycle>(timing);
     lifecycle_->setStayForever(true);   // the listener decides when to leave
     if (!feeder_) startFeeder(resumeFrame_, nullptr);
 }
 
-void LiveSession::stopWorld() {
-    if (lifecycle_) lifecycle_->requestExit();
+void LiveSession::stopWorld(bool quick) {
+    if (!lifecycle_) return;
+    if (quick) {
+        LifecycleTiming t;
+        t.fadeInSeconds = 0.15;
+        t.fadeOutSeconds = 0.15;
+        lifecycle_->setTiming(t);
+    }
+    lifecycle_->requestExit();
+}
+
+void LiveSession::seekWorld(double seconds) {
+    if (!world_) return;
+    const int64_t frame = std::max<int64_t>(0, static_cast<int64_t>(seconds * sampleRate()));
+    if (feeder_) {
+        stopFeeder();
+        startFeeder(frame, nullptr);
+    } else {
+        resumeFrame_ = frame;
+    }
+}
+
+void LiveSession::setWorldStemLevel(int stem, float gainDb, bool muted) {
+    if (!world_ || stem < 0 || stem >= static_cast<int>(world_->stems.size())) return;
+    world_->stems[static_cast<size_t>(stem)].baseGainDb = muted ? WorldDirector::kSilenceDb : std::clamp(gainDb, -60.0f, 6.0f);
+    if (director_) director_->setBaseGainDb(stem, world_->stems[static_cast<size_t>(stem)].baseGainDb);
 }
 
 void LiveSession::updateWorld(double dt, const ConditionContext& context) {

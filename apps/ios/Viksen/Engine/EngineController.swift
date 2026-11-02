@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import Observation
 
@@ -273,6 +274,102 @@ final class EngineController {
         }
     }
 
+    // MARK: Studio (the user's own stems)
+
+    struct StudioStem: Identifiable, Equatable {
+        let id = UUID()
+        let url: URL
+        var title: String { url.deletingPathExtension().lastPathComponent }
+        var gainDb: Float = 0
+        var muted = false
+        var solo = false
+        var lengthSeconds: Double = 0
+    }
+
+    private(set) var studioStems: [StudioStem] = []
+    var studioActive: Bool { worldStatus.loaded && worldStatus.worldID == "studio" }
+    var studioPlaying: Bool { studioActive && worldStatus.playing }
+    /// Stems differ in length by more than half a second (they stay aligned at their start).
+    var studioLengthsDiffer: Bool {
+        guard let a = studioStems.map(\.lengthSeconds).min(), let b = studioStems.map(\.lengthSeconds).max() else { return false }
+        return b - a > 0.5
+    }
+
+    static var studioFolder: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Studio", isDirectory: true)
+    }
+
+    /// Copies the picked files (originals untouched) and loads them as one synchronised session.
+    func importStudioStems(_ picked: [URL]) {
+        let folder = Self.studioFolder.appendingPathComponent(
+            ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-"), isDirectory: true)
+        var copies: [URL] = []
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            for src in picked.prefix(8) {
+                let scoped = src.startAccessingSecurityScopedResource()
+                defer { if scoped { src.stopAccessingSecurityScopedResource() } }
+                let dest = folder.appendingPathComponent(src.lastPathComponent)
+                try FileManager.default.copyItem(at: src, to: dest)
+                copies.append(dest)
+            }
+        } catch {
+            lastError = error.localizedDescription
+            return
+        }
+        loadStudio(copies.map { StudioStem(url: $0) })
+        if picked.count > 8 { statusMessage = "Studio uses the first 8 stems." }
+    }
+
+    func loadStudio(_ stems: [StudioStem]) {
+        do {
+            try bridge.loadStudioStems(stems.map(\.url))
+            if trackName != nil { bridge.pause() }
+            bridge.setDimensionSpatialEnabled(dimension3D)
+            studioStems = stems.map { st in
+                var s = st
+                if let f = try? AVAudioFile(forReading: st.url) { s.lengthSeconds = Double(f.length) / f.fileFormat.sampleRate }
+                return s
+            }
+            applyStudioMix()
+            AppLog.info("Studio: \(stems.count) stems loaded")
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func studioTogglePlay() {
+        guard studioActive else { return }
+        if studioPlaying { bridge.studioPause() } else {
+            if !audioRunning { startAudio() }
+            bridge.clearPanic()
+            bridge.studioPlay()
+        }
+    }
+
+    func studioSeek(_ seconds: Double) { bridge.studioSeek(toSeconds: seconds) }
+
+    func setStudioStem(_ id: UUID, gainDb: Float? = nil, muted: Bool? = nil, solo: Bool? = nil) {
+        guard let i = studioStems.firstIndex(where: { $0.id == id }) else { return }
+        if let gainDb { studioStems[i].gainDb = gainDb }
+        if let muted { studioStems[i].muted = muted }
+        if let solo { studioStems[i].solo = solo }
+        applyStudioMix()
+    }
+
+    /// Solo: when any stem is soloed, every non-soloed stem is silent.
+    private func applyStudioMix() {
+        let anySolo = studioStems.contains { $0.solo }
+        for (i, st) in studioStems.enumerated() {
+            bridge.setStem(i, gainDb: st.gainDb, muted: st.muted || (anySolo && !st.solo))
+        }
+    }
+
+    private var studioStemDictionaries: [[String: Any]] {
+        studioActive ? studioStems.map { ["url": $0.url, "gainDb": $0.gainDb, "muted": $0.muted] } : []
+    }
+
     // MARK: Projects, autosave, crash recovery
 
     static var projectsFolder: URL {
@@ -293,7 +390,7 @@ final class EngineController {
     private var autosaveTimer: Timer?
     private var lastAutosaveSignature = ""
 
-    private var currentDimensionID: String? { worldStatus.loaded ? worldStatus.worldID : nil }
+    private var currentDimensionID: String? { worldStatus.loaded && worldStatus.worldID != "studio" ? worldStatus.worldID : nil }
 
     func saveProject(named name: String) {
         let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -302,7 +399,8 @@ final class EngineController {
         let url = Self.projectsFolder.appendingPathComponent(clean + ".viksen", isDirectory: true)
         do {
             try FileManager.default.createDirectory(at: Self.projectsFolder, withIntermediateDirectories: true)
-            try bridge.saveProject(at: url, name: clean, song: trackURL, dimension: currentDimensionID)
+            try bridge.saveProject(at: url, name: clean, song: trackURL, dimension: currentDimensionID,
+                                   stems: studioStemDictionaries)
             statusMessage = "Saved project \u{201C}\(clean)\u{201D}"
             AppLog.info("Project saved")
         } catch {
@@ -315,7 +413,15 @@ final class EngineController {
             let info = try bridge.openProject(at: url)   // throws when the package cannot be read
             syncSettingsFromEngine()
             if let song = info["song"] as? URL { loadTrack(url: song) } else if trackName != nil { unloadTrack() }
-            if let dim = info["dimension"] as? String, let world = worlds.first(where: { $0.worldID == dim }) {
+            if let stems = info["stems"] as? [[String: Any]], !stems.isEmpty {
+                loadStudio(stems.compactMap { d in
+                    guard let u = d["url"] as? URL else { return nil }
+                    var st = StudioStem(url: u)
+                    st.gainDb = (d["gainDb"] as? NSNumber)?.floatValue ?? 0
+                    st.muted = (d["muted"] as? NSNumber)?.boolValue ?? false
+                    return st
+                })
+            } else if let dim = info["dimension"] as? String, let world = worlds.first(where: { $0.worldID == dim }) {
                 try? bridge.loadWorld(world.worldID)       // selected, not auto-played
                 bridge.setDimensionSpatialEnabled(dimension3D)
                 applySavedPositions(world.worldID)
@@ -360,10 +466,12 @@ final class EngineController {
         let signature = [String(describing: busGains), "\(masterGain)", "\(bedEnabled)\(bedLevel)\(bedColourHz)",
                          "\(micToneHz)\(micEchoSeconds)\(micFeedback)\(micWet)\(micShiftHz)\(micShiftMix)",
                          "\(roomMemoryEnabled)\(roomMemoryLevel)\(roomMemoryPitch)\(looping)\(limiterCeilingDb)",
-                         trackURL?.path ?? "-", currentDimensionID ?? "-"].joined(separator: "|")
+                         trackURL?.path ?? "-", currentDimensionID ?? "-",
+                         studioStems.map { "\($0.url.lastPathComponent)\($0.gainDb)\($0.muted)" }.joined()].joined(separator: "|")
         guard signature != lastAutosaveSignature else { return }
         do {
-            try bridge.saveProject(at: Self.autosaveURL, name: "Autosave", song: trackURL, dimension: currentDimensionID)
+            try bridge.saveProject(at: Self.autosaveURL, name: "Autosave", song: trackURL, dimension: currentDimensionID,
+                                   stems: studioStemDictionaries)
             lastAutosaveSignature = signature
         } catch {
             AppLog.error("Autosave failed: \(error.localizedDescription)")
@@ -449,6 +557,7 @@ final class EngineController {
 
     /// Enters a World: loads its music, starts audio if needed and fades it in.
     func enterWorld(_ world: AtmosWorldInfo) {
+        if studioActive { studioStems = [] }   // a Dimension replaces the Studio session
         if worldStatus.loaded && worldStatus.worldID == world.worldID && worldStatus.playing { return }
         do {
             try bridge.loadWorld(world.worldID)

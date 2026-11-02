@@ -22,7 +22,7 @@ struct HomeView: View {
                             .foregroundStyle(.white.opacity(0.7))
                         destination("Experience", "Immerse in sound, enhance a song, or transform your surroundings.",
                                     "play.fill", .experience)
-                        destination("Studio", "Layers, spatial audio and effects (in development).",
+                        destination("Studio", "Your own stems: mix them and place them in 3D.",
                                     "slider.horizontal.3", .studio)
                         destination("Dimensions", "Music that re-mixes itself around you.",
                                     "square.stack.3d.up", .worlds)

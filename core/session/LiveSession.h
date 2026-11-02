@@ -130,8 +130,11 @@ public:
     // ---- Worlds (built-in music re-mixed by the surroundings) ----
     bool loadWorld(const WorldManifest& world, StemDecoderFactory factory, std::string* error = nullptr);
     void unloadWorld();
-    void startWorld();                 // fades in from the loop start (or resumes)
-    void stopWorld();                  // fades out, then stops streaming
+    void startWorld(bool quickFade = false);  // fades in (quick: 150 ms, for transport play)
+    void stopWorld(bool quickFade = false);   // fades out, then stops streaming (position kept)
+    void seekWorld(double seconds);           // jump; keeps playing if it was playing
+    // Mixer (Studio): user level per stem, used when no rule drives the stem.
+    void setWorldStemLevel(int stem, float gainDb, bool muted);
     // Call regularly (e.g. 30 Hz): advances rule fades and the lifecycle.
     void updateWorld(double dtSeconds, const ConditionContext& context);
     WorldStatus worldStatus() const;

@@ -28,6 +28,7 @@ public:
     void update(bool conditionsMet, double dtSeconds);
     void requestExit();
     void setStayForever(bool stay) { stayForever_ = stay; }
+    void setTiming(const LifecycleTiming& t) { t_ = t; }   // applies from the current gain onwards
     bool stayForever() const { return stayForever_; }
 
     State state() const { return state_; }

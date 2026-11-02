@@ -207,3 +207,44 @@ TEST_CASE("session/World fades in, reacts, survives a sample-rate change and fad
     s.unloadWorld();
     CHECK(!s.worldStatus().loaded);
 }
+
+TEST_CASE("session/Studio transport: quick start/stop, seek, levels, unequal stem lengths") {
+    auto w = parseWorld(demoWorldJson());
+    REQUIRE(w.has_value());
+    w->rules.clear();
+    auto longStem = std::make_shared<const AudioClip>(test::makeSine(48000, 48000 * 3, 220, 0.3f));
+    auto shortStem = std::make_shared<const AudioClip>(test::makeSine(48000, 48000 * 1, 880, 0.3f));
+    StemDecoderFactory factory = [&](double, std::string&) {
+        std::vector<std::unique_ptr<StemDecoder>> v;
+        v.push_back(std::make_unique<ClipStemDecoder>(longStem));
+        v.push_back(std::make_unique<ClipStemDecoder>(shortStem));
+        return v;
+    };
+    LiveSession s(48000, 512);
+    REQUIRE(s.loadWorld(*w, factory));
+    s.setWorldSpatialEnabled(false);
+    s.startWorld(true);
+    ConditionContext ctx;
+    std::vector<float> l(512), r(512);
+    float* outs[2] = {l.data(), r.data()};
+    auto run = [&](double seconds) {
+        for (int i = 0; i < static_cast<int>(seconds * 48000 / 512); ++i) {
+            if (s.worldStatus().playing) waitBuffered(s.engine().worldPlayer(), 512);
+            s.updateWorld(512.0 / 48000, ctx);
+            s.engine().process(nullptr, 0, outs, 2, 512);
+        }
+    };
+    run(0.5);
+    CHECK(s.worldStatus().master > 0.99f);              // 150 ms fade-in done
+    CHECK_NEAR(s.worldStatus().lengthSeconds, 3.0, 0.01); // longest stem, not the shortest
+    s.setWorldStemLevel(1, 0.0f, true);                  // mute stem 2
+    run(5.0);                                            // director fades (2 s demo fade)
+    CHECK(s.worldStatus().stems[1].gainDb <= -59.0f);
+    s.seekWorld(2.0);
+    run(0.2);
+    CHECK(s.worldStatus().positionSeconds >= 2.0 && s.worldStatus().positionSeconds < 2.6);
+    s.stopWorld(true);
+    run(0.4);
+    CHECK(!s.worldStatus().playing);
+    CHECK_NEAR(s.worldStatus().positionSeconds, 2.5, 0.3); // position kept for resume
+}

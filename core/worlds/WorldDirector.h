@@ -23,6 +23,7 @@ public:
     float currentDb(int stem) const { return current_[static_cast<size_t>(stem)]; }
     float targetDb(int stem) const { return target_[static_cast<size_t>(stem)]; }
     float linearGain(int stem) const;                    // 0 at/below kSilenceDb
+    void setBaseGainDb(int stem, float db);              // the authored/user level when no rule applies
     // Labels of the rules currently driving this stem (for the UI).
     const std::vector<std::string>& reasons(int stem) const { return reasons_[static_cast<size_t>(stem)]; }
 

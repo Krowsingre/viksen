@@ -67,7 +67,7 @@ LiveSettings liveSettingsFromJson(const Json& j, const LiveSettings& base) {
 
 ProjectManifest makeSessionProject(const std::string& name, const LiveSettings& settings,
                                    const std::optional<SessionTrack>& track, const std::string& dimensionId,
-                                   double sampleRate) {
+                                   double sampleRate, const std::vector<SessionStem>& stems) {
     ProjectManifest m = ProjectManifest::createNew(name);
     m.sampleRate = sampleRate;
     for (int b = 0; b < kNumBuses; ++b) {
@@ -82,6 +82,13 @@ ProjectManifest makeSessionProject(const std::string& name, const LiveSettings& 
                              track->displayName, "", false, track->media, Json::object()});
         m.layers.push_back({"song-layer", "song", Bus::Music, 0, 0.0f, false, false, Json::object()});
     }
+    for (size_t i = 0; i < stems.size(); ++i) {
+        const std::string sid = "stem-" + std::to_string(i);
+        // All stems share one group and start at frame 0: their own leading silence keeps them aligned.
+        m.sources.push_back({sid, SourceKind::Stem, SourceStorage::Packaged, stems[i].file.packagedPath,
+                             stems[i].file.displayName, "studio", false, stems[i].file.media, Json::object()});
+        m.layers.push_back({sid + "-layer", sid, Bus::Music, 0, stems[i].gainDb, stems[i].muted, false, Json::object()});
+    }
     m.extra["liveSession"] = liveSettingsToJson(settings);
     if (!dimensionId.empty()) m.extra["liveSession"]["dimension"] = dimensionId;
     return m;
@@ -94,10 +101,12 @@ SessionRestore readSessionProject(const ProjectManifest& m, const LiveSettings& 
     r.dimensionId = pick<std::string>(live, "dimension", "");
     for (const auto& l : m.layers) {
         if (l.bus != Bus::Music) continue;
-        if (const SourceRef* s = m.findSource(l.sourceId); s && s->storage == SourceStorage::Packaged) {
+        const SourceRef* s = m.findSource(l.sourceId);
+        if (!s || s->storage != SourceStorage::Packaged) continue;
+        if (s->kind == SourceKind::Stem)
+            r.stems.push_back({SessionTrack{s->path, s->displayName, s->media}, std::clamp(l.gainDb, -60.0f, 6.0f), l.muted});
+        else if (!r.track)
             r.track = SessionTrack{s->path, s->displayName, s->media};
-            break;
-        }
     }
     return r;
 }

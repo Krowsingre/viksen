@@ -175,12 +175,22 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 // ---- Projects (.viksen packages: settings + copied song + current Dimension) ----
 // Saves the current session into `packageURL` (created or replaced). The song file,
 // if any, is copied into the package (reused when unchanged).
+// `stems`: Studio stems as @{ @"url": NSURL, @"gainDb": NSNumber, @"muted": NSNumber } (may be empty).
 - (BOOL)saveProjectAtURL:(NSURL *)packageURL name:(NSString *)name songURL:(nullable NSURL *)songURL
-             dimensionID:(nullable NSString *)dimensionID error:(NSError **)error
-    NS_SWIFT_NAME(saveProject(at:name:song:dimension:));
-// Opens a package: applies its settings now; returns @{ @"song": NSURL?, @"dimension": NSString?, @"name": NSString }.
+             dimensionID:(nullable NSString *)dimensionID stems:(NSArray<NSDictionary<NSString *, id> *> *)stems
+                   error:(NSError **)error
+    NS_SWIFT_NAME(saveProject(at:name:song:dimension:stems:));
+// Opens a package: applies its settings now; returns @{ @"song": NSURL?, @"dimension": NSString?, @"name": NSString,
+// @"stems": NSArray of @{ @"url", @"gainDb", @"muted" } }.
 - (nullable NSDictionary<NSString *, id> *)openProjectAtURL:(NSURL *)packageURL error:(NSError **)error
     NS_SWIFT_NAME(openProject(at:));
+
+// ---- Studio: the user's own stems, streamed in sync (uses the World slot) ----
+- (BOOL)loadStudioStems:(NSArray<NSURL *> *)urls error:(NSError **)error NS_SWIFT_NAME(loadStudioStems(_:));
+- (void)studioPlay;
+- (void)studioPause;
+- (void)studioSeekToSeconds:(double)seconds NS_SWIFT_NAME(studioSeek(toSeconds:));
+- (void)setStem:(NSInteger)index gainDb:(float)gainDb muted:(BOOL)muted NS_SWIFT_NAME(setStem(_:gainDb:muted:));
 
 // Snapshot of the live settings (keys: busGain0..3, masterGain, limiterCeilingDb, bedEnabled,
 // bedLevel, bedColourHz, micToneHz, micEchoSeconds, micFeedback, micWet, micShiftHz, micShiftMix,

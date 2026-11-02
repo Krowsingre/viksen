@@ -18,9 +18,10 @@ int ClipStemDecoder::read(float* lr, int frames) {
 WorldFeeder::WorldFeeder(WorldStreamPlayer& player, std::vector<std::unique_ptr<StemDecoder>> decoders,
                          int64_t loopStart, int64_t loopEnd)
     : player_(player), decoders_(std::move(decoders)) {
-    int64_t len = INT64_MAX;
-    for (auto& d : decoders_) len = std::min(len, d->lengthFrames());
-    if (decoders_.empty()) len = 0;
+    // Stems may differ in length (e.g. a stem without a tail): play to the end of
+    // the longest; shorter stems simply run out into silence.
+    int64_t len = 0;
+    for (auto& d : decoders_) len = std::max(len, d->lengthFrames());
     if (!decoders_.empty()) rate_ = decoders_.front()->outputRate();
     loopEnd_ = std::clamp<int64_t>(loopEnd <= 0 ? len : loopEnd, 1, std::max<int64_t>(1, len));
     loopStart_ = std::clamp<int64_t>(loopStart, 0, loopEnd_ - 1);
