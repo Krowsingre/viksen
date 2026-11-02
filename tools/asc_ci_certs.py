@@ -24,9 +24,15 @@ def call(method, path, params=None):
                        algorithm="ES256", headers={"kid": kid, "typ": "JWT"})
     url = "https://api.appstoreconnect.apple.com" + path + ("?" + urllib.parse.urlencode(params) if params else "")
     req = urllib.request.Request(url, method=method, headers={"Authorization": f"Bearer {token}"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        body = r.read()
-        return json.loads(body) if body else {}
+    for attempt in range(4):   # App Store Connect occasionally times out
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                body = r.read()
+                return json.loads(body) if body else {}
+        except (TimeoutError, urllib.error.URLError) as e:
+            if isinstance(e, urllib.error.HTTPError) or attempt == 3:
+                raise
+            time.sleep(2 ** (attempt + 1))
 
 
 def certificates():
