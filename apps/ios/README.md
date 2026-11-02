@@ -53,3 +53,17 @@ Microphone input and real latency can only be evaluated on a physical iPhone.
   sample-rate changes on route change, media-services reset.
 
 Studio and Worlds tabs state plainly that they are not built yet and contain no controls.
+
+## TestFlight from GitHub (no Mac needed)
+
+Workflow: `.github/workflows/ios-testflight.yml`. One-time setup:
+
+1. App Store Connect → Users and Access → Integrations → App Store Connect API →
+   Team Keys → **+**, role **Admin** (needed for cloud-managed signing). Download the
+   `.p8` once; note the Key ID and Issuer ID.
+2. GitHub → Settings → Secrets and variables → Actions → add `ASC_KEY_ID`,
+   `ASC_ISSUER_ID`, `ASC_KEY_P8` (the whole `.p8` text).
+3. Actions → "iPhone → TestFlight" → **Run workflow** (or push a tag `ios-v0.1.0`).
+   The build number is the workflow run number.
+4. After Apple finishes processing (usually 5–30 min), add yourself under TestFlight →
+   Internal Testing and install via the TestFlight app on the iPhone.
