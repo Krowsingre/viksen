@@ -21,6 +21,10 @@ public sealed class EngineService : IDisposable
     public string? LoadedDimensionId { get; private set; }
     public bool StudioLoaded { get; private set; }
     public IReadOnlyList<string> StudioStemPaths { get; private set; } = Array.Empty<string>();
+    /// <summary>Mixer state per Studio stem, kept here so the page can be rebuilt without losing it.</summary>
+    public float[] StudioGainDb { get; private set; } = Array.Empty<float>();
+    public bool[] StudioMuted { get; private set; } = Array.Empty<bool>();
+    public int? StudioSolo { get; set; }
     public string? LastError { get; private set; }
     public bool Available => _e != IntPtr.Zero;
 
@@ -40,9 +44,9 @@ public sealed class EngineService : IDisposable
             _e = Native.vk_create();
             AppLog.Info($"Engine created (HRTF: {(Native.vk_binaural_hrtf() == 1 ? "Steam Audio" : "simplified panner")})");
         }
-        catch (DllNotFoundException ex)
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
         {
-            LastError = "The audio engine (viksen_engine.dll) is missing from this build.";
+            LastError = "The audio engine (viksen_engine.dll) is missing or damaged in this build.";
             AppLog.Error($"{LastError} {ex.Message}");
         }
     }
@@ -197,6 +201,9 @@ public sealed class EngineService : IDisposable
         }
         StudioLoaded = true;
         StudioStemPaths = paths.ToArray();
+        StudioGainDb = new float[paths.Count];
+        StudioMuted = new bool[paths.Count];
+        StudioSolo = null;
         LoadedDimensionId = null;
         AppLog.Info($"Studio: {paths.Count} stems loaded");
         return true;
@@ -205,7 +212,24 @@ public sealed class EngineService : IDisposable
     public void StudioPlay() { if (Available) Native.vk_world_start(_e, 1); }
     public void StudioPause() { if (Available) Native.vk_world_stop(_e, 1); }
     public void Seek(double seconds) { if (Available) Native.vk_world_seek(_e, seconds); }
-    public void SetStem(int index, float gainDb, bool muted) { if (Available) Native.vk_world_set_stem(_e, index, gainDb, muted ? 1 : 0); }
+    /// <summary>Studio mixer: own mute and level; solo mutes every other stem (as on iPhone).</summary>
+    public void SetStudioStem(int index, float gainDb, bool muted)
+    {
+        if (!Available || index < 0 || index >= StudioGainDb.Length) return;
+        StudioGainDb[index] = gainDb;
+        StudioMuted[index] = muted;
+        ApplyStudioMix();
+    }
+
+    public void ApplyStudioMix()
+    {
+        if (!Available) return;
+        for (var i = 0; i < StudioGainDb.Length; i++)
+        {
+            var muted = StudioMuted[i] || (StudioSolo is int s && s != i);
+            Native.vk_world_set_stem(_e, i, StudioGainDb[i], muted ? 1 : 0);
+        }
+    }
 
     // ---------------------------------------------------------------- 3D
 

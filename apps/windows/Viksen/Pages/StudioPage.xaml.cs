@@ -12,7 +12,6 @@ public sealed partial class StudioPage : Page
     private readonly EngineService _engine = EngineService.Shared;
     private readonly List<(Slider Gain, ToggleButton Mute, ToggleButton Solo)> _rows = new();
     private bool _updating;
-    private int? _solo;
 
     public StudioPage()
     {
@@ -44,7 +43,6 @@ public sealed partial class StudioPage : Page
             await new ContentDialog { Title = "Could not open these stems", Content = _engine.LastError, CloseButtonText = "OK", XamlRoot = XamlRoot }.ShowAsync();
             return;
         }
-        _solo = null;
         BuildMixer();
     }
 
@@ -62,14 +60,19 @@ public sealed partial class StudioPage : Page
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             var label = new TextBlock { Text = names[i], VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
-            var gain = new Slider { Minimum = -60, Maximum = 6, Value = 0, StepFrequency = 0.5, VerticalAlignment = VerticalAlignment.Center };
-            var mute = new ToggleButton { Content = "M" };
-            var solo = new ToggleButton { Content = "S" };
+            var gain = new Slider { Minimum = -60, Maximum = 6, Value = _engine.StudioGainDb[i], StepFrequency = 0.5, VerticalAlignment = VerticalAlignment.Center };
+            var mute = new ToggleButton { Content = "M", IsChecked = _engine.StudioMuted[i] };
+            var solo = new ToggleButton { Content = "S", IsChecked = _engine.StudioSolo == i };
             ToolTipService.SetToolTip(mute, "Mute");
             ToolTipService.SetToolTip(solo, "Solo");
-            gain.ValueChanged += (_, _) => Apply();
-            mute.Click += (_, _) => Apply();
-            solo.Click += (_, _) => { _solo = solo.IsChecked == true ? index : null; Apply(); };
+            gain.ValueChanged += (_, _) => _engine.SetStudioStem(index, (float)gain.Value, mute.IsChecked == true);
+            mute.Click += (_, _) => _engine.SetStudioStem(index, (float)gain.Value, mute.IsChecked == true);
+            solo.Click += (_, _) =>
+            {
+                _engine.StudioSolo = solo.IsChecked == true ? index : null;
+                for (var j = 0; j < _rows.Count; j++) _rows[j].Solo.IsChecked = _engine.StudioSolo == j;
+                _engine.ApplyStudioMix();
+            };
             Grid.SetColumn(gain, 1); Grid.SetColumn(mute, 2); Grid.SetColumn(solo, 3);
             grid.Children.Add(label); grid.Children.Add(gain); grid.Children.Add(mute); grid.Children.Add(solo);
             Mixer.Children.Add(grid);
@@ -80,18 +83,6 @@ public sealed partial class StudioPage : Page
         _updating = true;
         SpatialSwitch.IsOn = _engine.World.Spatial || !_engine.World.Loaded;
         _updating = false;
-    }
-
-    // Solo mutes every other stem without changing their own mute buttons (as on iPhone).
-    private void Apply()
-    {
-        for (var i = 0; i < _rows.Count; i++)
-        {
-            var (gain, mute, solo) = _rows[i];
-            solo.IsChecked = _solo == i;
-            var muted = mute.IsChecked == true || (_solo is int s && s != i);
-            _engine.SetStem(i, (float)gain.Value, muted);
-        }
     }
 
     private void Refresh()

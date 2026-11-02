@@ -46,8 +46,16 @@ public sealed partial class LibraryPage : Page
     private async void OnPlay(object sender, RoutedEventArgs e)
     {
         if (Selected is not { } r) return;
-        var file = await StorageFile.GetFileFromPathAsync(r.Path);
-        await Windows.System.Launcher.LaunchFileAsync(file);
+        try
+        {
+            var file = await StorageFile.GetFileFromPathAsync(r.Path);
+            await Windows.System.Launcher.LaunchFileAsync(file);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
+        {
+            AppLog.Warning($"Play failed: {ex.Message}");
+            Reload();
+        }
     }
 
     private async void OnSaveCopy(object sender, RoutedEventArgs e)
@@ -58,8 +66,16 @@ public sealed partial class LibraryPage : Page
         WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(App.Window));
         var dest = await picker.PickSaveFileAsync();
         if (dest == null) return;
-        File.Copy(r.Path, dest.Path, overwrite: true);
-        AppLog.Info("Recording copied out");
+        try
+        {
+            File.Copy(r.Path, dest.Path, overwrite: true);
+            AppLog.Info("Recording copied out");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            AppLog.Warning($"Copy failed: {ex.Message}");
+            await new ContentDialog { Title = "Could not save the copy", Content = ex.Message, CloseButtonText = "OK", XamlRoot = XamlRoot }.ShowAsync();
+        }
     }
 
     private async void OnDelete(object sender, RoutedEventArgs e)
@@ -71,7 +87,8 @@ public sealed partial class LibraryPage : Page
             PrimaryButtonText = "Delete", CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Close, XamlRoot = XamlRoot,
         };
         if (await d.ShowAsync() != ContentDialogResult.Primary) return;
-        try { File.Delete(r.Path); } catch (IOException ex) { AppLog.Warning($"Delete failed: {ex.Message}"); }
+        try { File.Delete(r.Path); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { AppLog.Warning($"Delete failed: {ex.Message}"); }
         Reload();
     }
 }
