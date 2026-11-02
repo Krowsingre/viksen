@@ -383,6 +383,20 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 - (void)moveStem:(NSInteger)index azimuth:(float)az elevation:(float)el distance:(float)d {
     _session->setWorldStemPosition(static_cast<int>(index), az, el, d);
 }
+- (BOOL)startRecordingMode:(AtmosRecordMode)mode toURL:(NSURL *)url error:(NSError **)error {
+    std::string err;
+    if (!_session->startRecording(url.fileSystemRepresentation, static_cast<atmos::CaptureMode>(mode), &err)) {
+        if (error) *error = makeError(err.empty() ? "Could not start recording" : err);
+        return NO;
+    }
+    return YES;
+}
+- (double)stopRecording { return _session->stopRecording(); }
+- (BOOL)recording { return _session->recording(); }
+- (double)recordingSeconds { return _session->recordingSeconds(); }
+- (uint64_t)recordingDroppedBlocks { return _session->recordingDroppedBlocks(); }
+- (BOOL)takeRecordingInterrupted { return _session->takeRecordingInterrupted(); }
+
 - (void)resetStemPositions { _session->resetWorldStemPositions(); }
 - (BOOL)binauralHRTF { return _session->engine().worldPlayer().hrtfActive(); }
 

@@ -32,6 +32,9 @@ void AudioEngine::prepare(const EngineConfig& config) {
     micTransform_.prepare(sr, config_.maxBlockSize);
     roomMemory_.prepare(sr);
     world_.prepare(sr, config_.maxBlockSize);
+    capture_.prepare(static_cast<int>(sr * 6));
+    captureMix_.setSize(2, config_.maxBlockSize);
+    captureLimiter_.prepare(sr, -1.0f);
     prepared_ = true;
 }
 
@@ -203,6 +206,9 @@ void AudioEngine::renderMic(const float* const* inputs, int numInputs, int numFr
 
 void AudioEngine::sumToMaster(int numFrames) noexcept {
     mix_.clear(numFrames);
+    const CaptureMode cmode = capture_.mode();
+    const bool partial = cmode == CaptureMode::WithoutMic || cmode == CaptureMode::AtmosphereOnly || cmode == CaptureMode::MicOnly;
+    if (partial) captureMix_.clear(numFrames);
     for (int b = 0; b < kNumBuses; ++b) {
         BusState& bs = buses_[b];
         const bool muted = bs.muted.load(std::memory_order_relaxed);
@@ -217,6 +223,20 @@ void AudioEngine::sumToMaster(int numFrames) noexcept {
             mix_.channel(1)[i] += r;
             peak = std::max(peak, std::max(std::fabs(l), std::fabs(r)));
         }
+        if (partial) {
+            const Bus bus = static_cast<Bus>(b);
+            const bool take = cmode == CaptureMode::WithoutMic ? (bus == Bus::Music || bus == Bus::Atmosphere)
+                            : cmode == CaptureMode::AtmosphereOnly ? bus == Bus::Atmosphere
+                            : (bus == Bus::MicRaw || bus == Bus::MicTransformed);
+            if (take) {
+                // Bus gain as heard (end-of-block value; ramps are 20 ms).
+                const float g = muted ? 0.0f : bs.gain.current();
+                for (int i = 0; i < numFrames; ++i) {
+                    captureMix_.channel(0)[i] += src.channel(0)[i] * g;
+                    captureMix_.channel(1)[i] += src.channel(1)[i] * g;
+                }
+            }
+        }
         busPeak_[b].store(peak, std::memory_order_relaxed);
     }
     master_.beginBlock();
@@ -229,6 +249,15 @@ void AudioEngine::sumToMaster(int numFrames) noexcept {
     if (ceiling != appliedCeilingDb_) { limiter_.setCeilingDb(ceiling); appliedCeilingDb_ = ceiling; }
     limiter_.process(mix_, numFrames);
     limiterGain_.store(limiter_.lastGainReduction(), std::memory_order_relaxed);
+
+    if (cmode == CaptureMode::FullMix) {
+        capture_.push(mix_.channel(0), mix_.channel(1), numFrames);
+    } else if (partial) {
+        const float mg = master_.current();
+        for (int i = 0; i < numFrames; ++i) { captureMix_.channel(0)[i] *= mg; captureMix_.channel(1)[i] *= mg; }
+        captureLimiter_.process(captureMix_, numFrames);
+        capture_.push(captureMix_.channel(0), captureMix_.channel(1), numFrames);
+    }
 }
 
 void AudioEngine::writeOutputs(float* const* outputs, int numOutputs, int numFrames) noexcept {
@@ -290,6 +319,10 @@ void AudioEngine::processBlock(const float* const* inputs, int numInputs,
             if (outputs[ch]) std::fill(outputs[ch], outputs[ch] + numFrames, 0.0f);
         micActive_.store(false, std::memory_order_relaxed);
         master_.resetTo(0.0f); // ramp up from silence when the panic is cleared
+        if (capture_.mode() != CaptureMode::Off) {   // keep a recording's timeline intact
+            captureMix_.clear(numFrames);
+            capture_.push(captureMix_.channel(0), captureMix_.channel(1), numFrames);
+        }
         limiter_.reset();
         outPeak_[0].store(0.0f); outPeak_[1].store(0.0f);
         return;

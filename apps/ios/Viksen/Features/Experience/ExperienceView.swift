@@ -6,6 +6,9 @@ struct ExperienceView: View {
     @Environment(EngineController.self) private var engine
     @Environment(MediaLibrary.self) private var library
     @State private var showImporter = false
+    @State private var showRecorder = false
+    @Environment(Store.self) private var store
+    @State private var showPaywall = false
 
     var body: some View {
         @Bindable var engine = engine
@@ -76,6 +79,15 @@ struct ExperienceView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        if store.allows(.sessionRecording) { showRecorder = true } else { showPaywall = true }
+                    } label: {
+                        Image(systemName: engine.isRecording ? "record.circle.fill" : "record.circle")
+                            .foregroundStyle(engine.isRecording ? Theme.danger : Color.accentColor)
+                    }
+                    .accessibilityLabel(engine.isRecording ? "Recording" : "Record session")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(role: .destructive) { engine.panic() } label: {
                         Label("Stop all sound", systemImage: "speaker.slash.fill")
                     }
@@ -83,6 +95,8 @@ struct ExperienceView: View {
                     .accessibilityHint("Immediately silences all output")
                 }
             }
+            .sheet(isPresented: $showRecorder) { RecordSessionView() }
+            .sheet(isPresented: $showPaywall) { PaywallView(highlight: .experience) }
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.audio], allowsMultipleSelection: false) { result in
                 if case let .success(urls) = result, let url = urls.first, let local = library.importCopy(of: url) {
                     engine.loadTrack(url: local)
@@ -133,6 +147,13 @@ private struct StatusSection: View {
                 Label("Bluetooth adds noticeable delay to live monitoring. Wired headphones give the lowest latency.",
                       systemImage: "info.circle")
                     .font(.footnote).foregroundStyle(.secondary)
+            }
+            if engine.isRecording {
+                Label(String(format: "REC %ld:%02ld", Int(engine.recordingSeconds) / 60, Int(engine.recordingSeconds) % 60),
+                      systemImage: "record.circle.fill")
+                    .font(.caption.weight(.bold).monospacedDigit())
+                    .foregroundStyle(Theme.danger)
+                    .accessibilityLabel("Recording in progress")
             }
             Label("\(Lunar.phaseName(engine.meters.moonPhaseId)) · lunar day \(engine.meters.lunarDay)",
                   systemImage: Lunar.symbol(engine.meters.moonPhaseId))

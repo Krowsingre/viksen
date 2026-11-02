@@ -20,6 +20,7 @@
 #include "core/worlds/WorldDirector.h"
 #include "core/worlds/WorldFeeder.h"
 #include "core/worlds/WorldLifecycle.h"
+#include "core/session/SessionRecorder.h"
 
 namespace atmos::core {
 
@@ -141,6 +142,15 @@ public:
     void resetWorldStemPositions();
     ~LiveSession();
 
+    // ---- Explicit session recording (24-bit WAV) ----
+    bool startRecording(const std::filesystem::path& file, CaptureMode mode, std::string* error = nullptr);
+    double stopRecording();                    // seconds recorded
+    bool recording() const { return recorder_.recording(); }
+    double recordingSeconds() const { return recorder_.seconds(); }
+    uint64_t recordingDroppedBlocks() const { return recorder_.droppedBlocks(); }
+    // True once after a device change ended a recording (the file is complete).
+    bool takeRecordingInterrupted() { bool v = recordingInterrupted_; recordingInterrupted_ = false; return v; }
+
 private:
     void applySettings();
     void stopFeeder();
@@ -161,6 +171,8 @@ private:
     std::unique_ptr<WorldLifecycle> lifecycle_;
     int64_t resumeFrame_ = 0;
     bool worldSpatial_ = true;
+    SessionRecorder recorder_;
+    bool recordingInterrupted_ = false;
     void applyWorldSpatial();
 };
 

@@ -9,7 +9,16 @@ namespace atmos::core {
 
 LiveSession::LiveSession(double sampleRate, int maxBlockSize) { rebuild(sampleRate, maxBlockSize); }
 
-LiveSession::~LiveSession() { stopFeeder(); }
+LiveSession::~LiveSession() {
+    recorder_.stop();
+    stopFeeder();
+}
+
+bool LiveSession::startRecording(const std::filesystem::path& file, CaptureMode mode, std::string* error) {
+    return recorder_.start(engine_->capture(), mode, file, sampleRate(), error);
+}
+
+double LiveSession::stopRecording() { return recorder_.stop(); }
 
 void LiveSession::rebuild(double sampleRate, int maxBlockSize) {
     // The World stream feeds the old engine's player: stop it first and resume
@@ -18,6 +27,8 @@ void LiveSession::rebuild(double sampleRate, int maxBlockSize) {
     double resumeSeconds = 0.0;
     if (feeder_) resumeSeconds = static_cast<double>(feeder_->playbackFrame()) / feeder_->rate();
     stopFeeder();
+    // The capture tap belongs to the old engine: finish the recording cleanly.
+    if (recorder_.recording()) { recorder_.stop(); recordingInterrupted_ = true; }
     engine_ = std::make_unique<AudioEngine>();
     applySettings(); // before prepare(): smoothers start at their targets
     engine_->prepare({sampleRate, maxBlockSize});

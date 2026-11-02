@@ -26,6 +26,8 @@ struct LibraryView: View {
                     .accessibilityHint("Loads this file into Experience")
                 }
                 .onDelete { idx in idx.map { library.items[$0] }.forEach(library.delete) }
+
+                RecordingsSection()
             }
             .navigationTitle("Library")
             .refreshable { library.refresh() }

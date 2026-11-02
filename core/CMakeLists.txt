@@ -2,11 +2,13 @@
 add_library(atmos_core STATIC
   assets/WavFile.cpp
   assets/ClipPreparation.cpp
+  assets/WavStreamWriter.cpp
   projects/ProjectManifest.cpp
   projects/ProjectPackage.cpp
   projects/ProjectPlayback.cpp
   serialization/Ids.cpp
   session/LiveSession.cpp
+  session/SessionRecorder.cpp
   worlds/WorldLifecycle.cpp
   worlds/WorldConditions.cpp
   worlds/WorldManifest.cpp

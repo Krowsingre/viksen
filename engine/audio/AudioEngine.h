@@ -17,6 +17,7 @@
 
 #include "engine/atmosphere/NoiseBed.h"
 #include "engine/audio/AudioBuffer.h"
+#include "engine/audio/CaptureTap.h"
 #include "engine/audio/AudioClip.h"
 #include "engine/audio/Parameter.h"
 #include "engine/audio/SpscQueue.h"
@@ -95,6 +96,9 @@ public:
     // Wiped automatically whenever the mic stops being consumed.
     RoomMemory& roomMemory() noexcept { return roomMemory_; }
 
+    // ---- Explicit session recording tap ----
+    CaptureTap& capture() noexcept { return capture_; }
+
     // ---- World music (streamed stems on the music bus) ----
     WorldStreamPlayer& worldPlayer() noexcept { return world_; }
 
@@ -162,6 +166,9 @@ private:
     MicTransform micTransform_;
     RoomMemory roomMemory_;
     WorldStreamPlayer world_;
+    CaptureTap capture_;
+    AudioBuffer captureMix_;        // partial mixes for capture modes other than FullMix
+    SafetyLimiter captureLimiter_;
     bool micWasActive_ = false;
 
     std::array<AudioBuffer, kNumBuses> busBuffers_;

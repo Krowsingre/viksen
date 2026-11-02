@@ -7,6 +7,13 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+typedef NS_ENUM(NSInteger, AtmosRecordMode) {
+    AtmosRecordModeFullMix = 1,        // what you hear
+    AtmosRecordModeWithoutMic = 2,     // music + atmosphere
+    AtmosRecordModeAtmosphereOnly = 3,
+    AtmosRecordModeEnvironmentOnly = 4 // microphone paths (explicit consent in the UI)
+};
+
 typedef NS_ENUM(NSInteger, AtmosBusId) {
     AtmosBusIdMusic = 0,
     AtmosBusIdAtmosphere = 1,
@@ -156,6 +163,15 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
     NS_SWIFT_NAME(moveStem(_:azimuth:elevation:distance:));
 - (void)resetStemPositions;   // back to the Dimension's authored layout
 @property (nonatomic, readonly) BOOL binauralHRTF;   // Steam Audio active in this build/device
+// ---- Explicit session recording (24-bit WAV in Documents/Recordings) ----
+- (BOOL)startRecordingMode:(AtmosRecordMode)mode toURL:(NSURL *)url error:(NSError **)error
+    NS_SWIFT_NAME(startRecording(mode:to:));
+- (double)stopRecording;                                // seconds recorded
+@property (nonatomic, readonly) BOOL recording;
+@property (nonatomic, readonly) double recordingSeconds;
+@property (nonatomic, readonly) uint64_t recordingDroppedBlocks;
+- (BOOL)takeRecordingInterrupted;                       // YES once after a device change ended a recording
+
 // Exercise intensity 0...1 from Health / Apple Watch; negative = unknown.
 - (void)setExerciseIntensity:(double)intensity;
 @end
