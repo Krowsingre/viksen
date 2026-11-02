@@ -40,7 +40,7 @@ targets:
         excludes: ["**/*.md"]
       # Support code Steam Audio's iOS static library expects the app to provide.
       - path: ../../third_party/pffft
-        excludes: ["**/*.md", "LICENSE.txt", "VERSION"]
+        excludes: ["**/*.md", "LICENSE.txt", "PFFFT_SOURCE.txt"]
       - path: ../../third_party/mysofa_stub
     settings:
       base:
