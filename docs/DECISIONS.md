@@ -16,4 +16,6 @@
 | 12 | Linux desktop build exists only for development/CI and is not a product target. | Implemented |
 | 13 | Wherever dates matter, the app uses the **lunar calendar** (moon phase, lunar day), computed on-device. No solar-calendar features. | Owner directive |
 | 14 | **iPhone is the primary platform**; desktop follows. | Owner directive |
-| 15 | Opening screen follows the owner-selected concept (wordmark, violet light wave, ring, Get Started, About). "Restore Project" is shown only once project restore exists. | Implemented |
+| 15 | Launch flow: splash (placeholder until designed) → **Home tab** styled after the owner-selected concept (wave, ring, wordmark, Get Started, destinations). Tabs: Home, Experience, Studio, Worlds, Library; Settings from the gear on Home. | Implemented; splash design pending |
+| 16 | Apple team `JNJX9FYHC2`, automatic signing. | Configured |
+| 17 | Business model: paid app. | Owner directive; price to be decided |

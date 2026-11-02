@@ -5,20 +5,20 @@ struct ViksenApp: App {
     @State private var engine = EngineController()
     @State private var library = MediaLibrary()
     @AppStorage("appearance") private var appearance: Appearance = .dark
-    @State private var showWelcome = true
+    @State private var showSplash = true
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if showWelcome {
-                    WelcomeView { withAnimation(.easeInOut(duration: 0.4)) { showWelcome = false } }
+            ZStack {
+                RootView()
+                    .environment(engine)
+                    .environment(library)
+                    .preferredColorScheme(appearance.colorScheme)
+                if showSplash {
+                    SplashView { withAnimation(.easeInOut(duration: 0.4)) { showSplash = false } }
+                        .preferredColorScheme(.dark)
                         .transition(.opacity)
-                } else {
-                    RootView()
-                        .environment(engine)
-                        .environment(library)
-                        .preferredColorScheme(appearance.colorScheme)
-                        .transition(.opacity)
+                        .zIndex(1)
                 }
             }
             .tint(Theme.accent)

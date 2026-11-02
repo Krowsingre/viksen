@@ -1,28 +1,29 @@
 import SwiftUI
 
-/// iPhone navigation is Experience-first (spec §12).
-struct RootView: View {
-    @State private var tab: Tab = .experience
+enum AppTab: Hashable { case home, experience, studio, worlds, library }
 
-    enum Tab: Hashable { case experience, studio, worlds, library, settings }
+/// Tab bar from the owner-selected concepts: Home, Experience, Studio, Worlds,
+/// Library. Settings opens from the gear on Home.
+struct RootView: View {
+    @State private var tab: AppTab = .home
 
     var body: some View {
         TabView(selection: $tab) {
+            HomeView(selectedTab: $tab)
+                .tabItem { Label("Home", systemImage: "house") }
+                .tag(AppTab.home)
             ExperienceView()
-                .tabItem { Label("Experience", systemImage: "waveform.circle") }
-                .tag(Tab.experience)
+                .tabItem { Label("Experience", systemImage: "play.circle") }
+                .tag(AppTab.experience)
             StudioView()
                 .tabItem { Label("Studio", systemImage: "slider.horizontal.3") }
-                .tag(Tab.studio)
+                .tag(AppTab.studio)
             WorldsView()
-                .tabItem { Label("Worlds", systemImage: "globe.americas") }
-                .tag(Tab.worlds)
+                .tabItem { Label("Worlds", systemImage: "square.stack.3d.up") }
+                .tag(AppTab.worlds)
             LibraryView()
-                .tabItem { Label("Library", systemImage: "square.stack") }
-                .tag(Tab.library)
-            SettingsView()
-                .tabItem { Label("Settings", systemImage: "gearshape") }
-                .tag(Tab.settings)
+                .tabItem { Label("Library", systemImage: "books.vertical") }
+                .tag(AppTab.library)
         }
     }
 }

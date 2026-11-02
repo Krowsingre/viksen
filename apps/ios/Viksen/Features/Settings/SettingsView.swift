@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(EngineController.self) private var engine
     @AppStorage("appearance") private var appearance: Appearance = .dark
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         @Bindable var engine = engine
@@ -45,6 +46,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }
 
