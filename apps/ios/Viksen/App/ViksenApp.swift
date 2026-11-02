@@ -1,6 +1,8 @@
 import SwiftUI
 #if os(iOS)
 import UIKit
+#else
+import AppKit
 #endif
 
 @main
@@ -40,6 +42,12 @@ struct ViksenApp: App {
                 store.onTierChange = { [engine] tier in engine.enforce(tier) }
                 engine.beginRunTracking()
             }
+            #if os(macOS)
+            // Quitting a Mac app does not pass through .background: mark the clean stop here.
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+                engine.appDidEnterBackground()
+            }
+            #endif
             .onChange(of: scenePhase) { _, phase in
                 switch phase {
                 case .background: engine.appDidEnterBackground()
