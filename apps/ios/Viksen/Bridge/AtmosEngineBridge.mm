@@ -505,16 +505,36 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 }
 
 - (BOOL)loadWorld:(NSString *)worldID error:(NSError **)error {
+    return [self loadWorld:worldID audioFiles:nil error:error];
+}
+
+- (NSArray<NSString *> *)stemFilesForWorld:(NSString *)worldID {
+    auto w = readWorld(folderForWorld(worldID), nullptr);
+    NSMutableArray<NSString *> *out = [NSMutableArray array];
+    if (w)
+        for (const auto &song : w->songs)
+            for (const auto &st : song.stems) [out addObject:@(st.file.c_str())];
+    return out;
+}
+
+- (BOOL)loadWorld:(NSString *)worldID audioFiles:(NSDictionary<NSString *, NSURL *> *)files error:(NSError **)error {
     NSURL *folder = folderForWorld(worldID);
     std::string err;
     auto w = readWorld(folder, &err);
     if (!w) { if (error) *error = makeError(err); return NO; }
-    if (!stemsPresent(folder, *w)) {
-        if (error) *error = makeError("This build does not include this Dimension's music yet.");
-        return NO;
-    }
-    atmos::core::LiveSession::StemFileDecoder decode = [folder](const std::string &f, double rate, std::string &e) {
-        return atmos::ios::makeStemDecoder([folder URLByAppendingPathComponent:@(f.c_str())], rate, e);
+    NSDictionary<NSString *, NSURL *> *map = files ?: @{};
+    auto urlFor = [folder, map](const std::string &f) -> NSURL * {
+        NSURL *u = map[@(f.c_str())];
+        return u ?: [folder URLByAppendingPathComponent:@(f.c_str())];
+    };
+    for (const auto &song : w->songs)
+        for (const auto &st : song.stems)
+            if (![[NSFileManager defaultManager] fileExistsAtPath:urlFor(st.file).path]) {
+                if (error) *error = makeError("This Dimension is not downloaded yet.");
+                return NO;
+            }
+    atmos::core::LiveSession::StemFileDecoder decode = [urlFor](const std::string &f, double rate, std::string &e) {
+        return atmos::ios::makeStemDecoder(urlFor(f), rate, e);
     };
     if (!_session->loadDimension(*w, decode, &err)) { if (error) *error = makeError(err); return NO; }
     return YES;

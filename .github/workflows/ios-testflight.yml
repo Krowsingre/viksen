@@ -42,24 +42,8 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Fetch World audio (private assets repository)
-        env:
-          ASSETS_TOKEN: ${{ secrets.ASSETS_TOKEN }}
-        run: |
-          # Owner-licensed music lives in the private repo Krowsingre/viksen-assets,
-          # never in this public repository.
-          if [ -z "$ASSETS_TOKEN" ]; then
-            echo "::warning::ASSETS_TOKEN is not set: this build will not include World music."
-            exit 0
-          fi
-          git clone --depth 1 "https://x-access-token:${ASSETS_TOKEN}@github.com/Krowsingre/viksen-assets.git" "$RUNNER_TEMP/assets"
-          for dir in "$RUNNER_TEMP"/assets/worlds/*/; do
-            id=$(basename "$dir")
-            mkdir -p "apps/ios/Viksen/Resources/Worlds/$id"
-            cp "$dir"*.m4a "apps/ios/Viksen/Resources/Worlds/$id/"
-            echo "World $id: $(ls "$dir"*.m4a | wc -l) audio files"
-          done
-          rm -rf "$RUNNER_TEMP/assets"
+      # Dimension audio is not in the app: each Dimension is an Apple-hosted asset pack
+      # (see asset-packs.yml) that the app downloads when the listener chooses it.
 
       - name: Fetch Steam Audio SDK (pinned, checksum-verified)
         run: ./tools/fetch_steam_audio.sh

@@ -1,0 +1,74 @@
+name: Dimensions → App Store Connect (asset packs)
+
+# Packages each Dimension's audio (from the private assets repository) as an
+# Apple-hosted, on-demand asset pack and uploads a new version to App Store Connect.
+# The app downloads a Dimension when the listener chooses it and can remove it later.
+on:
+  workflow_dispatch:
+    inputs:
+      dimensions:
+        description: "Dimension ids to upload (space separated); empty = all"
+        required: false
+        default: ""
+      dry_run:
+        description: "Package only, do not upload"
+        type: boolean
+        default: false
+
+jobs:
+  packs:
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Fetch Dimension audio (private assets repository)
+        env:
+          ASSETS_TOKEN: ${{ secrets.ASSETS_TOKEN }}
+        run: |
+          [ -n "$ASSETS_TOKEN" ] || { echo "::error::ASSETS_TOKEN is not set"; exit 1; }
+          git clone --depth 1 "https://x-access-token:${ASSETS_TOKEN}@github.com/Krowsingre/viksen-assets.git" "$RUNNER_TEMP/assets"
+      - name: Package asset packs
+        env:
+          ONLY: ${{ inputs.dimensions }}
+        run: |
+          xcrun ba-package template -o "$RUNNER_TEMP/template.json"
+          echo "---- manifest template (for reference) ----"; cat "$RUNNER_TEMP/template.json"; echo
+          root="$RUNNER_TEMP/packroot"; out="$RUNNER_TEMP/packs"; mkdir -p "$root/Dimensions" "$out"
+          : > "$RUNNER_TEMP/packs.txt"
+          for dir in "$RUNNER_TEMP"/assets/worlds/*/; do
+            id=$(basename "$dir")
+            if [ -n "$ONLY" ] && ! echo " $ONLY " | grep -q " $id "; then continue; fi
+            [ -f "apps/ios/Viksen/Resources/Worlds/$id/world.json" ] || { echo "::warning::$id has no world.json in the app; skipped"; continue; }
+            mkdir -p "$root/Dimensions/$id"
+            cp "$dir"*.m4a "$root/Dimensions/$id/"
+            python3 - "$id" "$root/$id.manifest.json" <<'PY'
+          import json, sys
+          pack, path = sys.argv[1], sys.argv[2]
+          json.dump({"assetPackID": pack,
+                     "downloadPolicy": {"onDemand": {}},
+                     "fileSelectors": [{"directory": f"Dimensions/{pack}"}],
+                     "platforms": ["iOS"]}, open(path, "w"), indent=2)
+          PY
+            (cd "$root" && xcrun ba-package "$id.manifest.json" -o "$out/$id.aar")
+            echo "$id $out/$id.aar" >> "$RUNNER_TEMP/packs.txt"
+            ls -la "$out/$id.aar"
+          done
+          cat "$RUNNER_TEMP/packs.txt"
+      - name: Upload to App Store Connect
+        if: ${{ !inputs.dry_run }}
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          python3 -m pip install --quiet --break-system-packages pyjwt cryptography 2>/dev/null || python3 -m pip install --quiet pyjwt cryptography
+          mkdir -p "$RUNNER_TEMP/asc"
+          printf '%s\n' "$ASC_KEY_P8" | tr -d '\r' > "$RUNNER_TEMP/asc/AuthKey.p8"
+          ASC_KEY_PATH="$RUNNER_TEMP/asc/AuthKey.p8" python3 tools/asc_asset_packs.py $(cat "$RUNNER_TEMP/packs.txt")
+      - name: Remove API key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/asc"

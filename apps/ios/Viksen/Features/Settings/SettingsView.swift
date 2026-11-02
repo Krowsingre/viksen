@@ -19,6 +19,8 @@ struct SettingsView: View {
                     Button("Restore Purchases") { Task { await store.restore() } }
                 }
 
+                DownloadsSettingsSection()
+
                 Section("Audio route") {
                     LabeledContent("Output", value: engine.route.outputName)
                     LabeledContent("Input", value: engine.route.inputName)
@@ -71,5 +73,37 @@ struct SettingsView: View {
         case .denied: "Denied"
         default: "Not requested"
         }
+    }
+}
+
+/// Downloaded Dimensions and the space each uses; remove any to free it.
+private struct DownloadsSettingsSection: View {
+    @Environment(EngineController.self) private var engine
+
+    var body: some View {
+        let downloaded = engine.worlds.filter { !$0.userMade && !$0.audioAvailable && engine.downloads.state($0.worldID) == .installed }
+        Section {
+            if downloaded.isEmpty {
+                Text("No Dimensions downloaded.").foregroundStyle(.secondary)
+            }
+            ForEach(downloaded, id: \.worldID) { w in
+                HStack {
+                    Text(w.name)
+                    Spacer()
+                    if let bytes = engine.downloads.sizes[w.worldID] {
+                        Text(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
+                            .foregroundStyle(.secondary).monospacedDigit()
+                    }
+                }
+                .swipeActions {
+                    Button("Remove", role: .destructive) { engine.removeDownload(w) }
+                }
+            }
+        } header: {
+            Text("Downloaded Dimensions")
+        } footer: {
+            Text("Swipe left to remove a Dimension and free its space. Download it again from Dimensions any time.")
+        }
+        .onAppear { engine.refreshWorlds() }
     }
 }

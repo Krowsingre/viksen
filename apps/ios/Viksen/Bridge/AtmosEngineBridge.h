@@ -166,6 +166,12 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 // Returns nil if valid, otherwise a user-facing reason.
 - (nullable NSString *)validateDimensionFolder:(NSURL *)folder NS_SWIFT_NAME(validateDimensionFolder(_:));
 - (BOOL)loadWorld:(NSString *)worldID error:(NSError **)error NS_SWIFT_NAME(loadWorld(_:));
+// Same, with the Dimension's audio somewhere else (a downloaded asset pack): stem file
+// name (as in world.json) -> local URL. Files not in the map are read from the folder.
+- (BOOL)loadWorld:(NSString *)worldID audioFiles:(nullable NSDictionary<NSString *, NSURL *> *)files error:(NSError **)error
+    NS_SWIFT_NAME(loadWorld(_:audioFiles:));
+// Stem file names of every song in a Dimension (for locating downloaded audio).
+- (NSArray<NSString *> *)stemFilesForWorld:(NSString *)worldID NS_SWIFT_NAME(stemFiles(forWorld:));
 - (void)startWorld;
 - (void)stopWorld;
 - (void)unloadWorld;

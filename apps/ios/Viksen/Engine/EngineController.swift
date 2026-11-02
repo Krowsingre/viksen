@@ -25,6 +25,7 @@ final class EngineController {
     let activity = ActivityMonitor()
     let health = HealthService()
     let watch = WatchLink()
+    let downloads = DimensionDownloads()
     private let delegateProxy = BridgeDelegateProxy()
     private var meterTimer: Timer?
 
@@ -400,7 +401,21 @@ final class EngineController {
             .appendingPathComponent("Dimensions", isDirectory: true)
     }
 
-    func refreshWorlds() { worlds = bridge.availableWorlds() }
+    func refreshWorlds() {
+        worlds = bridge.availableWorlds()
+        downloads.stemFiles = { [bridge] id in bridge.stemFiles(forWorld: id) }
+        downloads.refresh(worlds.filter { !$0.userMade }.map(\.worldID),
+                          bundled: Set(worlds.filter(\.audioAvailable).map(\.worldID)))
+    }
+
+    /// Removes a downloaded Dimension's audio from this device (it can be downloaded again).
+    func removeDownload(_ world: AtmosWorldInfo) {
+        if worldStatus.loaded && worldStatus.worldID == world.worldID {
+            bridge.unloadWorld()
+            worldStatus = bridge.worldStatus()
+        }
+        downloads.remove(world.worldID)
+    }
 
     private static func slug(_ name: String) -> String {
         let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-"))
@@ -690,7 +705,16 @@ final class EngineController {
         if studioActive { studioStems = [] }   // a Dimension replaces the Studio session
         if worldStatus.loaded && worldStatus.worldID == world.worldID && worldStatus.playing { return }
         do {
-            try bridge.loadWorld(world.worldID)
+            if world.audioAvailable || world.userMade {
+                try bridge.loadWorld(world.worldID)            // audio inside the app or the user's folder
+            } else {
+                guard downloads.state(world.worldID) == .installed,
+                      let files = downloads.audioFiles(world.worldID, files: bridge.stemFiles(forWorld: world.worldID)) else {
+                    lastError = "Download \(world.name) first."
+                    return
+                }
+                try bridge.loadWorld(world.worldID, audioFiles: files)
+            }
             bridge.setDimensionSpatialEnabled(dimension3D)
             applySavedPositions(world.worldID)
             AppLog.info("Enter Dimension \(world.worldID) (3D \(dimension3D), HRTF \(bridge.binauralHRTF))")
