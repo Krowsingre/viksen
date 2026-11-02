@@ -127,6 +127,14 @@ jobs:
           print("API key OK; app record found:", apps[0]["attributes"].get("name"))
           PY
 
+      # Opt-in (repository variable CI_REVOKE_OWN_CERT = true): revoke the throwaway
+      # development certificate this run creates, so runs never hit Apple's limit.
+      - name: Snapshot signing certificates
+        if: vars.CI_REVOKE_OWN_CERT == 'true'
+        run: |
+          ASC_KEY_ID="$ASC_KEY_ID_CLEAN" ASC_ISSUER_ID="$ASC_ISSUER_ID_CLEAN" ASC_KEY_PATH="$RUNNER_TEMP/asc/AuthKey.p8" \
+            python3 tools/asc_ci_certs.py snapshot "$RUNNER_TEMP/certs-before.json"
+
       - name: Archive (signed, build number = run number)
         working-directory: apps/ios
         env:
@@ -157,6 +165,13 @@ jobs:
             -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
             -authenticationKeyID "$ASC_KEY_ID_CLEAN" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID_CLEAN"
+
+      - name: Revoke this run's development certificate
+        if: always() && vars.CI_REVOKE_OWN_CERT == 'true'
+        run: |
+          [ -f "$RUNNER_TEMP/certs-before.json" ] || exit 0
+          ASC_KEY_ID="$ASC_KEY_ID_CLEAN" ASC_ISSUER_ID="$ASC_ISSUER_ID_CLEAN" ASC_KEY_PATH="$RUNNER_TEMP/asc/AuthKey.p8" \
+            python3 tools/asc_ci_certs.py cleanup "$RUNNER_TEMP/certs-before.json"
 
       - name: Remove API key
         if: always()
