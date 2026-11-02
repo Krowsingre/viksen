@@ -111,13 +111,14 @@ jobs:
           print("API key OK; app record found:", apps[0]["attributes"].get("name"))
           PY
 
-      # Opt-in (repository variable CI_REVOKE_OWN_CERT = true): revoke the throwaway
-      # development certificate this run creates, so runs never hit Apple's limit.
-      - name: Snapshot signing certificates
-        if: vars.CI_REVOKE_OWN_CERT == 'true'
+      # Every run starts on a fresh runner, so Xcode creates a new development
+      # certificate; Apple caps how many a team can have. Owner-approved: revoke the
+      # old CI-made ones ("Created via API") first, and this run's own at the end.
+      - name: Revoke old CI development certificates
         run: |
-          ASC_KEY_ID="$ASC_KEY_ID_CLEAN" ASC_ISSUER_ID="$ASC_ISSUER_ID_CLEAN" ASC_KEY_PATH="$RUNNER_TEMP/asc/AuthKey.p8" \
-            python3 tools/asc_ci_certs.py snapshot "$RUNNER_TEMP/certs-before.json"
+          export ASC_KEY_ID="$ASC_KEY_ID_CLEAN" ASC_ISSUER_ID="$ASC_ISSUER_ID_CLEAN" ASC_KEY_PATH="$RUNNER_TEMP/asc/AuthKey.p8"
+          python3 tools/asc_ci_certs.py prune
+          python3 tools/asc_ci_certs.py snapshot "$RUNNER_TEMP/certs-before.json"
 
       - name: Archive (signed, build number = run number)
         working-directory: apps/ios
@@ -151,7 +152,7 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID_CLEAN"
 
       - name: Revoke this run's development certificate
-        if: always() && vars.CI_REVOKE_OWN_CERT == 'true'
+        if: always()
         run: |
           [ -f "$RUNNER_TEMP/certs-before.json" ] || exit 0
           ASC_KEY_ID="$ASC_KEY_ID_CLEAN" ASC_ISSUER_ID="$ASC_ISSUER_ID_CLEAN" ASC_KEY_PATH="$RUNNER_TEMP/asc/AuthKey.p8" \

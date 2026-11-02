@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:   # run by hand to also build the Mac, Windows and desktop apps
 
 jobs:
   engine-tests:
@@ -30,6 +31,8 @@ jobs:
           "$bin"
 
   desktop:
+    # iPhone first (owner): other platforms build only on manual runs.
+    if: github.event_name == 'workflow_dispatch'
     name: Desktop app (${{ matrix.name }})
     strategy:
       fail-fast: false
@@ -81,6 +84,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO build
 
   mac:
+    # iPhone first (owner): other platforms build only on manual runs.
+    if: github.event_name == 'workflow_dispatch'
     name: Mac app (build)
     runs-on: macos-15
     steps:
@@ -104,6 +109,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO build
 
   windows-app:
+    # iPhone first (owner): other platforms build only on manual runs.
+    if: github.event_name == 'workflow_dispatch'
     name: Windows app (WinUI 3)
     runs-on: windows-latest
     steps:
