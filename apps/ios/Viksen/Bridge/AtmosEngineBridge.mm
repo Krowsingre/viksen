@@ -357,7 +357,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     auto w = readWorld(folder, &err);
     if (!w) { if (error) *error = makeError(err); return NO; }
     if (!stemsPresent(folder, *w)) {
-        if (error) *error = makeError("This build does not include the World's music yet.");
+        if (error) *error = makeError("This build does not include this Dimension's music yet.");
         return NO;
     }
     std::vector<std::string> files;

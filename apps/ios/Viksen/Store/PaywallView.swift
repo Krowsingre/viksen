@@ -18,7 +18,7 @@ struct PaywallView: View {
                 tierSection(.experience,
                             ["Room memory and frequency shifting", "Head tracking with AirPods",
                              "Activity, steps and workout intensity", "Weather-aware atmospheres (optional)",
-                             "Expanded Worlds"])
+                             "Expanded Dimensions"])
                 tierSection(.studio,
                             ["Everything in Experience", "Import songs and stems", "Spatial composition",
                              "Advanced effects and automation", "Export"])

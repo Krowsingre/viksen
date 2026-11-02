@@ -25,3 +25,4 @@
 | 21 | Privacy policy hosted on **GitHub Pages**. | Approved |
 | 22 | **Experience mirrors the the reference app model with built-in music**: Worlds ship with the owner's own music (from the owner's published albums, owner holds the rights). Importing your own songs/stems stays in **Studio**. | Owner directive |
 | 23 | App Store name: **Viksen: Aural Dimensions** (App Apple ID 6829630437). | Set by owner in App Store Connect |
+| 24 | User-facing name for Worlds is **Dimensions** (tab, screens, buttons, paywall). Code and file formats keep "World". Upcoming Dimensions: *Light of a Distant Sun*, *Steel, Steam, and Borrowed Dreams*. | Owner directive |

@@ -2,7 +2,7 @@ import SwiftUI
 
 enum AppTab: Hashable { case home, experience, studio, worlds, library }
 
-/// Tab bar from the owner-selected concepts: Home, Experience, Studio, Worlds,
+/// Tab bar from the owner-selected concepts: Home, Experience, Studio, Dimensions,
 /// Library. Settings opens from the gear on Home.
 struct RootView: View {
     @State private var tab: AppTab = .home
@@ -19,7 +19,7 @@ struct RootView: View {
                 .tabItem { Label("Studio", systemImage: "slider.horizontal.3") }
                 .tag(AppTab.studio)
             WorldsView()
-                .tabItem { Label("Worlds", systemImage: "square.stack.3d.up") }
+                .tabItem { Label("Dimensions", systemImage: "square.stack.3d.up") }
                 .tag(AppTab.worlds)
             LibraryView()
                 .tabItem { Label("Library", systemImage: "books.vertical") }

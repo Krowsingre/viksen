@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Built-in Worlds: music that re-mixes itself around the listener.
+/// Built-in Dimensions (internally "Worlds"): music that re-mixes itself around the listener.
 struct WorldsView: View {
     @Environment(EngineController.self) private var engine
 
@@ -8,8 +8,8 @@ struct WorldsView: View {
         NavigationStack {
             List {
                 if engine.worlds.isEmpty {
-                    ContentUnavailableView("No Worlds yet", systemImage: "square.stack.3d.up",
-                                           description: Text("Worlds will appear here."))
+                    ContentUnavailableView("No Dimensions yet", systemImage: "square.stack.3d.up",
+                                           description: Text("Dimensions will appear here."))
                 }
                 ForEach(engine.worlds, id: \.worldID) { world in
                     NavigationLink {
@@ -27,7 +27,7 @@ struct WorldsView: View {
                     }
                 }
             }
-            .navigationTitle("Worlds")
+            .navigationTitle("Dimensions")
         }
     }
 
@@ -61,7 +61,7 @@ struct WorldDetailView: View {
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
                 if !world.audioAvailable {
-                    Label("This build does not include the World's music yet.", systemImage: "exclamationmark.triangle")
+                    Label("This build does not include this Dimension's music yet.", systemImage: "exclamationmark.triangle")
                         .font(.footnote).foregroundStyle(Theme.micRaw)
                 } else if store.tier < requiredTier {
                     Button("Unlock with \(requiredTier.title)") { showPaywall = true }
@@ -69,7 +69,7 @@ struct WorldDetailView: View {
                     Button {
                         isPlaying ? engine.leaveWorld() : engine.enterWorld(world)
                     } label: {
-                        Label(isPlaying ? "Leave World" : "Enter World", systemImage: isPlaying ? "stop.fill" : "play.fill")
+                        Label(isPlaying ? "Leave Dimension" : "Enter Dimension", systemImage: isPlaying ? "stop.fill" : "play.fill")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -108,7 +108,7 @@ struct WorldDetailView: View {
                     EnvironmentChips(meters: engine.meters)
                 }
             } header: {
-                Text("What the World listens to")
+                Text("What this Dimension listens to")
             } footer: {
                 Text("With the microphone and motion sensing on, layers come and go: quiet brings strings and woodwinds, walking brings percussion, bass and guitar, loud places raise the synth, and workout intensity from Health pushes the rhythm. With them off you hear the music as composed.")
             }
