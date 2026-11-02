@@ -18,8 +18,10 @@ using namespace atmos::core;
 
 namespace {
 // Waits (briefly) until the feeder has buffered at least `frames` for every stem.
+// Bounded by wall-clock time, not iterations: a 1 ms sleep lasts ~15 ms on Windows.
 bool waitBuffered(WorldStreamPlayer& p, int frames) {
-    for (int i = 0; i < 2000; ++i) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+    while (std::chrono::steady_clock::now() < deadline) {
         if (p.active() && p.readableFrames() >= frames) return true;
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
@@ -153,8 +155,8 @@ TEST_CASE("worlds/feeder streams aligned stems through the engine and loops") {
 TEST_CASE("session/World fades in, reacts, survives a sample-rate change and fades out") {
     auto w = parseWorld(demoWorldJson());
     REQUIRE(w.has_value());
-    auto keys = std::make_shared<const AudioClip>(test::makeSine(48000, 48000 * 4, 220, 0.3f));
-    auto perc = std::make_shared<const AudioClip>(test::makeSine(48000, 48000 * 4, 880, 0.3f));
+    auto keys = std::make_shared<const AudioClip>(test::makeSine(48000, 48000 * 10, 220, 0.3f));
+    auto perc = std::make_shared<const AudioClip>(test::makeSine(48000, 48000 * 10, 880, 0.3f));
     StemDecoderFactory factory = [&](double rate, std::string&) {
         std::vector<std::unique_ptr<StemDecoder>> v;
         for (auto& c : {keys, perc})
@@ -172,7 +174,7 @@ TEST_CASE("session/World fades in, reacts, survives a sample-rate change and fad
     float* outs[2] = {l.data(), r.data()};
     auto run = [&](double seconds) {
         for (int i = 0; i < static_cast<int>(seconds * s.sampleRate() / 512); ++i) {
-            waitBuffered(s.engine().worldPlayer(), 512);
+            if (s.worldStatus().playing) waitBuffered(s.engine().worldPlayer(), 512);
             s.updateWorld(512.0 / s.sampleRate(), ctx);
             s.engine().process(nullptr, 0, outs, 2, 512);
         }

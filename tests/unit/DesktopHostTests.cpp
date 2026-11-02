@@ -49,5 +49,6 @@ TEST_CASE("desktop/miniaudio stem decoder streams a WAV exactly and seeks") {
     CHECK(d->read(lr.data(), 10) == 10);
     CHECK_NEAR(lr[0], clip.samples.channel(0)[5000], 1e-6);
     CHECK(desktop::makeMiniaudioStemDecoder((dir / "missing.wav").string(), 48000, err) == nullptr);
+    d.reset();                                // Windows: the file must be closed before removal
     std::filesystem::remove_all(dir);
 }
