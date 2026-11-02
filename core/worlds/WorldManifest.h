@@ -60,6 +60,7 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error = null
 // stems, sections and rules). Songs carry ids "<dimension>/<song>".
 struct DimensionManifest {
     std::string id, name, artist, tier = "free";
+    std::string album;             // the owner's album the songs come from (shown, linked to buy)
     ConditionSet unlock;
     std::vector<WorldManifest> songs;
     size_t totalStems() const { size_t n = 0; for (const auto& s : songs) n += s.stems.size(); return n; }

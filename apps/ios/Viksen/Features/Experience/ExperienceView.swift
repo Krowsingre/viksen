@@ -376,6 +376,7 @@ private struct DimensionPickerSection: View {
     private func subtitle(_ w: AtmosWorldInfo, locked: Bool) -> String {
         var parts: [String] = []
         if !w.artist.isEmpty { parts.append(w.artist) }
+        if !w.album.isEmpty && w.album != w.name { parts.append(w.album) }
         if w.userMade { parts.append("yours") }
         if locked { parts.append(requiredTier(w).title) }
         else if isBundled(w) { parts.append(w.songCount > 1 ? "\(w.songCount) tracks" : "1 track") }
@@ -541,6 +542,12 @@ struct DimensionTracksView: View {
     var body: some View {
         let current = engine.worldStatus.playing && engine.worldStatus.worldID == world.worldID
         List {
+            if !world.album.isEmpty {
+                Section {
+                    LabeledContent("From the album", value: world.album)
+                    if !world.artist.isEmpty { LabeledContent("Artist", value: world.artist) }
+                }
+            }
             Section {
                 if locked {
                     Button("Unlock \(world.name)") { showPaywall = true }

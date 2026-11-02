@@ -39,7 +39,7 @@ constexpr int kMaxBlock = 8192;   // MiniaudioHost's largest period
 
 @implementation AtmosWorldInfo
 - (instancetype)init {
-    if ((self = [super init])) { _worldID = @""; _name = @""; _artist = @""; _musicalKey = @""; _tier = @"free"; _songCount = 1; _songTitles = @[]; }
+    if ((self = [super init])) { _worldID = @""; _name = @""; _artist = @""; _musicalKey = @""; _tier = @"free"; _songCount = 1; _songTitles = @[]; _album = @""; }
     return self;
 }
 @end
@@ -472,6 +472,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
             info.tier = pass == 0 ? @(w->tier.c_str()) : @"free";
             info.tempo = first.tempo;
             info.songCount = static_cast<NSInteger>(w->songs.size());
+            info.album = @(w->album.c_str());
             NSMutableArray<NSString *> *titles = [NSMutableArray array];
             for (const auto &song : w->songs) [titles addObject:@(song.name.c_str())];
             info.songTitles = titles;

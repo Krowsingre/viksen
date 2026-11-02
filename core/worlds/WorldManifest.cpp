@@ -151,6 +151,7 @@ std::optional<DimensionManifest> parseDimension(const Json& j, std::string* erro
     d.name = j.value("name", std::string{});
     d.artist = j.value("artist", std::string{});
     d.tier = j.value("tier", std::string{"free"});
+    d.album = j.value("album", std::string{});
     if (d.id.empty()) return fail("Dimension needs an id");
     if (!j.contains("songs")) {
         auto w = parseWorld(j, error);
