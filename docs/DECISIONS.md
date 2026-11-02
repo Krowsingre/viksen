@@ -23,3 +23,4 @@
 | 19 | Proposed tiers: Free (a few Worlds, basic augmented audio, limited spatial) · Experience $9.99 · Studio $24.99 · World packs $1.99–4.99. One app with in-app purchases (StoreKit 2), universal purchase with the Mac app. | **Approved**: Studio includes Experience; $14.99 Studio upgrade for Experience owners; Small Business Program |
 | 20 | Desktop (Windows/macOS) emphasises Studio; Experience features kept wherever practical. Windows sold via the **Microsoft Store**. | Approved; **last on the list** |
 | 21 | Privacy policy hosted on **GitHub Pages**. | Approved |
+| 22 | **Experience mirrors the the reference app model with built-in music**: Worlds ship with the owner's own music (from the owner's published albums, owner holds the rights). Importing your own songs/stems stays in **Studio**. | Owner directive |
