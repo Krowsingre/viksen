@@ -34,13 +34,18 @@ jobs:
         include:
           - name: Windows
             os: windows-latest
-            configure: -G "Visual Studio 17 2022" -A x64
+            configure: -G Ninja -DCMAKE_BUILD_TYPE=Release
           - name: macOS (arm64)
             os: macos-14
             configure: -G Xcode -DCMAKE_OSX_ARCHITECTURES=arm64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: MSVC environment (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
       - name: Configure
         run: cmake -S . -B build-desktop ${{ matrix.configure }} -DATMOS_BUILD_DESKTOP=ON -DATMOS_BUILD_TESTS=OFF
       - name: Build
@@ -48,14 +53,18 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.os }}
-          path: build-desktop/apps/desktop/AtmosDesktop_artefacts/Release
+          path: build-desktop/apps/desktop/AtmosDesktop_artefacts
           retention-days: 7
 
   ios:
     name: iPhone app (simulator build)
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - name: Select latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project

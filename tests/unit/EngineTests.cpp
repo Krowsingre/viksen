@@ -225,8 +225,10 @@ TEST_CASE("engine/concurrent control and audio threads (stress)") {
         if (i % 50 == 0) e->collectGarbage();
         if (i % 500 == 0) e->seek(0);
     }
+    // Make sure the audio thread really ran concurrently (schedulers may start it late).
+    while (e->meters().blocksProcessed < 200) std::this_thread::yield();
     stop.store(true);
     audio.join();
     e->collectGarbage();
-    CHECK(e->meters().blocksProcessed > 0);
+    CHECK(e->meters().blocksProcessed >= 200);
 }
