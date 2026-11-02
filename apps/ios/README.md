@@ -67,3 +67,17 @@ Workflow: `.github/workflows/ios-testflight.yml`. One-time setup:
    The build number is the workflow run number.
 4. After Apple finishes processing (usually 5–30 min), add yourself under TestFlight →
    Internal Testing and install via the TestFlight app on the iPhone.
+
+## In-app purchases (StoreKit 2)
+
+Create these **non-consumable** in-app purchases in App Store Connect (app → Monetization →
+In-App Purchases), each with a price, display name, description and a review screenshot:
+
+| Product ID | Price | Grants |
+|---|---|---|
+| `com.krowsingre.viksen.experience` | $9.99 | Experience |
+| `com.krowsingre.viksen.studio` | $24.99 | Studio (includes Experience) |
+| `com.krowsingre.viksen.studio.upgrade` | $14.99 | Studio; shown only to Experience owners |
+
+What each tier unlocks is defined in one table: `Viksen/Store/Entitlements.swift`.
+Purchases made in TestFlight builds are free sandbox purchases.

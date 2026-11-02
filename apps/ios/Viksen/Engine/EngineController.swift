@@ -153,6 +153,17 @@ final class EngineController {
         }
     }
 
+    // MARK: Tiers
+
+    /// Switches off anything the current tier no longer includes (e.g. after a refund).
+    func enforce(_ tier: Tier) {
+        if tier < Feature.roomMemory.requiredTier { roomMemoryEnabled = false }
+        if tier < Feature.frequencyShift.requiredTier { micShiftMix = 0 }
+        if tier < Feature.headTracking.requiredTier { headTrackingEnabled = false }
+        if tier < Feature.activity.requiredTier { echoFollowsSteps = false; activityEnabled = false }
+        if tier < Feature.musicImport.requiredTier, trackName != nil { unloadTrack() }
+    }
+
     // MARK: Body & motion
 
     private func applyCadence(_ spm: Double?) {

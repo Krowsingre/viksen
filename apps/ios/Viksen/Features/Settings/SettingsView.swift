@@ -4,11 +4,21 @@ struct SettingsView: View {
     @Environment(EngineController.self) private var engine
     @AppStorage("appearance") private var appearance: Appearance = .dark
     @Environment(\.dismiss) private var dismiss
+    @Environment(Store.self) private var store
+    @State private var showPaywall = false
 
     var body: some View {
         @Bindable var engine = engine
         NavigationStack {
             Form {
+                Section("Purchases") {
+                    LabeledContent("Edition", value: store.tier.title)
+                    if store.tier < .studio {
+                        Button(store.tier == .free ? "Upgrade…" : "Upgrade to Studio…") { showPaywall = true }
+                    }
+                    Button("Restore Purchases") { Task { await store.restore() } }
+                }
+
                 Section("Audio route") {
                     LabeledContent("Output", value: engine.route.outputName)
                     LabeledContent("Input", value: engine.route.inputName)
@@ -46,6 +56,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .sheet(isPresented: $showPaywall) { PaywallView() }
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }

@@ -4,6 +4,7 @@ import SwiftUI
 struct ViksenApp: App {
     @State private var engine = EngineController()
     @State private var library = MediaLibrary()
+    @State private var store = Store()
     @AppStorage("appearance") private var appearance: Appearance = .dark
     @State private var showSplash = true
 
@@ -13,6 +14,7 @@ struct ViksenApp: App {
                 RootView()
                     .environment(engine)
                     .environment(library)
+                    .environment(store)
                     .preferredColorScheme(appearance.colorScheme)
                 if showSplash {
                     SplashView { withAnimation(.easeInOut(duration: 0.4)) { showSplash = false } }
@@ -22,6 +24,7 @@ struct ViksenApp: App {
                 }
             }
             .tint(Theme.accent)
+            .onAppear { store.onTierChange = { [engine] tier in engine.enforce(tier) } }
         }
     }
 }

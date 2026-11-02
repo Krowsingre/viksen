@@ -194,12 +194,16 @@ private struct MusicSourceRow: View {
                 .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 Toggle("Loop", isOn: $engine.looping)
             }
-            Button("Replace song…") { showImporter = true }
+            Gated(feature: .musicImport, title: "Replace song…") {
+                Button("Replace song…") { showImporter = true }
+            }
             Button("Remove song", role: .destructive) { engine.unloadTrack() }
         } else if engine.isLoadingTrack {
             HStack { ProgressView(); Text("Decoding…").foregroundStyle(.secondary) }
         } else {
-            Button { showImporter = true } label: { Label("Import a song…", systemImage: "square.and.arrow.down") }
+            Gated(feature: .musicImport, title: "Import a song…") {
+                Button { showImporter = true } label: { Label("Import a song…", systemImage: "square.and.arrow.down") }
+            }
             Text("Or play atmosphere and environment on their own — no music needed.")
                 .font(.footnote).foregroundStyle(.secondary)
         }
@@ -240,9 +244,13 @@ private struct EnvironmentSection: View {
             LabeledSlider(title: "Echo time", value: $engine.micEchoSeconds, range: 0.05...1.5, format: "%.2f s")
             LabeledSlider(title: "Echo feedback", value: $engine.micFeedback, range: 0...0.9, format: "%.2f")
             LabeledSlider(title: "Effect mix", value: $engine.micWet, range: 0...1, format: "%.2f")
-            LabeledSlider(title: "Frequency shift", value: $engine.micShiftHz, range: -600...600, format: "%.0f Hz")
-            LabeledSlider(title: "Shift amount", value: $engine.micShiftMix, range: 0...1, format: "%.2f")
-            Toggle("Room memory", isOn: $engine.roomMemoryEnabled)
+            Gated(feature: .frequencyShift, title: "Frequency shift") {
+                LabeledSlider(title: "Frequency shift", value: $engine.micShiftHz, range: -600...600, format: "%.0f Hz")
+                LabeledSlider(title: "Shift amount", value: $engine.micShiftMix, range: 0...1, format: "%.2f")
+            }
+            Gated(feature: .roomMemory, title: "Room memory") {
+                Toggle("Room memory", isOn: $engine.roomMemoryEnabled)
+            }
             if engine.roomMemoryEnabled {
                 Text("Replays the last few seconds of your surroundings, slowed and faded, as a drifting texture. Held in memory only and erased when the microphone turns off.")
                     .font(.footnote).foregroundStyle(.secondary)
@@ -284,7 +292,9 @@ private struct BodyMotionSection: View {
         let activity = engine.activity
 
         if head.isSupported {
-            Toggle("Head tracking", isOn: $engine.headTrackingEnabled)
+            Gated(feature: .headTracking, title: "Head tracking") {
+                Toggle("Head tracking", isOn: $engine.headTrackingEnabled)
+            }
             if engine.headTrackingEnabled {
                 HStack {
                     Text(head.headphonesConnected ? String(format: "Facing %+.0f°", head.yawDegrees)
@@ -306,7 +316,9 @@ private struct BodyMotionSection: View {
         }
 
         if activity.isSupported {
-            Toggle("Activity", isOn: $engine.activityEnabled)
+            Gated(feature: .activity, title: "Activity") {
+                Toggle("Activity", isOn: $engine.activityEnabled)
+            }
             if engine.activityEnabled {
                 if activity.permissionDenied {
                     Text("Motion & Fitness access is off. You can turn it on in iOS Settings > Privacy & Security > Motion & Fitness.")

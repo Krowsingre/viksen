@@ -3,6 +3,8 @@ import SwiftUI
 struct LibraryView: View {
     @Environment(MediaLibrary.self) private var library
     @Environment(EngineController.self) private var engine
+    @Environment(Store.self) private var store
+    @State private var showPaywall = false
 
     var body: some View {
         NavigationStack {
@@ -13,7 +15,7 @@ struct LibraryView: View {
                 }
                 ForEach(library.items) { item in
                     Button {
-                        engine.loadTrack(url: item.url)
+                        if store.allows(.musicImport) { engine.loadTrack(url: item.url) } else { showPaywall = true }
                     } label: {
                         VStack(alignment: .leading) {
                             Text(item.name).lineLimit(1)
@@ -27,6 +29,7 @@ struct LibraryView: View {
             }
             .navigationTitle("Library")
             .refreshable { library.refresh() }
+            .sheet(isPresented: $showPaywall) { PaywallView(highlight: .studio) }
         }
     }
 }

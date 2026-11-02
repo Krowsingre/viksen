@@ -74,18 +74,29 @@ jobs:
           key = open(os.path.join(os.environ["RUNNER_TEMP"], "asc", "AuthKey.p8")).read()
           kid, iss = os.environ["ASC_KEY_ID_CLEAN"], os.environ["ASC_ISSUER_ID_CLEAN"]
           print(f"Key ID length {len(kid)}, issuer ID length {len(iss)} (expected 10 and 36)")
-          now = int(time.time())
-          token = jwt.encode({"iss": iss, "iat": now, "exp": now + 600, "aud": "appstoreconnect-v1"},
-                             key, algorithm="ES256", headers={"kid": kid, "typ": "JWT"})
-          req = urllib.request.Request("https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=com.krowsingre.viksen",
-                                       headers={"Authorization": f"Bearer {token}"})
-          try:
-              data = json.load(urllib.request.urlopen(req, timeout=30))
-          except urllib.error.HTTPError as e:
-              print(f"::error::App Store Connect rejected the API key (HTTP {e.code}). "
-                    "Check that ASC_KEY_ID and ASC_ISSUER_ID belong to this .p8, and that it is a TEAM key "
-                    "(Users and Access > Integrations > App Store Connect API > Team Keys) with the Admin role.")
-              print(e.read().decode()[:500])
+          def call(payload):
+              now = int(time.time())
+              payload.update({"iat": now, "exp": now + 600, "aud": "appstoreconnect-v1"})
+              token = jwt.encode(payload, key, algorithm="ES256", headers={"kid": kid, "typ": "JWT"})
+              req = urllib.request.Request("https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=com.krowsingre.viksen",
+                                           headers={"Authorization": f"Bearer {token}"})
+              try:
+                  return 200, json.load(urllib.request.urlopen(req, timeout=30))
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read().decode()[:400]
+          status, data = call({"iss": iss})                 # team key
+          if status != 200:
+              team_status = status
+              status, _ = call({"sub": "user"})              # individual key (no issuer)
+              if status == 200:
+                  print("::error::This is an INDIVIDUAL API key. Xcode cloud signing needs a TEAM key: App Store Connect > "
+                        "Users and Access > Integrations > App Store Connect API > Team Keys > + (role Admin). "
+                        "Then update ASC_KEY_ID and ASC_KEY_P8 (ASC_ISSUER_ID is shown on that page).")
+              else:
+                  print(f"::error::App Store Connect rejected the API key (HTTP {team_status}). The Key ID, Issuer ID and .p8 "
+                        "probably do not belong together, or the key was revoked. Create a new Team Key (role Admin) and "
+                        "update all three secrets from that same key.")
+                  print(data)
               sys.exit(1)
           apps = data.get("data", [])
           if not apps:
