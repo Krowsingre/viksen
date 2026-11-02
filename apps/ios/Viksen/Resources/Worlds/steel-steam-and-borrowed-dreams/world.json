@@ -247,6 +247,14 @@
             "type": "still"
           }
         ]
+      },
+      "prefer": {
+        "all": [
+          {
+            "type": "moonPhase",
+            "phase": "full"
+          }
+        ]
       }
     },
     {

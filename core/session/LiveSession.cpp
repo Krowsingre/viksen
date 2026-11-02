@@ -179,6 +179,10 @@ bool LiveSession::startFeeder(int64_t fromFrame, std::string* error) {
         planner_->setStopAtSongEnd(dimension_ && dimension_->songs.size() > 1);
     }
     feeder_ = std::make_unique<WorldFeeder>(engine_->worldPlayer(), std::move(decoders), loopStart, loopEnd, planner_, crossfade);
+    if (planner_) {
+        feeder_->enableTransitionFx(60.0 / std::max(1.0, world_->tempo));
+        feeder_->setTransitionSpace(transitionSpace_);
+    }
     applyWorldSpatial();
     for (int i = 0; i < static_cast<int>(world_->stems.size()); ++i)
         engine_->worldPlayer().setStemGain(i, director_ ? director_->linearGain(i) * static_cast<float>(lifecycle_ ? lifecycle_->gain() : 0.0) : 0.0f);
@@ -357,6 +361,12 @@ void LiveSession::updateWorld(double dt, const ConditionContext& context) {
         return;
     }
     director_->update(context, dt);
+    // The moon shapes transitions: near the full moon they ring longer and wider.
+    {
+        const double illum = 0.5 * (1.0 - std::cos(2.0 * 3.14159265358979 * moonPhase(context.daysSinceUnixEpochUtc)));
+        transitionSpace_ = static_cast<float>(0.25 + 0.75 * illum);
+        if (feeder_) feeder_->setTransitionSpace(transitionSpace_);
+    }
     if (!world_->sections.empty()) {
         lastChoice_ = chooseSections(world_->sections, context);
         if (planner_) planner_->setChoice(lastChoice_);

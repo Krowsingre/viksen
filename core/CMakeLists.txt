@@ -15,6 +15,7 @@ add_library(atmos_core STATIC
   worlds/WorldManifest.cpp
   worlds/WorldDirector.cpp
   worlds/WorldSections.cpp
+  worlds/TransitionFx.cpp
   worlds/WorldFeeder.cpp
 )
 target_include_directories(atmos_core PUBLIC ${PROJECT_SOURCE_DIR})

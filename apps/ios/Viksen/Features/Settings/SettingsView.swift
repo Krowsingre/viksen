@@ -21,6 +21,15 @@ struct SettingsView: View {
 
                 DownloadsSettingsSection()
 
+                Section {
+                    Label("\(Lunar.phaseName(engine.meters.moonPhaseId)) · lunar day \(engine.meters.lunarDay) of 30",
+                          systemImage: Lunar.symbol(engine.meters.moonPhaseId))
+                    Text("Viksen follows the lunar calendar, worked out on this \(Platform.deviceNoun). The fuller the moon, the longer and wider the echoes and reverb wash that carry the music from one part to the next; near the new moon, changes are closer and drier. Each Dimension also has parts it favours under the full moon and at the new moon, and some favour the night.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                } header: {
+                    Text("The Moon")
+                }
+
                 Section("Audio route") {
                     LabeledContent("Output", value: engine.route.outputName)
                     LabeledContent("Input", value: engine.route.inputName)

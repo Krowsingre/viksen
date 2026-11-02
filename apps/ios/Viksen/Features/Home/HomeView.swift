@@ -17,11 +17,6 @@ struct HomeView: View {
                         Text(greeting)
                             .font(.title2.weight(.semibold))
                             .foregroundStyle(.white)
-                        Text("Create, enhance, transform, or simply explore.")
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.7))
-                        destination("Dimensions", "Step into music that follows where you are and what you do.",
-                                    "square.stack.3d.up", .experience)
                         if AppTabs.showMoreTabs && store.tier >= .studio {
                             destination("Studio", "Your own stems: mix them and place them in 3D.",
                                         "slider.horizontal.3", .studio)
@@ -37,6 +32,8 @@ struct HomeView: View {
                             .font(.footnote)
                             .foregroundStyle(.white.opacity(0.6))
                             .padding(.top, 4)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .accessibilityHint("The moon shapes the music; see Settings")
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 32)

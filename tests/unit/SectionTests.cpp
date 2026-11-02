@@ -11,6 +11,7 @@
 #include "core/session/LiveSession.h"
 #include "core/worlds/WorldManifest.h"
 #include "core/worlds/WorldSections.h"
+#include "core/worlds/TransitionFx.h"
 #include "tests/TestHarness.h"
 #include "tests/TestUtil.h"
 
@@ -292,4 +293,32 @@ TEST_CASE("session/multi-song Dimension: moving changes the song; a finished son
     run(1.0);
     CHECK(!s.worldStatus().playing);
     s.unloadWorld();
+}
+
+TEST_CASE("worlds/transition wash rings on, fades to silence, stays bounded; the moon lengthens it") {
+    const double rate = 48000;
+    const int n = 24000;                                  // a 0.5 s outgoing tail
+    std::vector<float> in(static_cast<size_t>(n) * 2);
+    for (int i = 0; i < n; ++i) in[2 * i] = in[2 * i + 1] = 0.5f * static_cast<float>(std::sin(2 * 3.14159265 * 330 * i / rate));
+    TransitionShape dark, full;
+    dark.beatSeconds = full.beatSeconds = 60.0 / 110;
+    dark.space = 0.0f;
+    full.space = 1.0f;
+    const auto t0 = std::chrono::steady_clock::now();
+    const auto a = renderTransitionTail(in.data(), n, rate, dark);
+    const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    const auto b = renderTransitionTail(in.data(), n, rate, full);
+    CHECK(b.size() > a.size());                           // full moon: longer
+    float peak = 0, after = 0;
+    for (float v : a) { CHECK(std::isfinite(v)); peak = std::max(peak, std::fabs(v)); }
+    for (size_t i = static_cast<size_t>(n) * 2 + 48000 * 2; i < static_cast<size_t>(n) * 2 + 48000 * 3; ++i) after = std::max(after, std::fabs(a[i]));
+    CHECK(peak < 1.5f);
+    CHECK(after > 0.001f);                                // still ringing 1 s after the input stopped
+    CHECK(std::fabs(a[a.size() - 2]) < 1e-4f);            // and ends in silence, not a cut
+    std::printf("transition wash: %.1f ms for %zu frames\n", ms, a.size() / 2);
+    CHECK(ms < 500);
+    // The submerge crossfade starts as the outgoing part and ends as the incoming one.
+    std::vector<float> out(in), inc(static_cast<size_t>(n) * 2, 0.25f);
+    submergeCrossfade(out.data(), inc.data(), n, rate);
+    CHECK(std::fabs(inc[static_cast<size_t>(2 * (n - 1))] - 0.25f) < 0.02f);
 }

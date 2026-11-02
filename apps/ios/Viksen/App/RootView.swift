@@ -32,6 +32,15 @@ struct RootView: View {
                     .tag(AppTab.library)
             }
         }
+        // Swipe right from the left edge of any screen to return Home.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 24, coordinateSpace: .global)
+                .onEnded { g in
+                    guard tab != .home, g.startLocation.x < 28,
+                          g.translation.width > 90, abs(g.translation.height) < 80 else { return }
+                    withAnimation(.easeInOut(duration: 0.25)) { tab = .home }
+                }
+        )
         .onChange(of: store.tier) { _, tier in
             if tier < .studio && tab == .studio { tab = .home }
         }

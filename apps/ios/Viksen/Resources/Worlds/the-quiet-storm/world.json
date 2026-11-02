@@ -227,6 +227,14 @@
                 "type": "quiet"
               }
             ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "moonPhase",
+                "phase": "full"
+              }
+            ]
           }
         },
         {
@@ -281,6 +289,14 @@
             "all": [
               {
                 "type": "still"
+              }
+            ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "moonPhase",
+                "phase": "new"
               }
             ]
           }
@@ -522,6 +538,14 @@
                 "type": "quiet"
               }
             ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "moonPhase",
+                "phase": "full"
+              }
+            ]
           }
         },
         {
@@ -578,6 +602,14 @@
             "all": [
               {
                 "type": "still"
+              }
+            ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "moonPhase",
+                "phase": "new"
               }
             ]
           }

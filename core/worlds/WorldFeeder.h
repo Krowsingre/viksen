@@ -14,6 +14,7 @@
 #include "engine/audio/AudioClip.h"
 #include "engine/audio/WorldStreamPlayer.h"
 #include "core/worlds/WorldSections.h"
+#include "core/worlds/TransitionFx.h"
 
 namespace atmos::core {
 
@@ -64,6 +65,10 @@ public:
     // The song reached its end and the planner asked to stop (multi-song Dimensions);
     // true once the listener has heard the end.
     bool finishedPlaying() const;
+    // Organic transitions on section jumps (submerge sweep + echo/reverb wash).
+    // Call before start(); `space` can change any time (the moon sets it).
+    void enableTransitionFx(double beatSeconds) { fxBeat_ = beatSeconds; fxOn_ = true; }
+    void setTransitionSpace(float space) { fxSpace_.store(space); }
 
 private:
     void run();
@@ -80,6 +85,9 @@ private:
     int64_t crossfade_ = 0;
     std::atomic<uint64_t> jumps_{0};
     std::atomic<uint64_t> endWritten_{UINT64_MAX};   // frames written when the song ended
+    bool fxOn_ = false;
+    double fxBeat_ = 0.5;
+    std::atomic<float> fxSpace_{0.5f};
     // Map from frames written to the ring (= frames the player will play) to source
     // frames, one entry per contiguous run. Feeder appends, control thread reads.
     mutable std::mutex segMutex_;

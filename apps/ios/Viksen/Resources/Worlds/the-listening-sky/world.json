@@ -251,6 +251,14 @@
                 "type": "still"
               }
             ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "moonPhase",
+                "phase": "new"
+              }
+            ]
           }
         },
         {
@@ -277,6 +285,14 @@
             "all": [
               {
                 "type": "quiet"
+              }
+            ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "moonPhase",
+                "phase": "full"
               }
             ]
           }

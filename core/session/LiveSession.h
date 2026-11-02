@@ -186,6 +186,7 @@ private:
     std::unique_ptr<WorldFeeder> feeder_;
     std::shared_ptr<SectionPlanner> planner_;
     SectionChoice lastChoice_;
+    float transitionSpace_ = 0.5f;
     // Multi-song Dimensions.
     std::optional<DimensionManifest> dimension_;
     StemFileDecoder fileDecoder_;

@@ -87,6 +87,15 @@ void WorldFeeder::run() {
     // Crossfade scratch: the outgoing tail of every stem.
     std::vector<std::vector<float>> tail(stems, std::vector<float>(static_cast<size_t>(std::max<int64_t>(crossfade_, 1)) * 2));
     std::vector<float> incoming(static_cast<size_t>(std::max<int64_t>(crossfade_, 1)) * 2);
+    // Transition wash still ringing (interleaved stereo), shared out over all stems.
+    std::vector<float> wash, washIn;
+    size_t washPos = 0;
+    const float washShare = stems > 0 ? 1.0f / static_cast<float>(stems) : 0.0f;
+    auto addWash = [&](float* lr, int frames) {
+        if (washPos >= wash.size() / 2) return;
+        const size_t m = std::min<size_t>(static_cast<size_t>(frames), wash.size() / 2 - washPos);
+        for (size_t i = 0; i < 2 * m; ++i) lr[i] += wash[2 * washPos + i] * washShare;
+    };
     int64_t pos = startFrame_.load();
     uint64_t written = 0;
     int64_t buffered = 0;
@@ -103,8 +112,10 @@ void WorldFeeder::run() {
         for (size_t s = 0; s < stems; ++s) {
             const int got = decoders_[s]->read(buf.data(), n);
             if (got < n) std::fill(buf.begin() + 2 * std::max(0, got), buf.begin() + 2 * n, 0.0f);
+            addWash(buf.data(), n);
             player_.write(static_cast<int>(s), buf.data(), n);
         }
+        washPos += static_cast<size_t>(n);
         pos += n;
         written += static_cast<uint64_t>(n);
         buffered += n;
@@ -135,18 +146,46 @@ void WorldFeeder::run() {
             for (size_t s = 0; s < stems; ++s) {
                 const int got = decoders_[s]->read(tail[s].data(), static_cast<int>(xf));
                 std::fill(tail[s].begin() + 2 * std::max(0, got), tail[s].begin() + 2 * xf, 0.0f);
+            }
+            if (fxOn_) {
+                // The outgoing part (summed) feeds one echo/reverb wash that rings on under
+                // the new part; whatever is left of an earlier wash keeps ringing too.
+                washIn.assign(static_cast<size_t>(xf) * 2, 0.0f);
+                for (size_t s = 0; s < stems; ++s)
+                    for (int64_t i = 0; i < xf; ++i) {
+                        const float fade = std::cos((static_cast<float>(i) + 0.5f) / static_cast<float>(xf) * 1.5707963f);
+                        washIn[static_cast<size_t>(2 * i)] += tail[s][static_cast<size_t>(2 * i)] * fade;
+                        washIn[static_cast<size_t>(2 * i + 1)] += tail[s][static_cast<size_t>(2 * i + 1)] * fade;
+                    }
+                TransitionShape shape;
+                shape.beatSeconds = fxBeat_;
+                shape.space = fxSpace_.load();
+                std::vector<float> fresh = renderTransitionTail(washIn.data(), static_cast<int>(xf), rate_, shape);
+                const size_t left = washPos < wash.size() / 2 ? wash.size() / 2 - washPos : 0;
+                if (fresh.size() / 2 < left) fresh.resize(left * 2, 0.0f);
+                for (size_t i = 0; i < 2 * left; ++i) fresh[i] += wash[2 * washPos + i];
+                wash = std::move(fresh);
+                washPos = 0;
+            }
+            for (size_t s = 0; s < stems; ++s) {
                 decoders_[s]->seek(target);
                 const int got2 = decoders_[s]->read(incoming.data(), static_cast<int>(xf));
                 std::fill(incoming.begin() + 2 * std::max(0, got2), incoming.begin() + 2 * xf, 0.0f);
-                for (int64_t i = 0; i < xf; ++i) {
-                    const float t = (static_cast<float>(i) + 0.5f) / static_cast<float>(xf);
-                    const float gOut = std::cos(t * 1.5707963f), gIn = std::sin(t * 1.5707963f);
-                    for (int c = 0; c < 2; ++c)
-                        incoming[static_cast<size_t>(2 * i + c)] = tail[s][static_cast<size_t>(2 * i + c)] * gOut +
-                                                                   incoming[static_cast<size_t>(2 * i + c)] * gIn;
+                if (fxOn_) {
+                    submergeCrossfade(tail[s].data(), incoming.data(), static_cast<int>(xf), rate_);
+                    addWash(incoming.data(), static_cast<int>(xf));
+                } else {
+                    for (int64_t i = 0; i < xf; ++i) {
+                        const float t = (static_cast<float>(i) + 0.5f) / static_cast<float>(xf);
+                        const float gOut = std::cos(t * 1.5707963f), gIn = std::sin(t * 1.5707963f);
+                        for (int c = 0; c < 2; ++c)
+                            incoming[static_cast<size_t>(2 * i + c)] = tail[s][static_cast<size_t>(2 * i + c)] * gOut +
+                                                                       incoming[static_cast<size_t>(2 * i + c)] * gIn;
+                    }
                 }
                 player_.write(static_cast<int>(s), incoming.data(), static_cast<int>(xf));
             }
+            if (fxOn_) washPos += static_cast<size_t>(xf);
             noteSegment(written, target);          // heard from here on: the new part
             written += static_cast<uint64_t>(xf);
             pos = target + xf;

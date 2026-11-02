@@ -180,6 +180,14 @@
             "type": "quiet"
           }
         ]
+      },
+      "prefer": {
+        "all": [
+          {
+            "type": "moonPhase",
+            "phase": "full"
+          }
+        ]
       }
     },
     {
