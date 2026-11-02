@@ -61,6 +61,7 @@ void LiveSession::applySettings() {
     e.roomMemory().setEnabled(settings_.roomMemoryEnabled);
     e.roomMemory().level.set(settings_.roomMemoryLevel);
     e.roomMemory().pitchSemitones.store(settings_.roomMemoryPitch);
+    e.roomMemory().listenerYawDeg.store(listenerYaw_);
     e.setMicInputEnabled(settings_.micEnabled);
     e.setLooping(settings_.looping);
 }
@@ -100,5 +101,9 @@ void LiveSession::addMotionSample(double ax, double ay, double az, double dt) {
     states_.updateMotion(motion_.energy(), dt);
 }
 void LiveSession::setMotionAvailable(bool available) { states_.setMotionAvailable(available); }
+void LiveSession::setListenerYaw(float degrees) {
+    listenerYaw_ = degrees;
+    engine_->roomMemory().listenerYawDeg.store(degrees, std::memory_order_relaxed);
+}
 
 } // namespace atmos::core

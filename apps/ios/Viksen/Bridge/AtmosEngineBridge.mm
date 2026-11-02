@@ -214,6 +214,8 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 
 // ------------------------------------------------------------------ motion
 
+- (void)setListenerYawDegrees:(float)degrees { _session->setListenerYaw(degrees); }
+
 - (BOOL)motionSensingAvailable { return _motion.available; }
 - (BOOL)motionSensingEnabled { return _motion.running; }
 

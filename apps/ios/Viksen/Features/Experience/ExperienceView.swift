@@ -33,6 +33,14 @@ struct ExperienceView: View {
                     Text("Microphone audio is processed on this device only and is never recorded or uploaded.")
                 }
 
+                Section {
+                    BodyMotionSection()
+                } header: {
+                    Text("Body & Motion")
+                } footer: {
+                    Text("Head tracking keeps room memories fixed around you as you turn. Uses compatible AirPods or Beats. Motion data stays on this iPhone.")
+                }
+
                 Section("Levels") {
                     ForEach(EngineController.BusLevel.allCases) { bus in
                         BusSlider(title: bus.title,
@@ -263,6 +271,57 @@ struct LabeledSlider: View {
                 Text(String(format: format, value)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
             Slider(value: $value, in: range).accessibilityLabel(title)
+        }
+    }
+}
+
+private struct BodyMotionSection: View {
+    @Environment(EngineController.self) private var engine
+
+    var body: some View {
+        @Bindable var engine = engine
+        let head = engine.headTracker
+        let activity = engine.activity
+
+        if head.isSupported {
+            Toggle("Head tracking", isOn: $engine.headTrackingEnabled)
+            if engine.headTrackingEnabled {
+                HStack {
+                    Text(head.headphonesConnected ? String(format: "Facing %+.0f°", head.yawDegrees)
+                                                  : "Waiting for compatible headphones…")
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Recenter") { head.recenter() }
+                        .buttonStyle(.bordered)
+                        .disabled(!head.headphonesConnected)
+                }
+                if let error = head.lastError {
+                    Text(error).font(.footnote).foregroundStyle(Theme.danger)
+                }
+            }
+        } else {
+            Text("Head tracking is not available on this device.")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+
+        if activity.isSupported {
+            Toggle("Activity", isOn: $engine.activityEnabled)
+            if engine.activityEnabled {
+                if activity.permissionDenied {
+                    Text("Motion & Fitness access is off. You can turn it on in iOS Settings > Privacy & Security > Motion & Fitness.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                } else {
+                    HStack {
+                        Text(activity.activity.title)
+                        Spacer()
+                        Text(activity.cadenceStepsPerMinute.map { String(format: "%.0f steps/min", $0) } ?? "no steps")
+                            .font(.footnote.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    Toggle("Echo follows your steps", isOn: $engine.echoFollowsSteps)
+                }
+            }
         }
     }
 }

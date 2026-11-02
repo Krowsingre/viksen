@@ -94,6 +94,9 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 - (void)setRoomMemoryLevel:(float)level;
 - (void)setRoomMemoryPitch:(float)semitones;
 
+// Head direction from head-tracking headphones, degrees (+ = turned right).
+- (void)setListenerYawDegrees:(float)degrees;
+
 // Motion sensing from the accelerometer (drives the still/moving states).
 @property (nonatomic, readonly) BOOL motionSensingAvailable;
 @property (nonatomic, readonly) BOOL motionSensingEnabled;

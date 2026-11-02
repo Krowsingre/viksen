@@ -87,6 +87,8 @@ public:
     // Accelerometer samples in g from the platform (e.g. Core Motion on iPhone).
     void addMotionSample(double ax, double ay, double az, double dtSeconds);
     void setMotionAvailable(bool available);
+    // Head direction from head-tracking headphones (degrees, + = right). Not persisted.
+    void setListenerYaw(float degrees);
     EnvironmentStateSnapshot environmentStates() const { return states_.snapshot(); }
     unsigned freeFallEvents() const { return motion_.freeFallEvents(); }
 
@@ -98,6 +100,7 @@ private:
     std::shared_ptr<const AudioClip> original_;
     EnvironmentStates states_;
     MotionAnalyzer motion_;
+    float listenerYaw_ = 0.0f;
 };
 
 } // namespace atmos::core

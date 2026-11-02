@@ -51,11 +51,48 @@ jobs:
 
       - name: Write API key
         env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
           mkdir -p "$RUNNER_TEMP/asc"
-          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc/AuthKey.p8"
+          # Normalise: Windows line endings, stray spaces around IDs.
+          printf '%s\n' "$ASC_KEY_P8" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' > "$RUNNER_TEMP/asc/AuthKey.p8"
           chmod 600 "$RUNNER_TEMP/asc/AuthKey.p8"
+          echo "ASC_KEY_ID_CLEAN=$(printf '%s' "$ASC_KEY_ID" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          echo "ASC_ISSUER_ID_CLEAN=$(printf '%s' "$ASC_ISSUER_ID" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          head -1 "$RUNNER_TEMP/asc/AuthKey.p8" | grep -q -- '-----BEGIN PRIVATE KEY-----' \
+            || { echo "::error::ASC_KEY_P8 does not start with -----BEGIN PRIVATE KEY-----. Paste the whole .p8 file."; exit 1; }
+
+      - name: Verify API key with App Store Connect
+        run: |
+          python3 -m pip install --quiet --break-system-packages pyjwt cryptography 2>/dev/null \
+            || python3 -m pip install --quiet pyjwt cryptography
+          python3 - <<'PY'
+          import json, os, sys, time, urllib.request, urllib.error
+          import jwt
+          key = open(os.path.join(os.environ["RUNNER_TEMP"], "asc", "AuthKey.p8")).read()
+          kid, iss = os.environ["ASC_KEY_ID_CLEAN"], os.environ["ASC_ISSUER_ID_CLEAN"]
+          print(f"Key ID length {len(kid)}, issuer ID length {len(iss)} (expected 10 and 36)")
+          now = int(time.time())
+          token = jwt.encode({"iss": iss, "iat": now, "exp": now + 600, "aud": "appstoreconnect-v1"},
+                             key, algorithm="ES256", headers={"kid": kid, "typ": "JWT"})
+          req = urllib.request.Request("https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=com.krowsingre.viksen",
+                                       headers={"Authorization": f"Bearer {token}"})
+          try:
+              data = json.load(urllib.request.urlopen(req, timeout=30))
+          except urllib.error.HTTPError as e:
+              print(f"::error::App Store Connect rejected the API key (HTTP {e.code}). "
+                    "Check that ASC_KEY_ID and ASC_ISSUER_ID belong to this .p8, and that it is a TEAM key "
+                    "(Users and Access > Integrations > App Store Connect API > Team Keys) with the Admin role.")
+              print(e.read().decode()[:500])
+              sys.exit(1)
+          apps = data.get("data", [])
+          if not apps:
+              print("::error::Key works, but no app record with bundle ID com.krowsingre.viksen was found in App Store Connect.")
+              sys.exit(1)
+          print("API key OK; app record found:", apps[0]["attributes"].get("name"))
+          PY
 
       - name: Archive (signed, build number = run number)
         working-directory: apps/ios
@@ -68,8 +105,8 @@ jobs:
             -archivePath "$RUNNER_TEMP/Viksen.xcarchive" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            -authenticationKeyID "$ASC_KEY_ID_CLEAN" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID_CLEAN" \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             archive
 
@@ -85,8 +122,8 @@ jobs:
             -exportPath "$RUNNER_TEMP/export" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            -authenticationKeyID "$ASC_KEY_ID_CLEAN" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID_CLEAN"
 
       - name: Remove API key
         if: always()

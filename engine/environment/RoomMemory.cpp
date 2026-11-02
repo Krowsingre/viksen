@@ -37,8 +37,11 @@ void RoomMemory::startVoice(int slot) noexcept {
     it->readPos = 0.0;
     it->elapsed = 0.0;
     it->lengthOut = slotFrames_ / it->rate;
-    it->pan = nextPan_;
-    nextPan_ = -nextPan_; // alternate sides so there is no long-term bias
+    // Cycle through directions that alternate sides so there is no long-term bias.
+    static constexpr float kDirections[] = {-60.0f, 60.0f, -125.0f, 125.0f, -25.0f, 25.0f};
+    it->azimuthDeg = kDirections[nextDirection_];
+    nextDirection_ = (nextDirection_ + 1) % 6;
+    it->gainL = it->gainR = -1.0f; // computed fresh on the first block
 }
 
 void RoomMemory::capture(const float* mono, int numFrames) noexcept {
@@ -74,9 +77,28 @@ void RoomMemory::renderAdd(AudioBuffer& out, int numFrames) noexcept {
     float* L = out.channel(0);
     float* R = out.channel(1);
     const double pi = std::numbers::pi;
+    const float yaw = listenerYawDeg.load(std::memory_order_relaxed);
+    const float invN = numFrames > 0 ? 1.0f / static_cast<float>(numFrames) : 0.0f;
+
+    // Per voice: target gains for this block from the head-relative direction.
+    float targetL[kVoices], targetR[kVoices];
+    for (int k = 0; k < kVoices; ++k) {
+        Voice& v = voices_[static_cast<size_t>(k)];
+        const double rel = (v.azimuthDeg - yaw) * pi / 180.0;
+        const float x = static_cast<float>(std::sin(rel));                  // -1 left .. +1 right
+        const float behind = static_cast<float>(std::max(0.0, -std::cos(rel)));
+        const float g = 1.0f - 0.3f * behind;                                // slightly softer behind
+        const float theta = (x + 1.0f) * 0.25f * static_cast<float>(pi);
+        targetL[k] = g * std::cos(theta);
+        targetR[k] = g * std::sin(theta);
+        if (v.gainL < 0.0f) { v.gainL = targetL[k]; v.gainR = targetR[k]; }
+    }
+
     for (int i = 0; i < numFrames; ++i) {
         const float lvl = level.next();
-        for (auto& v : voices_) {
+        const float t = static_cast<float>(i + 1) * invN;
+        for (int k = 0; k < kVoices; ++k) {
+            Voice& v = voices_[static_cast<size_t>(k)];
             if (v.slot < 0) continue;
             if (v.slot == writeSlot_) { v.slot = -1; continue; } // being overwritten
             const float* src = memory_.data() + static_cast<size_t>(v.slot) * slotFrames_;
@@ -86,13 +108,18 @@ void RoomMemory::renderAdd(AudioBuffer& out, int numFrames) noexcept {
             const float s = src[i0] + frac * (src[i0 + 1] - src[i0]);
             // Long raised-cosine envelope over the whole replay.
             const float env = static_cast<float>(0.5 - 0.5 * std::cos(2.0 * pi * v.elapsed / v.lengthOut));
-            const float theta = (v.pan + 1.0f) * 0.25f * static_cast<float>(pi);
-            L[i] += s * env * lvl * std::cos(theta);
-            R[i] += s * env * lvl * std::sin(theta);
+            const float gl = v.gainL + (targetL[k] - v.gainL) * t; // click-free head turns
+            const float gr = v.gainR + (targetR[k] - v.gainR) * t;
+            L[i] += s * env * lvl * gl;
+            R[i] += s * env * lvl * gr;
             v.readPos += v.rate;
             v.elapsed += 1.0;
             if (v.elapsed >= v.lengthOut) v.slot = -1;
         }
+    }
+    for (int k = 0; k < kVoices; ++k) {
+        voices_[static_cast<size_t>(k)].gainL = targetL[k];
+        voices_[static_cast<size_t>(k)].gainR = targetR[k];
     }
     publishVoices();
 }

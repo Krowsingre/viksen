@@ -237,3 +237,26 @@ TEST_CASE("session/environment states and new mic settings survive a rebuild") {
     for (int i = 0; i < 150; ++i) s.addMotionSample(0, 0, -1, 1.0 / 30);
     CHECK(s.environmentStates().still);
 }
+
+TEST_CASE("environment/room memories stay fixed in the room as the head turns") {
+    auto run = [](float yaw) {
+        RoomMemory rm;
+        rm.prepare(48000, 0.25);
+        rm.setEnabled(true);
+        rm.listenerYawDeg.store(yaw);
+        auto tone = test::makeSine(48000, 48000, 500.0, 0.5f, 1);
+        double l = 0, r = 0;
+        for (int i = 0; i < 48000; i += 480) {
+            AudioBuffer block(2, 480);
+            rm.capture(tone.samples.channel(0) + i, 480);
+            rm.renderAdd(block, 480);
+            // First memory (placed at -60 degrees) plays alone between 0.5 s and 0.75 s.
+            if (i >= 26400 && i < 36000) { l += test::rmsOf(block.channel(0), 480); r += test::rmsOf(block.channel(1), 480); }
+        }
+        return std::pair{l, r};
+    };
+    auto [l0, r0] = run(0.0f);     // facing front: the memory is on the left
+    CHECK(l0 > 3 * r0);
+    auto [l1, r1] = run(-60.0f);   // head turned toward it: now in front
+    CHECK_NEAR(l1 / r1, 1.0, 0.02);
+}

@@ -20,6 +20,8 @@ final class EngineController {
     }
 
     private let bridge = AtmosEngineBridge()
+    let headTracker = HeadTracker()
+    let activity = ActivityMonitor()
     private let delegateProxy = BridgeDelegateProxy()
     private var meterTimer: Timer?
 
@@ -52,11 +54,24 @@ final class EngineController {
     var motionSensing = false { didSet { bridge.setMotionSensingEnabled(motionSensing) } }
     var motionSensingAvailable: Bool { bridge.motionSensingAvailable }
 
+    // Body & motion (each reaction can be switched off individually).
+    var headTrackingEnabled = false {
+        didSet { headTrackingEnabled ? headTracker.start() : headTracker.stop() }
+    }
+    var activityEnabled = false {
+        didSet { activityEnabled ? activity.start() : activity.stop() }
+    }
+    /// Echo time follows the listener's step rhythm (one echo per step).
+    var echoFollowsSteps = false { didSet { applyCadence(activity.cadenceStepsPerMinute) } }
+    private var echoBeforeStepSync: Float?
+
     init() {
         delegateProxy.onChange = { [weak self] reason in self?.bridgeStateDidChange(reason) }
         bridge.delegate = delegateProxy
         for bus in BusLevel.allCases { busGains[bus.rawValue] = bridge.gain(for: AtmosBusId(rawValue: bus.rawValue)!) }
         route = bridge.route
+        headTracker.onYaw = { [weak self] yaw in self?.bridge.setListenerYawDegrees(Float(yaw)) }
+        activity.onCadence = { [weak self] spm in self?.applyCadence(spm) }
         meterTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshMeters() }
         }
@@ -136,6 +151,19 @@ final class EngineController {
                 self.route = self.bridge.route
             }
         }
+    }
+
+    // MARK: Body & motion
+
+    private func applyCadence(_ spm: Double?) {
+        guard echoFollowsSteps, let spm else {
+            if let saved = echoBeforeStepSync { micEchoSeconds = saved; echoBeforeStepSync = nil }
+            return
+        }
+        if echoBeforeStepSync == nil { echoBeforeStepSync = micEchoSeconds }
+        let seconds = Float(min(1.5, max(0.2, 60.0 / spm)))
+        // Ignore tiny cadence wobbles so the echo does not constantly re-tune.
+        if abs(seconds - micEchoSeconds) / micEchoSeconds > 0.03 { micEchoSeconds = seconds }
     }
 
     // MARK: Meters / delegate
