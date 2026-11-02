@@ -8,6 +8,7 @@ add_executable(atmos_tests
   unit/WorldTests.cpp
   unit/SpatialTests.cpp
   unit/RecordingTests.cpp
+  unit/SessionDocumentTests.cpp
   integration/RoundTripTests.cpp
 )
 target_link_libraries(atmos_tests PRIVATE atmos_core)

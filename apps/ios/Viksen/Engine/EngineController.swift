@@ -31,6 +31,7 @@ final class EngineController {
     private(set) var audioRunning = false
     private(set) var micEnabled = false
     private(set) var trackName: String?
+    private(set) var trackURL: URL?
     private(set) var isLoadingTrack = false
     private(set) var meters = AtmosMeterSnapshot()
     private(set) var worldStatus = AtmosWorldStatus()
@@ -169,6 +170,7 @@ final class EngineController {
                 self.isLoadingTrack = false
                 if ok {
                     self.trackName = self.bridge.loadedTrackName
+                    self.trackURL = url
                     AppLog.info("Song loaded (\(url.pathExtension.lowercased()))")
                 } else { self.lastError = error }
             }
@@ -178,6 +180,7 @@ final class EngineController {
     func unloadTrack() {
         bridge.unloadTrack()
         trackName = nil
+        trackURL = nil
     }
 
     // MARK: Microphone
@@ -268,6 +271,125 @@ final class EngineController {
             loggedUnderruns = total
             lastUnderrunLog = Date()
         }
+    }
+
+    // MARK: Projects, autosave, crash recovery
+
+    static var projectsFolder: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Projects", isDirectory: true)
+    }
+    private static var supportFolder: URL {
+        let u = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
+        return u
+    }
+    static var autosaveURL: URL { supportFolder.appendingPathComponent("Autosave.viksen", isDirectory: true) }
+    private static var runningFlag: URL { supportFolder.appendingPathComponent("session.running") }
+
+    /// True when the previous run ended without going to the background first (crash or kill).
+    private(set) var previousRunEndedUnexpectedly = false
+    var hasAutosave: Bool { FileManager.default.fileExists(atPath: Self.autosaveURL.appendingPathComponent("manifest.json").path) }
+    private var autosaveTimer: Timer?
+    private var lastAutosaveSignature = ""
+
+    private var currentDimensionID: String? { worldStatus.loaded ? worldStatus.worldID : nil }
+
+    func saveProject(named name: String) {
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+        guard !clean.isEmpty else { return }
+        let url = Self.projectsFolder.appendingPathComponent(clean + ".viksen", isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: Self.projectsFolder, withIntermediateDirectories: true)
+            try bridge.saveProject(at: url, name: clean, song: trackURL, dimension: currentDimensionID)
+            statusMessage = "Saved project \u{201C}\(clean)\u{201D}"
+            AppLog.info("Project saved")
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func openProject(_ url: URL) {
+        do {
+            guard let info = try bridge.openProject(at: url) else { return }
+            syncSettingsFromEngine()
+            if let song = info["song"] as? URL { loadTrack(url: song) } else if trackName != nil { unloadTrack() }
+            if let dim = info["dimension"] as? String, let world = worlds.first(where: { $0.worldID == dim }) {
+                try? bridge.loadWorld(world.worldID)       // selected, not auto-played
+                bridge.setDimensionSpatialEnabled(dimension3D)
+                applySavedPositions(world.worldID)
+            }
+            statusMessage = "Opened \u{201C}\((info["name"] as? String) ?? url.deletingPathExtension().lastPathComponent)\u{201D}"
+            AppLog.info("Project opened")
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Called once at launch.
+    func beginRunTracking() {
+        guard autosaveTimer == nil else { return }   // once per launch
+        let fm = FileManager.default
+        previousRunEndedUnexpectedly = fm.fileExists(atPath: Self.runningFlag.path) && hasAutosave
+        if previousRunEndedUnexpectedly { AppLog.warning("Previous session ended unexpectedly; autosave available") }
+        fm.createFile(atPath: Self.runningFlag.path, contents: nil)
+        autosaveTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.autosave() }
+        }
+    }
+
+    /// Scene phase hook: going to the background is a clean stop point.
+    func appDidEnterBackground() {
+        autosave()
+        try? FileManager.default.removeItem(at: Self.runningFlag)
+    }
+    func appWillEnterForeground() {
+        FileManager.default.createFile(atPath: Self.runningFlag.path, contents: nil)
+    }
+
+    func restoreAutosave() {
+        openProject(Self.autosaveURL)
+        previousRunEndedUnexpectedly = false
+    }
+
+    func dismissRestore() { previousRunEndedUnexpectedly = false }
+
+    /// Saves only when something changed since the last autosave.
+    private func autosave() {
+        let signature = [String(describing: busGains), "\(masterGain)", "\(bedEnabled)\(bedLevel)\(bedColourHz)",
+                         "\(micToneHz)\(micEchoSeconds)\(micFeedback)\(micWet)\(micShiftHz)\(micShiftMix)",
+                         "\(roomMemoryEnabled)\(roomMemoryLevel)\(roomMemoryPitch)\(looping)\(limiterCeilingDb)",
+                         trackURL?.path ?? "-", currentDimensionID ?? "-"].joined(separator: "|")
+        guard signature != lastAutosaveSignature else { return }
+        do {
+            try bridge.saveProject(at: Self.autosaveURL, name: "Autosave", song: trackURL, dimension: currentDimensionID)
+            lastAutosaveSignature = signature
+        } catch {
+            AppLog.error("Autosave failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// After a project is applied in the engine, mirror its values into the UI state.
+    /// (didSet handlers re-send the same values, which is harmless.)
+    private func syncSettingsFromEngine() {
+        let s = bridge.currentSettings()
+        busGains = (0..<4).map { Float(truncating: s["busGain\($0)"] ?? 0) }
+        masterGain = Float(truncating: s["masterGain"] ?? 0.7)
+        limiterCeilingDb = Float(truncating: s["limiterCeilingDb"] ?? -1)
+        bedEnabled = (s["bedEnabled"]?.boolValue) ?? false
+        bedLevel = Float(truncating: s["bedLevel"] ?? 0.25)
+        bedColourHz = Float(truncating: s["bedColourHz"] ?? 900)
+        micToneHz = Float(truncating: s["micToneHz"] ?? 1800)
+        micEchoSeconds = Float(truncating: s["micEchoSeconds"] ?? 0.38)
+        micFeedback = Float(truncating: s["micFeedback"] ?? 0.45)
+        micWet = Float(truncating: s["micWet"] ?? 0.6)
+        micShiftHz = Float(truncating: s["micShiftHz"] ?? -180)
+        micShiftMix = Float(truncating: s["micShiftMix"] ?? 0)
+        roomMemoryEnabled = (s["roomMemoryEnabled"]?.boolValue) ?? false
+        roomMemoryLevel = Float(truncating: s["roomMemoryLevel"] ?? 0.6)
+        roomMemoryPitch = Float(truncating: s["roomMemoryPitch"] ?? -12)
+        looping = (s["looping"]?.boolValue) ?? false
     }
 
     // MARK: Recording

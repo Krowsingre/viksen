@@ -26,6 +26,9 @@ struct HomeView: View {
                                     "slider.horizontal.3", .studio)
                         destination("Dimensions", "Music that re-mixes itself around you.",
                                     "square.stack.3d.up", .worlds)
+                        if engine.previousRunEndedUnexpectedly {
+                            restoreCard
+                        }
                         if let name = engine.trackName {
                             nowPlaying(name)
                         }
@@ -119,6 +122,25 @@ struct HomeView: View {
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.accent.opacity(0.35), lineWidth: 1))
         }
         .buttonStyle(.plain)
+    }
+
+    /// Shown after an unexpected close: the autosave holds the last state.
+    private var restoreCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Viksen closed unexpectedly", systemImage: "arrow.counterclockwise.circle")
+                .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+            Text("Restore your last session? The microphone stays off until you turn it on.")
+                .font(.caption).foregroundStyle(.white.opacity(0.7))
+            HStack {
+                Button("Restore") { engine.restoreAutosave(); selectedTab = .experience }
+                    .buttonStyle(.borderedProminent)
+                Button("Not now") { engine.dismissRestore() }
+                    .buttonStyle(.bordered)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
     }
 
     private func nowPlaying(_ name: String) -> some View {

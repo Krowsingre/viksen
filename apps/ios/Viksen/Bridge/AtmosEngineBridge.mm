@@ -14,6 +14,8 @@
 #include "platform/ios/IOSMediaDecoder.h"
 #include "platform/ios/IOSStemDecoder.h"
 #include "core/worlds/WorldManifest.h"
+#include "core/projects/ProjectPackage.h"
+#include "core/session/SessionDocument.h"
 #include "core/worlds/WorldConditions.h"
 #import "platform/ios/IOSMotion.h"
 
@@ -396,6 +398,75 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 - (double)recordingSeconds { return _session->recordingSeconds(); }
 - (uint64_t)recordingDroppedBlocks { return _session->recordingDroppedBlocks(); }
 - (BOOL)takeRecordingInterrupted { return _session->takeRecordingInterrupted(); }
+
+- (BOOL)saveProjectAtURL:(NSURL *)packageURL name:(NSString *)name songURL:(NSURL *)songURL
+             dimensionID:(NSString *)dimensionID error:(NSError **)error {
+    namespace fs = std::filesystem;
+    using namespace atmos::core;
+    const fs::path pkg(packageURL.fileSystemRepresentation);
+    std::optional<SessionTrack> track;
+    if (songURL) {
+        const fs::path src(songURL.fileSystemRepresentation);
+        std::error_code ec;
+        // Reuse the copy already in the package when it is the same file (autosave).
+        std::string rel;
+        ProjectManifest old;
+        if (ProjectPackage::load(pkg, old).ok) {
+            const auto prev = readSessionProject(old).track;
+            if (prev && fs::exists(pkg / prev->packagedPath, ec) && fs::path(prev->packagedPath).filename() == src.filename() &&
+                fs::file_size(pkg / prev->packagedPath, ec) == fs::file_size(src, ec))
+                rel = prev->packagedPath;
+        }
+        if (rel.empty()) {
+            // Remove stale song copies before importing the new one.
+            for (auto &e : fs::directory_iterator(pkg / "assets" / "audio", ec)) fs::remove(e.path(), ec);
+            const auto r = ProjectPackage::importAsset(pkg, src, rel);
+            if (!r.ok) { if (error) *error = makeError(r.error); return NO; }
+        }
+        MediaInfo media;
+        if (AVAudioFile *f = [[AVAudioFile alloc] initForReading:songURL error:nil]) {
+            media.sampleRate = f.fileFormat.sampleRate;
+            media.channels = static_cast<int>(f.fileFormat.channelCount);
+            media.frames = f.length;
+        }
+        track = SessionTrack{rel, songURL.lastPathComponent.UTF8String, media};
+    }
+    auto m = makeSessionProject(name.UTF8String, _session->settings(), track,
+                                dimensionID ? dimensionID.UTF8String : "", _session->sampleRate());
+    const auto r = ProjectPackage::save(pkg, m);
+    if (!r.ok) { if (error) *error = makeError(r.error); return NO; }
+    return YES;
+}
+
+- (NSDictionary<NSString *, id> *)openProjectAtURL:(NSURL *)packageURL error:(NSError **)error {
+    using namespace atmos::core;
+    const std::filesystem::path pkg(packageURL.fileSystemRepresentation);
+    ProjectManifest m;
+    const auto r = ProjectPackage::load(pkg, m);
+    if (!r.ok) { if (error) *error = makeError(r.error); return nil; }
+    const auto restore = readSessionProject(m, _session->settings());
+    _session->applyAllSettings(restore.settings);
+    NSMutableDictionary *out = [@{ @"name": @(m.name.c_str()) } mutableCopy];
+    if (restore.track) {
+        const auto file = pkg / restore.track->packagedPath;
+        if (std::filesystem::exists(file)) out[@"song"] = [NSURL fileURLWithPath:@(file.c_str())];
+    }
+    if (!restore.dimensionId.empty()) out[@"dimension"] = @(restore.dimensionId.c_str());
+    return out;
+}
+
+- (NSDictionary<NSString *, NSNumber *> *)currentSettings {
+    const auto &s = _session->settings();
+    return @{
+        @"busGain0": @(s.busGain[0]), @"busGain1": @(s.busGain[1]), @"busGain2": @(s.busGain[2]), @"busGain3": @(s.busGain[3]),
+        @"masterGain": @(s.masterGain), @"limiterCeilingDb": @(s.limiterCeilingDb),
+        @"bedEnabled": @(s.bedEnabled), @"bedLevel": @(s.bedLevel), @"bedColourHz": @(s.bedColourHz),
+        @"micToneHz": @(s.micToneHz), @"micEchoSeconds": @(s.micEchoSeconds), @"micFeedback": @(s.micFeedback),
+        @"micWet": @(s.micWet), @"micShiftHz": @(s.micShiftHz), @"micShiftMix": @(s.micShiftMix),
+        @"roomMemoryEnabled": @(s.roomMemoryEnabled), @"roomMemoryLevel": @(s.roomMemoryLevel),
+        @"roomMemoryPitch": @(s.roomMemoryPitch), @"looping": @(s.looping),
+    };
+}
 
 - (void)resetStemPositions { _session->resetWorldStemPositions(); }
 - (BOOL)binauralHRTF { return _session->engine().worldPlayer().hrtfActive(); }

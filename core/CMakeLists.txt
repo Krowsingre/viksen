@@ -9,6 +9,7 @@ add_library(atmos_core STATIC
   serialization/Ids.cpp
   session/LiveSession.cpp
   session/SessionRecorder.cpp
+  session/SessionDocument.cpp
   worlds/WorldLifecycle.cpp
   worlds/WorldConditions.cpp
   worlds/WorldManifest.cpp

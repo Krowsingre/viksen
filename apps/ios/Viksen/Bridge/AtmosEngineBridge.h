@@ -172,6 +172,21 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic, readonly) uint64_t recordingDroppedBlocks;
 - (BOOL)takeRecordingInterrupted;                       // YES once after a device change ended a recording
 
+// ---- Projects (.viksen packages: settings + copied song + current Dimension) ----
+// Saves the current session into `packageURL` (created or replaced). The song file,
+// if any, is copied into the package (reused when unchanged).
+- (BOOL)saveProjectAtURL:(NSURL *)packageURL name:(NSString *)name songURL:(nullable NSURL *)songURL
+             dimensionID:(nullable NSString *)dimensionID error:(NSError **)error
+    NS_SWIFT_NAME(saveProject(at:name:song:dimension:));
+// Opens a package: applies its settings now; returns @{ @"song": NSURL?, @"dimension": NSString?, @"name": NSString }.
+- (nullable NSDictionary<NSString *, id> *)openProjectAtURL:(NSURL *)packageURL error:(NSError **)error
+    NS_SWIFT_NAME(openProject(at:));
+
+// Snapshot of the live settings (keys: busGain0..3, masterGain, limiterCeilingDb, bedEnabled,
+// bedLevel, bedColourHz, micToneHz, micEchoSeconds, micFeedback, micWet, micShiftHz, micShiftMix,
+// roomMemoryEnabled, roomMemoryLevel, roomMemoryPitch, looping).
+- (NSDictionary<NSString *, NSNumber *> *)currentSettings;
+
 // Exercise intensity 0...1 from Health / Apple Watch; negative = unknown.
 - (void)setExerciseIntensity:(double)intensity;
 @end

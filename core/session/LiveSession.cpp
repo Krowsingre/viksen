@@ -61,6 +61,13 @@ void LiveSession::clearTrack() {
 
 double LiveSession::trackDurationSeconds() const noexcept { return original_ ? original_->durationSeconds() : 0.0; }
 
+void LiveSession::applyAllSettings(const LiveSettings& next) {
+    const bool mic = settings_.micEnabled;
+    settings_ = next;
+    settings_.micEnabled = mic;   // the microphone only ever changes by explicit user action
+    applySettings();
+}
+
 void LiveSession::applySettings() {
     AudioEngine& e = *engine_;
     for (int b = 0; b < kNumBuses; ++b) {

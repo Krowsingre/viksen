@@ -7,6 +7,8 @@ struct ExperienceView: View {
     @Environment(MediaLibrary.self) private var library
     @State private var showImporter = false
     @State private var showRecorder = false
+    @State private var showSaveProject = false
+    @State private var projectName = ""
     @Environment(Store.self) private var store
     @State private var showPaywall = false
 
@@ -78,6 +80,12 @@ struct ExperienceView: View {
                         if engine.audioRunning { engine.stopAudio() } else { engine.startAudio() }
                     }
                 }
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Button("Save as Project\u{2026}") { projectName = engine.trackName.map { ($0 as NSString).deletingPathExtension } ?? ""; showSaveProject = true }
+                    } label: { Image(systemName: "ellipsis.circle") }
+                    .accessibilityLabel("More")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         if store.allows(.sessionRecording) { showRecorder = true } else { showPaywall = true }
@@ -96,6 +104,13 @@ struct ExperienceView: View {
                 }
             }
             .sheet(isPresented: $showRecorder) { RecordSessionView() }
+            .alert("Save as Project", isPresented: $showSaveProject) {
+                TextField("Name", text: $projectName)
+                Button("Save") { engine.saveProject(named: projectName) }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Saves your song (copied), levels, atmosphere, microphone effects and current Dimension.")
+            }
             .sheet(isPresented: $showPaywall) { PaywallView(highlight: .experience) }
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.audio], allowsMultipleSelection: false) { result in
                 if case let .success(urls) = result, let url = urls.first, let local = library.importCopy(of: url) {

@@ -8,6 +8,7 @@ struct ViksenApp: App {
     @State private var store = Store()
     @AppStorage("appearance") private var appearance: Appearance = .dark
     @State private var showSplash = true
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         AppLog.info(AppLog.launchBanner())
@@ -31,7 +32,17 @@ struct ViksenApp: App {
                 }
             }
             .tint(Theme.accent)
-            .onAppear { store.onTierChange = { [engine] tier in engine.enforce(tier) } }
+            .onAppear {
+                store.onTierChange = { [engine] tier in engine.enforce(tier) }
+                engine.beginRunTracking()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                switch phase {
+                case .background: engine.appDidEnterBackground()
+                case .active: engine.appWillEnterForeground()
+                default: break
+                }
+            }
         }
     }
 }

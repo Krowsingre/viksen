@@ -96,6 +96,8 @@ public:
     double trackDurationSeconds() const noexcept;
 
     const LiveSettings& settings() const noexcept { return settings_; }
+    // Replaces all settings at once (e.g. opening a project). Keeps the mic state.
+    void applyAllSettings(const LiveSettings& s);
     void setBusGain(Bus bus, float gain);
     void setBusMuted(Bus bus, bool muted);
     void setMasterGain(float gain);

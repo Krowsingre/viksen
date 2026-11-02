@@ -27,6 +27,7 @@ struct LibraryView: View {
                 }
                 .onDelete { idx in idx.map { library.items[$0] }.forEach(library.delete) }
 
+                ProjectsSection()
                 RecordingsSection()
             }
             .navigationTitle("Library")
