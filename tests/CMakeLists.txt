@@ -20,3 +20,9 @@ endforeach()
 
 add_executable(atmos_benchmark performance/EngineBenchmark.cpp)
 target_link_libraries(atmos_benchmark PRIVATE atmos_engine)
+
+if(TARGET atmos_desktop_host)
+  target_sources(atmos_tests PRIVATE unit/DesktopHostTests.cpp)
+  target_link_libraries(atmos_tests PRIVATE atmos_desktop_host)
+  add_test(NAME desktop COMMAND atmos_tests desktop)
+endif()
