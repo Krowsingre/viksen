@@ -184,6 +184,8 @@ targets:
         DEVELOPMENT_TEAM: JNJX9FYHC2
         CODE_SIGN_STYLE: Automatic
         INFOPLIST_FILE: ViksenMac/Info.plist
+        LIBRARY_SEARCH_PATHS: ["$(inherited)", "$(SRCROOT)/../../third_party/steamaudio/lib/osx"]
+        LD_RUNPATH_SEARCH_PATHS: ["$(inherited)", "@executable_path/../Frameworks"]
         SWIFT_OBJC_BRIDGING_HEADER: Viksen/Bridge/Viksen-Bridging-Header.h
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
