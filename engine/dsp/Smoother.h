@@ -19,7 +19,7 @@ public:
     }
 
     void setTarget(float target) noexcept {
-        if (target == target_) return;
+        if (!(target < target_ || target > target_)) return; // unchanged (avoids -Wfloat-equal)
         target_ = target;
         remaining_ = rampSamples_;
         step_ = (target_ - current_) / static_cast<float>(remaining_);

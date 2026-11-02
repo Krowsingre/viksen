@@ -22,8 +22,9 @@ constexpr const char* busId(Bus b) noexcept {
         case Bus::Atmosphere: return "atmosphere";
         case Bus::MicRaw: return "micRaw";
         case Bus::MicTransformed: return "micTransformed";
-        default: return "unknown";
+        case Bus::Count: break;
     }
+    return "unknown";
 }
 
 // Conservative defaults (linear gain).
@@ -33,8 +34,9 @@ constexpr float defaultBusGain(Bus b) noexcept {
         case Bus::Atmosphere: return 0.5f;
         case Bus::MicRaw: return 0.0f;
         case Bus::MicTransformed: return 0.5f;
-        default: return 0.0f;
+        case Bus::Count: break;
     }
+    return 0.0f;
 }
 
 } // namespace atmos

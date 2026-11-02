@@ -6,6 +6,7 @@ add_library(atmos_core STATIC
   projects/ProjectPackage.cpp
   projects/ProjectPlayback.cpp
   serialization/Ids.cpp
+  session/LiveSession.cpp
 )
 target_include_directories(atmos_core PUBLIC ${PROJECT_SOURCE_DIR})
 target_include_directories(atmos_core SYSTEM PUBLIC ${PROJECT_SOURCE_DIR}/third_party)
