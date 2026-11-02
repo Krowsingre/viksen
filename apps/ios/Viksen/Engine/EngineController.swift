@@ -23,6 +23,7 @@ final class EngineController {
     let headTracker = HeadTracker()
     let activity = ActivityMonitor()
     let health = HealthService()
+    let watch = WatchLink()
     private let delegateProxy = BridgeDelegateProxy()
     private var meterTimer: Timer?
 
@@ -80,6 +81,8 @@ final class EngineController {
         route = bridge.route
         headTracker.onYaw = { [weak self] yaw in self?.bridge.setListenerYawDegrees(Float(yaw)) }
         activity.onCadence = { [weak self] spm in self?.applyCadence(spm) }
+        watch.onHeartRate = { [weak self] bpm, date in self?.health.ingestLiveHeartRate(bpm, at: date) }
+        watch.activate()
         health.onIntensity = { [weak self] i in
             guard let self, self.intensityShapesAtmosphere else { return }
             self.applyIntensity(i)

@@ -12,6 +12,13 @@ apps/ios/
 platform/ios/                 AVAudioSession, RemoteIO host, AVFoundation decoder
 ```
 
+## Apple Watch companion
+
+`ViksenWatch/` is a single-target watchOS 10 app (bundle `com.krowsingre.viksen.watchkitapp`)
+embedded in the iPhone app. It starts a workout (walk, run, cycle, other), reads live heart
+rate with `HKLiveWorkoutBuilder`, sends it to the iPhone over WatchConnectivity
+(`Viksen/Services/WatchLink.swift`), and saves the workout to Apple Health when it ends.
+
 ## Build
 
 Requires macOS with Xcode 15.3+ (iOS 17 SDK) and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
