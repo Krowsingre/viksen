@@ -26,3 +26,17 @@ if(TARGET atmos_desktop_host)
   target_link_libraries(atmos_tests PRIVATE atmos_desktop_host)
   add_test(NAME desktop COMMAND atmos_tests desktop)
 endif()
+
+if(TARGET viksen_engine)
+  # The C interface is tested through the shared library, as the Windows app uses it.
+  add_executable(viksen_capi_tests TestMain.cpp unit/CApiTests.cpp)
+  target_link_libraries(viksen_capi_tests PRIVATE viksen_engine atmos_core)
+  atmos_set_warnings(viksen_capi_tests)
+  add_test(NAME capi COMMAND viksen_capi_tests desktop)
+  if(WIN32)
+    # Run against the DLL (and Steam Audio's) next to the test executable.
+    add_custom_command(TARGET viksen_capi_tests POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:viksen_capi_tests> $<TARGET_FILE_DIR:viksen_capi_tests>
+      COMMAND_EXPAND_LISTS)
+  endif()
+endif()

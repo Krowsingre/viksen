@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstring>
+#include <filesystem>
 
 namespace atmos::desktop {
 
@@ -176,7 +177,14 @@ std::unique_ptr<core::StemDecoder> makeMiniaudioStemDecoder(const std::string& p
     ma_decoder_config cfg = ma_decoder_config_init(ma_format_f32, 2, static_cast<ma_uint32>(outputRate));
     cfg.resampling.linear.lpfOrder = MA_MAX_FILTER_ORDER;   // best anti-aliasing when the file's rate differs
     auto* d = new ma_decoder;
-    if (ma_decoder_init_file(path.c_str(), &cfg, d) != MA_SUCCESS) {
+#ifdef _WIN32
+    // `path` is UTF-8; the narrow Windows API would use the ANSI code page.
+    const std::wstring wide = std::filesystem::path(reinterpret_cast<const char8_t*>(path.c_str())).wstring();
+    const ma_result opened = ma_decoder_init_file_w(wide.c_str(), &cfg, d);
+#else
+    const ma_result opened = ma_decoder_init_file(path.c_str(), &cfg, d);
+#endif
+    if (opened != MA_SUCCESS) {
         delete d;
         error = "Unsupported or unreadable audio file: " + path;
         return nullptr;

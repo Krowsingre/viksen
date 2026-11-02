@@ -40,6 +40,13 @@ if(ATMOS_BUILD_DESKTOP_HOST AND NOT IOS)
   add_library(atmos_desktop_host STATIC platform/desktop/MiniaudioHost.cpp)
   target_link_libraries(atmos_desktop_host PUBLIC atmos_core atmos_miniaudio)
   atmos_set_warnings(atmos_desktop_host)
+
+  # C interface (shared library) for the Windows WinUI 3 app.
+  add_library(viksen_engine SHARED platform/capi/ViksenEngine.cpp)
+  target_compile_definitions(viksen_engine PRIVATE VIKSEN_ENGINE_BUILD=1)
+  target_link_libraries(viksen_engine PRIVATE atmos_desktop_host)
+  set_target_properties(viksen_engine PROPERTIES CXX_VISIBILITY_PRESET hidden POSITION_INDEPENDENT_CODE ON)
+  atmos_set_warnings(viksen_engine)
 endif()
 
 if(ATMOS_BUILD_TESTS)
