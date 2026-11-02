@@ -33,7 +33,7 @@ public sealed partial class MainWindow : Window
     private void OnNavSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         if (args.IsSettingsSelected) { ContentFrame.Navigate(typeof(SettingsPage)); return; }
-        var page = (args.SelectedItem as NavigationViewItem)?.Tag as string switch
+        var page = ((args.SelectedItem as NavigationViewItem)?.Tag as string) switch
         {
             "experience" => typeof(ExperiencePage),
             "studio" => typeof(StudioPage),

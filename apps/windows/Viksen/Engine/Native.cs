@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 namespace Viksen.Engine;
 
 /// <summary>P/Invoke surface of platform/capi/ViksenEngine.h. Keep in sync.</summary>
-internal static class Native
+public static class Native
 {
     private const string Dll = "viksen_engine";
     public const int ApiVersion = 1;
