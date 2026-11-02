@@ -60,6 +60,8 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic) BOOL audioAvailable;           // all stem files are in this build
 @property (nonatomic) NSInteger songCount;           // songs in this Dimension (1 or more)
 @property (nonatomic, copy) NSString *album;          // album the songs come from ("" when unknown)
+@property (nonatomic, copy) NSString *albumLink;      // fixed Apple Music URL ("" = look it up)
+@property (nonatomic) BOOL albumOnAppleMusic;         // the album is live on Apple Music
 @property (nonatomic, copy) NSArray<NSString *> *songTitles;
 @property (nonatomic) BOOL userMade;                 // created/imported by the user (exportable); NO = built in
 @property (nonatomic, copy, nullable) NSURL *folderURL;

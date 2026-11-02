@@ -277,6 +277,13 @@ private struct NowPlayingSection: View {
                             Text(st.sectionTitle).font(.subheadline).foregroundStyle(Theme.accent)
                         }
                         Text(reason(st)).font(.caption).foregroundStyle(.secondary)
+                        if let world = engine.worlds.first(where: { $0.worldID == st.worldID }),
+                           let url = engine.albums.link(for: world) {
+                            Link(destination: url) {
+                                Text("From \(world.album) \u{203A}").font(.caption).foregroundStyle(Theme.accent)
+                            }
+                            .accessibilityLabel("Open the album \(world.album) on Apple Music")
+                        }
                     }
                     Spacer()
                     Button {
@@ -546,6 +553,11 @@ struct DimensionTracksView: View {
                 Section {
                     LabeledContent("From the album", value: world.album)
                     if !world.artist.isEmpty { LabeledContent("Artist", value: world.artist) }
+                    if let url = engine.albums.link(for: world) {
+                        Link(destination: url) {
+                            Label("Listen to the full album on Apple Music", systemImage: "music.note")
+                        }
+                    }
                 }
             }
             Section {

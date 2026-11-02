@@ -26,6 +26,7 @@ final class EngineController {
     let health = HealthService()
     let watch = WatchLink()
     let downloads = DimensionDownloads()
+    let albums = AlbumLinks()
     private let delegateProxy = BridgeDelegateProxy()
     private var meterTimer: Timer?
 
