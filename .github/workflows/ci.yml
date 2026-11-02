@@ -119,8 +119,13 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+      - uses: microsoft/setup-msbuild@v2
       - name: Build app
-        run: dotnet build apps/windows/Viksen/Viksen.csproj -c Release -p:Platform=x64
+        run: msbuild apps/windows/Viksen/Viksen.csproj -restore -p:Configuration=Release -p:Platform=x64 -v:minimal
+      - name: XAML compiler report
+        if: failure()
+        shell: bash
+        run: find apps/windows/Viksen/obj -name output.json -exec cat {} \; || true
       - name: Check the engine is in the output
         shell: bash
         run: |
