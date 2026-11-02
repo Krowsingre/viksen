@@ -58,6 +58,8 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic) double tempo;
 @property (nonatomic) NSInteger stemCount;
 @property (nonatomic) BOOL audioAvailable;           // all stem files are in this build
+@property (nonatomic) NSInteger songCount;           // songs in this Dimension (1 or more)
+@property (nonatomic, copy) NSArray<NSString *> *songTitles;
 @property (nonatomic) BOOL userMade;                 // created/imported by the user (exportable); NO = built in
 @property (nonatomic, copy, nullable) NSURL *folderURL;
 @end
@@ -88,6 +90,8 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic) BOOL composed;      // no sense is steering it: playing as written
 @property (nonatomic, copy) NSString *sectionTitle;   // part of the song being heard
 @property (nonatomic, copy) NSString *sectionLabel;   // why ("You are moving")
+@property (nonatomic, copy) NSString *songTitle;      // song being heard (a Dimension can hold several)
+@property (nonatomic) NSInteger songCount;
 @property (nonatomic, copy) NSArray<AtmosWorldStemStatus *> *stems;
 @end
 

@@ -61,6 +61,9 @@ public:
     int64_t loopEnd() const { return loopEnd_; }
     double rate() const { return rate_; }
     uint64_t jumps() const { return jumps_.load(); }   // boundary jumps/loops made (diagnostics)
+    // The song reached its end and the planner asked to stop (multi-song Dimensions);
+    // true once the listener has heard the end.
+    bool finishedPlaying() const;
 
 private:
     void run();
@@ -76,6 +79,7 @@ private:
     std::shared_ptr<SectionPlanner> planner_;
     int64_t crossfade_ = 0;
     std::atomic<uint64_t> jumps_{0};
+    std::atomic<uint64_t> endWritten_{UINT64_MAX};   // frames written when the song ended
     // Map from frames written to the ring (= frames the player will play) to source
     // frames, one entry per contiguous run. Feeder appends, control thread reads.
     mutable std::mutex segMutex_;

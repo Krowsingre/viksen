@@ -54,6 +54,17 @@ struct WorldManifest {
 };
 
 std::optional<WorldManifest> parseWorld(const Json& j, std::string* error = nullptr);
+
+// A Dimension holds one or more songs. Single-song world.json files are a Dimension
+// with one song; multi-song files list them under "songs" (each with its own music,
+// stems, sections and rules). Songs carry ids "<dimension>/<song>".
+struct DimensionManifest {
+    std::string id, name, artist, tier = "free";
+    ConditionSet unlock;
+    std::vector<WorldManifest> songs;
+    size_t totalStems() const { size_t n = 0; for (const auto& s : songs) n += s.stems.size(); return n; }
+};
+std::optional<DimensionManifest> parseDimension(const Json& j, std::string* error = nullptr);
 Json worldToJson(const WorldManifest& w);
 
 } // namespace atmos::core

@@ -176,6 +176,7 @@ bool LiveSession::startFeeder(int64_t fromFrame, std::string* error) {
                                                     static_cast<int64_t>(std::llround(bar * world_->minStayBars * rate)));
         crossfade = static_cast<int64_t>(std::llround(beat * world_->crossfadeBeats * rate));
         planner_->setChoice(lastChoice_);
+        planner_->setStopAtSongEnd(dimension_ && dimension_->songs.size() > 1);
     }
     feeder_ = std::make_unique<WorldFeeder>(engine_->worldPlayer(), std::move(decoders), loopStart, loopEnd, planner_, crossfade);
     applyWorldSpatial();
@@ -187,11 +188,16 @@ bool LiveSession::startFeeder(int64_t fromFrame, std::string* error) {
 
 bool LiveSession::loadWorld(const WorldManifest& world, StemDecoderFactory factory, std::string* error) {
     unloadWorld();
+    return loadSong(world, std::move(factory), error);
+}
+
+bool LiveSession::loadSong(const WorldManifest& world, StemDecoderFactory factory, std::string* error) {
     world_ = world;
     worldAuthored_ = world;
     worldFactory_ = std::move(factory);
     director_ = std::make_unique<WorldDirector>(world);
     resumeFrame_ = 0;
+    lastChoice_ = SectionChoice{};
     // Validate that the audio opens now rather than on first play.
     std::string err;
     auto probe = worldFactory_(sampleRate(), err);
@@ -201,6 +207,91 @@ bool LiveSession::loadWorld(const WorldManifest& world, StemDecoderFactory facto
         return false;
     }
     return true;
+}
+
+StemDecoderFactory LiveSession::songFactory(int song) const {
+    std::vector<std::string> files;
+    for (const auto& st : dimension_->songs[static_cast<size_t>(song)].stems) files.push_back(st.file);
+    StemFileDecoder decode = fileDecoder_;
+    return [files, decode](double rate, std::string& err) {
+        std::vector<std::unique_ptr<StemDecoder>> v;
+        for (const auto& f : files) {
+            auto d = decode(f, rate, err);
+            if (!d) return std::vector<std::unique_ptr<StemDecoder>>{};
+            v.push_back(std::move(d));
+        }
+        return v;
+    };
+}
+
+bool LiveSession::loadDimension(const DimensionManifest& d, StemFileDecoder decode, std::string* error) {
+    unloadWorld();
+    if (d.songs.empty()) { if (error) *error = "the Dimension has no songs"; return false; }
+    dimension_ = d;
+    fileDecoder_ = std::move(decode);
+    song_ = 0;
+    if (!loadSong(d.songs[0], songFactory(0), error)) return false;
+    dimension_ = d;            // loadSong's failure path clears it; success keeps it
+    return true;
+}
+
+// Multi-song Dimensions: move to another song when the listener's state suits one of
+// its parts and nothing in this song does (held for a while, so a passing sound does
+// not change the song), or when this song has ended. Control thread.
+void LiveSession::updateSongChoice(double dt, const ConditionContext& context) {
+    if (!dimension_ || dimension_->songs.size() < 2 || !lifecycle_ || switchTo_ >= 0) return;
+    const int n = static_cast<int>(dimension_->songs.size());
+    if (feeder_ && feeder_->finishedPlaying()) {
+        beginSongSwitch((song_ + 1) % n, context, true);
+        return;
+    }
+    int candidate = -1;
+    if (lastChoice_.composed) {
+        for (int k = 1; k < n && candidate < 0; ++k) {
+            const int i = (song_ + k) % n;
+            if (!chooseSections(dimension_->songs[static_cast<size_t>(i)].sections, context).composed) candidate = i;
+        }
+    }
+    if (candidate != candidate_) { candidate_ = candidate; candidateFor_ = 0; return; }
+    if (candidate_ < 0) return;
+    candidateFor_ += dt;
+    const double bar = 60.0 / std::max(1.0, world_->tempo) * world_->beatsPerBar;
+    if (candidateFor_ >= std::max(4.0, bar * world_->minStayBars)) beginSongSwitch(candidate_, context, false);
+}
+
+void LiveSession::beginSongSwitch(int song, const ConditionContext& context, bool immediate) {
+    switchTo_ = song;
+    candidate_ = -1;
+    candidateFor_ = 0;
+    // Start the next song at a part that suits now (or from the top when composed).
+    const auto& next = dimension_->songs[static_cast<size_t>(song)];
+    const SectionChoice ch = chooseSections(next.sections, context);
+    switchFromSeconds_ = 0;
+    if (!ch.composed)
+        for (size_t i = 0; i < next.sections.size(); ++i)
+            if ((ch.acceptable >> i & 1) && (ch.preferred == 0 || (ch.preferred >> i & 1))) { switchFromSeconds_ = next.sections[i].fromSeconds; break; }
+    LifecycleTiming t;
+    t.fadeInSeconds = 3.0;
+    t.fadeOutSeconds = immediate ? 0.05 : 3.0;   // after a natural ending there is nothing left to fade
+    lifecycle_->setTiming(t);
+    lifecycle_->requestExit();
+}
+
+void LiveSession::finishSongSwitch() {
+    const int song = switchTo_;
+    switchTo_ = -1;
+    stopFeeder();
+    auto keep = dimension_;
+    auto decode = fileDecoder_;
+    std::string err;
+    if (!loadSong(keep->songs[static_cast<size_t>(song)], songFactory(song), &err)) return;
+    dimension_ = std::move(keep);
+    fileDecoder_ = std::move(decode);
+    song_ = song;
+    applyWorldSpatial();
+    resumeFrame_ = static_cast<int64_t>(switchFromSeconds_ * sampleRate());
+    startWorld(false);
+    songSwitches_++;
 }
 
 void LiveSession::unloadWorld() {
@@ -214,6 +305,9 @@ void LiveSession::unloadWorld() {
     planner_.reset();
     lastChoice_ = SectionChoice{};
     resumeFrame_ = 0;
+    dimension_.reset();
+    switchTo_ = -1;
+    candidate_ = -1;
 }
 
 void LiveSession::startWorld(bool quick) {
@@ -228,6 +322,8 @@ void LiveSession::startWorld(bool quick) {
 
 void LiveSession::stopWorld(bool quick) {
     if (!lifecycle_) return;
+    switchTo_ = -1;            // the listener is leaving: no next song
+    candidate_ = -1;
     if (quick) {
         LifecycleTiming t;
         t.fadeInSeconds = 0.15;
@@ -265,10 +361,15 @@ void LiveSession::updateWorld(double dt, const ConditionContext& context) {
         lastChoice_ = chooseSections(world_->sections, context);
         if (planner_) planner_->setChoice(lastChoice_);
     }
+    updateSongChoice(dt, context);
     lifecycle_->update(true, dt);
     const float master = static_cast<float>(lifecycle_->gain());
     for (int i = 0; i < director_->stemCount(); ++i)
         engine_->worldPlayer().setStemGain(i, director_->linearGain(i) * master);
+    if (lifecycle_->finished() && switchTo_ >= 0) {
+        finishSongSwitch();
+        return;
+    }
     if (lifecycle_->finished()) {
         stopFeeder();
         lifecycle_.reset();
@@ -313,13 +414,23 @@ WorldStatus LiveSession::worldStatus() const {
     st.loaded = true;
     st.id = world_->id;
     st.name = world_->name;
-    st.playing = lifecycle_ != nullptr;
+    st.playing = lifecycle_ != nullptr || switchTo_ >= 0;
     st.master = lifecycle_ ? static_cast<float>(lifecycle_->gain()) : 0.0f;
     const WorldStreamPlayer& p = const_cast<AudioEngine&>(*engine_).worldPlayer();
     st.spatial = worldSpatial_;
     st.hrtf = p.hrtfActive();
     st.underruns = p.underruns();
     st.adaptive = !world_->sections.empty();
+    if (dimension_) {
+        st.id = dimension_->id;
+        st.name = dimension_->name;
+        st.songCount = static_cast<int>(dimension_->songs.size());
+        st.songIndex = song_;
+        st.songTitle = world_->name;
+        st.songSwitches = songSwitches_;
+    } else {
+        st.songTitle = world_->name;
+    }
     st.composed = lastChoice_.composed;
     if (feeder_ && planner_) {
         const int sec = planner_->sectionAt(feeder_->playbackFrame());

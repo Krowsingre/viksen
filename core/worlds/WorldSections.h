@@ -42,6 +42,10 @@ public:
                    int64_t loopStart, int64_t loopEnd, int64_t minStayFrames);
 
     void setChoice(const SectionChoice& c);
+    // Multi-song Dimensions: at the end of the song (as composed) stop instead of
+    // looping, so the next song can follow. decide() then returns kEnd.
+    static constexpr int64_t kEnd = -1;
+    void setStopAtSongEnd(bool on) { stopAtEnd_.store(on, std::memory_order_relaxed); }
     // First boundary strictly after `pos` (grid point, section end or loop end).
     int64_t nextBoundary(int64_t pos) const;
     // Where to continue when the stream reaches boundary `b` (b itself = carry on).
@@ -57,6 +61,7 @@ private:
     int64_t grid_, loopStart_, loopEnd_, minStay_;
     std::atomic<uint64_t> acceptable_{~0ull}, preferred_{0};
     std::atomic<bool> composed_{true};
+    std::atomic<bool> stopAtEnd_{false};
     int64_t enteredAt_ = -1;   // feeder thread only: source frame where the current section was entered
     int lastSection_ = -1;
 };

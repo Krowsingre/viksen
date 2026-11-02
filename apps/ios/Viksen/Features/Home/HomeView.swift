@@ -20,9 +20,9 @@ struct HomeView: View {
                         Text("Create, enhance, transform, or simply explore.")
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.7))
-                        destination("Experience", "Step into a Dimension: music that follows where you are and what you do.",
-                                    "play.fill", .experience)
-                        if store.tier >= .studio {
+                        destination("Dimensions", "Step into music that follows where you are and what you do.",
+                                    "square.stack.3d.up", .experience)
+                        if AppTabs.showMoreTabs && store.tier >= .studio {
                             destination("Studio", "Your own stems: mix them and place them in 3D.",
                                         "slider.horizontal.3", .studio)
                         }
@@ -83,7 +83,7 @@ struct HomeView: View {
                         .foregroundStyle(.white)
                 }
                 .padding(.horizontal, 40)
-                .accessibilityHint("Opens Experience")
+                .accessibilityHint("Opens Dimensions")
             }
             .padding(.top, 40)
         }
@@ -143,7 +143,8 @@ struct HomeView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(st.playing ? "Now in" : "Continue").font(.caption).foregroundStyle(.white.opacity(0.6))
-                    Text(st.name).font(.subheadline).foregroundStyle(.white).lineLimit(1)
+                    Text(st.songCount > 1 ? "\(st.name) · \(st.songTitle)" : st.name)
+                        .font(.subheadline).foregroundStyle(.white).lineLimit(1)
                     if st.playing && !st.sectionTitle.isEmpty {
                         Text(st.sectionTitle).font(.caption).foregroundStyle(Theme.accent)
                     }

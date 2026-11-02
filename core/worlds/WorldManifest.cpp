@@ -143,4 +143,48 @@ Json worldToJson(const WorldManifest& w) {
     return j;
 }
 
+std::optional<DimensionManifest> parseDimension(const Json& j, std::string* error) {
+    auto fail = [&](const std::string& m) -> std::optional<DimensionManifest> { if (error) *error = m; return std::nullopt; };
+    if (!j.is_object() || j.value("format", std::string{}) != "atmos.world") return fail("not a Dimension manifest");
+    DimensionManifest d;
+    d.id = j.value("id", std::string{});
+    d.name = j.value("name", std::string{});
+    d.artist = j.value("artist", std::string{});
+    d.tier = j.value("tier", std::string{"free"});
+    if (d.id.empty()) return fail("Dimension needs an id");
+    if (!j.contains("songs")) {
+        auto w = parseWorld(j, error);
+        if (!w) return std::nullopt;
+        d.unlock = w->unlock;
+        d.songs.push_back(std::move(*w));
+        return d;
+    }
+    if (!j["songs"].is_array() || j["songs"].empty()) return fail("songs must be a non-empty list");
+    if (j["songs"].size() > 8) return fail("at most 8 songs in a Dimension");
+    if (j.contains("unlock")) {
+        auto u = parseConditions(j["unlock"], error);
+        if (!u) return std::nullopt;
+        d.unlock = *u;
+    }
+    for (const auto& sj : j["songs"]) {
+        if (!sj.is_object()) return fail("each song must be an object");
+        Json song = sj;
+        const std::string sid = sj.value("id", std::string{});
+        if (sid.empty()) return fail("each song needs an id");
+        song["format"] = "atmos.world";
+        song["id"] = d.id + "/" + sid;
+        song["name"] = sj.value("title", sid);
+        if (!song.contains("artist")) song["artist"] = d.artist;
+        song["tier"] = d.tier;
+        song.erase("title");
+        std::string err;
+        auto w = parseWorld(song, &err);
+        if (!w) return fail("song " + sid + ": " + err);
+        for (const auto& other : d.songs)
+            if (other.id == w->id) return fail("duplicate song id " + sid);
+        d.songs.push_back(std::move(*w));
+    }
+    return d;
+}
+
 } // namespace atmos::core

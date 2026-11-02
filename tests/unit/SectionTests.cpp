@@ -161,28 +161,134 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
     const fs::path root = fs::path(ATMOS_SOURCE_DIR) / "apps/ios/Viksen/Resources/Worlds";
     // Song lengths (seconds) of the built-in audio, which lives outside this repository.
     const std::map<std::string, double> lengths = {
-        {"hinds-of-morrow", 561.4}, {"light-of-a-distant-sun", 425.97}, {"steel-steam-and-borrowed-dreams", 683.55}};
-    int count = 0;
+        {"hinds-of-morrow", 561.4}, {"light-of-a-distant-sun", 425.97}, {"steel-steam-and-borrowed-dreams", 683.55},
+        {"silent-alley-in-different-times/the-silent-alley", 355.37},
+        {"silent-alley-in-different-times/in-different-times", 436.65}};
+    int songs = 0;
     for (const auto& dir : fs::directory_iterator(root)) {
         std::ifstream in(dir.path() / "world.json");
         REQUIRE(in.good());
         std::string err;
-        auto w = parseWorld(Json::parse(in), &err);
-        if (!w) std::printf("%s: %s\n", dir.path().filename().string().c_str(), err.c_str());
-        REQUIRE(w.has_value());
-        CHECK(w->id == dir.path().filename().string());
-        CHECK(w->artist == "Krowsingre");
-        CHECK(!w->sections.empty());
-        const auto len = lengths.find(w->id);
-        REQUIRE(len != lengths.end());
-        double prevEnd = 0;
-        for (const auto& s : w->sections) {
-            CHECK(s.toSeconds <= len->second + 0.5);       // within the song
-            CHECK(s.fromSeconds >= prevEnd - 1e-6);          // in order, no overlaps
-            prevEnd = s.toSeconds;
-            CHECK(s.when.all.empty() || !s.label.empty());   // every reactive part says why it plays
+        auto d = parseDimension(Json::parse(in), &err);
+        if (!d) std::printf("%s: %s\n", dir.path().filename().string().c_str(), err.c_str());
+        REQUIRE(d.has_value());
+        CHECK(d->id == dir.path().filename().string());
+        CHECK(d->artist == "Krowsingre");
+        for (const auto& w : d->songs) {
+            CHECK(!w.sections.empty());
+            CHECK(w.stems.size() <= 16);
+            const auto len = lengths.find(w.id);
+            if (len == lengths.end()) std::printf("unknown song %s\n", w.id.c_str());
+            REQUIRE(len != lengths.end());
+            double prevEnd = 0;
+            for (const auto& s : w.sections) {
+                CHECK(s.toSeconds <= len->second + 0.5);       // within the song
+                CHECK(s.fromSeconds >= prevEnd - 1e-6);          // in order, no overlaps
+                prevEnd = s.toSeconds;
+                CHECK(s.when.all.empty() || !s.label.empty());   // every reactive part says why it plays
+            }
+            ++songs;
         }
-        ++count;
     }
-    CHECK(count == 3);
+    CHECK(songs == 5);
+}
+
+namespace {
+Json twoSongDimension() {
+    return Json::parse(R"({
+      "format": "atmos.world", "schemaVersion": 1, "id": "duo", "name": "Duo", "artist": "Krowsingre", "tier": "free",
+      "songs": [
+        {"id": "a", "title": "Song A", "music": {"tempo": 120, "key": "C major"},
+         "adaptive": {"jumpEveryBars": 1, "minStayBars": 1, "crossfadeBeats": 0.5}, "fadeSeconds": 0.5,
+         "stems": [{"id": "x", "file": "a-x.wav"}],
+         "sections": [{"id": "calm", "title": "Calm", "fromBar": 0, "toBar": 4, "when": {"all": [{"type": "still"}]}, "label": "You are still"}]},
+        {"id": "b", "title": "Song B", "music": {"tempo": 90, "key": "D minor"},
+         "adaptive": {"jumpEveryBars": 1, "minStayBars": 1, "crossfadeBeats": 0.5}, "fadeSeconds": 0.5,
+         "stems": [{"id": "x", "file": "b-x.wav"}, {"id": "y", "file": "b-y.wav"}],
+         "sections": [{"id": "drive", "title": "Drive", "fromBar": 0, "toBar": 3, "when": {"all": [{"type": "moving"}]}, "label": "You are moving"}]}
+      ]})");
+}
+} // namespace
+
+TEST_CASE("worlds/multi-song Dimension parses; single-song files are one-song Dimensions") {
+    auto d = parseDimension(twoSongDimension());
+    REQUIRE(d.has_value());
+    CHECK(d->songs.size() == 2);
+    CHECK(d->songs[0].id == "duo/a");
+    CHECK(d->songs[1].name == "Song B");
+    CHECK(d->songs[1].artist == "Krowsingre");
+    CHECK(d->songs[1].tempo == 90.0);
+    CHECK(d->totalStems() == 3);
+    auto single = parseDimension(sectionWorld());
+    REQUIRE(single.has_value());
+    CHECK(single->songs.size() == 1);
+    Json bad = twoSongDimension();
+    bad["songs"][1]["id"] = "a";
+    CHECK(!parseDimension(bad).has_value());
+}
+
+TEST_CASE("session/multi-song Dimension: moving changes the song; a finished song hands over") {
+    auto d = parseDimension(twoSongDimension());
+    REQUIRE(d.has_value());
+    const double rate = 48000;
+    auto tone = [&](double f, double seconds) {
+        return std::make_shared<const AudioClip>(test::makeSine(rate, static_cast<int>(rate * seconds), f, 0.3f));
+    };
+    std::map<std::string, std::shared_ptr<const AudioClip>> files = {
+        {"a-x.wav", tone(220, 8)}, {"b-x.wav", tone(880, 8)}, {"b-y.wav", tone(660, 8)}};
+    LiveSession::StemFileDecoder decode = [&](const std::string& f, double, std::string& err) -> std::unique_ptr<StemDecoder> {
+        auto it = files.find(f);
+        if (it == files.end()) { err = "missing " + f; return nullptr; }
+        return std::make_unique<ClipStemDecoder>(it->second);
+    };
+    LiveSession s(rate, 256);
+    s.setWorldSpatialEnabled(false);
+    std::string err;
+    REQUIRE(s.loadDimension(*d, decode, &err));
+    ConditionContext ctx;
+    ctx.env.motionAvailable = true;
+    ctx.env.still = true;
+    std::vector<float> l(256), r(256);
+    float* outs[2] = {l.data(), r.data()};
+    auto run = [&](double seconds) {
+        for (int i = 0; i < static_cast<int>(seconds * rate / 256); ++i) {
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+            while (s.worldStatus().playing && s.engine().worldPlayer().readableFrames() < 256 &&
+                   std::chrono::steady_clock::now() < deadline)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            s.updateWorld(256.0 / rate, ctx);
+            s.engine().process(nullptr, 0, outs, 2, 256);
+        }
+    };
+    s.updateWorld(0, ctx);
+    s.startWorld(true);
+    run(2.0);
+    auto st = s.worldStatus();
+    CHECK(st.name == "Duo");
+    CHECK(st.id == "duo");
+    CHECK(st.songCount == 2);
+    CHECK(st.songIndex == 0);
+    CHECK(st.songTitle == "Song A");
+    // Start moving: song A has no moving part, song B does -> after a hold and a fade, song B.
+    ctx.env.still = false;
+    ctx.env.moving = true;
+    run(10.0);
+    st = s.worldStatus();
+    CHECK(st.songIndex == 1);
+    CHECK(st.songTitle == "Song B");
+    CHECK(st.sectionTitle == "Drive");
+    CHECK(st.stems.size() == 2);
+    CHECK(st.playing);
+    // Senses off (composed): song B plays to its end (8 s), then song A follows.
+    ctx.env.motionAvailable = false;
+    ctx.env.moving = false;
+    run(12.0);
+    st = s.worldStatus();
+    CHECK(st.songIndex == 0);
+    CHECK(st.songSwitches >= 2);
+    // Leaving during a song stops for good.
+    s.stopWorld(true);
+    run(1.0);
+    CHECK(!s.worldStatus().playing);
+    s.unloadWorld();
 }

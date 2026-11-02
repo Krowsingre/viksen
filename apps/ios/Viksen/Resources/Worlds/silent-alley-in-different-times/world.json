@@ -1,0 +1,698 @@
+{
+  "format": "atmos.world",
+  "schemaVersion": 1,
+  "id": "silent-alley-in-different-times",
+  "name": "The Silent Alley & In Different Times",
+  "artist": "Krowsingre",
+  "tier": "experience",
+  "songs": [
+    {
+      "id": "the-silent-alley",
+      "title": "The Silent Alley",
+      "music": {
+        "tempo": 89.145,
+        "key": "C minor",
+        "beatsPerBar": 4,
+        "barOffsetSeconds": 0.048
+      },
+      "adaptive": {
+        "jumpEveryBars": 4,
+        "minStayBars": 8,
+        "crossfadeBeats": 2
+      },
+      "fadeSeconds": 4,
+      "stems": [
+        {
+          "id": "lead-vocals",
+          "file": "silent-alley-lead-vocals.m4a",
+          "title": "Lead Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 5,
+            "distance": 1.2,
+            "width": 20
+          }
+        },
+        {
+          "id": "backing-vocals",
+          "file": "silent-alley-backing-vocals.m4a",
+          "title": "Backing Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 10,
+            "distance": 2.2,
+            "width": 150
+          }
+        },
+        {
+          "id": "drums",
+          "file": "silent-alley-drums.m4a",
+          "title": "Drums",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -5,
+            "distance": 2.0,
+            "width": 70
+          }
+        },
+        {
+          "id": "bass",
+          "file": "silent-alley-bass.m4a",
+          "title": "Bass",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -10,
+            "distance": 1.4,
+            "width": 20
+          }
+        },
+        {
+          "id": "guitar",
+          "file": "silent-alley-guitar.m4a",
+          "title": "Guitar",
+          "spatial": {
+            "azimuth": 65,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 30
+          }
+        },
+        {
+          "id": "keyboard",
+          "file": "silent-alley-keyboard.m4a",
+          "title": "Keyboard",
+          "spatial": {
+            "azimuth": -40,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 60
+          }
+        },
+        {
+          "id": "percussion",
+          "file": "silent-alley-percussion.m4a",
+          "title": "Percussion",
+          "spatial": {
+            "azimuth": -110,
+            "elevation": 0,
+            "distance": 2.2,
+            "width": 50
+          }
+        },
+        {
+          "id": "strings",
+          "file": "silent-alley-strings.m4a",
+          "title": "Strings",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 20,
+            "distance": 3.0,
+            "width": 160
+          }
+        },
+        {
+          "id": "synth",
+          "file": "silent-alley-synth.m4a",
+          "title": "Synth",
+          "spatial": {
+            "azimuth": 180,
+            "elevation": 25,
+            "distance": 3.0,
+            "width": 100
+          }
+        },
+        {
+          "id": "other",
+          "file": "silent-alley-other.m4a",
+          "title": "Textures",
+          "spatial": {
+            "azimuth": 140,
+            "elevation": 10,
+            "distance": 2.5,
+            "width": 60
+          }
+        },
+        {
+          "id": "brass",
+          "file": "silent-alley-brass.m4a",
+          "title": "Brass",
+          "spatial": {
+            "azimuth": 100,
+            "elevation": 5,
+            "distance": 2.5,
+            "width": 40
+          }
+        },
+        {
+          "id": "woodwinds",
+          "file": "silent-alley-woodwinds.m4a",
+          "title": "Woodwinds",
+          "spatial": {
+            "azimuth": -65,
+            "elevation": 10,
+            "distance": 2.0,
+            "width": 30
+          }
+        }
+      ],
+      "rules": [
+        {
+          "stem": "strings",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          },
+          "gainDb": 0,
+          "otherwiseDb": -3,
+          "label": "Strings open up in the quiet"
+        },
+        {
+          "stem": "drums",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.5
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "Drums push with your heart rate"
+        }
+      ],
+      "sections": [
+        {
+          "id": "streetlight",
+          "title": "Streetlight",
+          "fromBar": 0,
+          "toBar": 12,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "timeWindow",
+                "from": 21,
+                "to": 5
+              }
+            ]
+          }
+        },
+        {
+          "id": "cobblestones",
+          "title": "Cobblestones",
+          "fromBar": 12,
+          "toBar": 28,
+          "label": ""
+        },
+        {
+          "id": "echoes",
+          "title": "Echoes",
+          "fromBar": 28,
+          "toBar": 52,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "doorways",
+          "title": "Doorways",
+          "fromBar": 52,
+          "toBar": 60,
+          "label": ""
+        },
+        {
+          "id": "crowd",
+          "title": "Crowd",
+          "fromBar": 60,
+          "toBar": 84,
+          "label": "Your surroundings are loud",
+          "when": {
+            "all": [
+              {
+                "type": "loud"
+              }
+            ]
+          }
+        },
+        {
+          "id": "footsteps",
+          "title": "Footsteps",
+          "fromBar": 84,
+          "toBar": 100,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "pause",
+          "title": "Pause",
+          "fromBar": 100,
+          "toBar": 108,
+          "label": ""
+        },
+        {
+          "id": "hush",
+          "title": "Hush",
+          "fromBar": 108,
+          "toBar": 112,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "last-light",
+          "title": "Last Light",
+          "fromBar": 112,
+          "toBar": 131.9,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "timeWindow",
+                "from": 21,
+                "to": 5
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "in-different-times",
+      "title": "In Different Times",
+      "music": {
+        "tempo": 131.045,
+        "key": "A major",
+        "beatsPerBar": 4,
+        "barOffsetSeconds": 0.195
+      },
+      "adaptive": {
+        "jumpEveryBars": 4,
+        "minStayBars": 8,
+        "crossfadeBeats": 1
+      },
+      "fadeSeconds": 4,
+      "stems": [
+        {
+          "id": "lead-vocals",
+          "file": "different-times-lead-vocals.m4a",
+          "title": "Lead Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 5,
+            "distance": 1.2,
+            "width": 20
+          }
+        },
+        {
+          "id": "backing-vocals",
+          "file": "different-times-backing-vocals.m4a",
+          "title": "Backing Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 10,
+            "distance": 2.2,
+            "width": 150
+          }
+        },
+        {
+          "id": "drums",
+          "file": "different-times-drums.m4a",
+          "title": "Drums",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -5,
+            "distance": 2.0,
+            "width": 70
+          }
+        },
+        {
+          "id": "bass",
+          "file": "different-times-bass.m4a",
+          "title": "Bass",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -10,
+            "distance": 1.4,
+            "width": 20
+          }
+        },
+        {
+          "id": "guitar",
+          "file": "different-times-guitar.m4a",
+          "title": "Guitar",
+          "spatial": {
+            "azimuth": 65,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 30
+          }
+        },
+        {
+          "id": "keyboard",
+          "file": "different-times-keyboard.m4a",
+          "title": "Keyboard",
+          "spatial": {
+            "azimuth": -40,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 60
+          }
+        },
+        {
+          "id": "percussion",
+          "file": "different-times-percussion.m4a",
+          "title": "Percussion",
+          "spatial": {
+            "azimuth": -110,
+            "elevation": 0,
+            "distance": 2.2,
+            "width": 50
+          }
+        },
+        {
+          "id": "strings",
+          "file": "different-times-strings.m4a",
+          "title": "Strings",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 20,
+            "distance": 3.0,
+            "width": 160
+          }
+        },
+        {
+          "id": "synth",
+          "file": "different-times-synth.m4a",
+          "title": "Synth",
+          "spatial": {
+            "azimuth": 180,
+            "elevation": 25,
+            "distance": 3.0,
+            "width": 100
+          }
+        },
+        {
+          "id": "other",
+          "file": "different-times-other.m4a",
+          "title": "Textures",
+          "spatial": {
+            "azimuth": 140,
+            "elevation": 10,
+            "distance": 2.5,
+            "width": 60
+          }
+        },
+        {
+          "id": "brass",
+          "file": "different-times-brass.m4a",
+          "title": "Brass",
+          "spatial": {
+            "azimuth": 100,
+            "elevation": 5,
+            "distance": 2.5,
+            "width": 40
+          }
+        },
+        {
+          "id": "woodwinds",
+          "file": "different-times-woodwinds.m4a",
+          "title": "Woodwinds",
+          "spatial": {
+            "azimuth": -65,
+            "elevation": 10,
+            "distance": 2.0,
+            "width": 30
+          }
+        }
+      ],
+      "rules": [
+        {
+          "stem": "strings",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          },
+          "gainDb": 0,
+          "otherwiseDb": -3,
+          "label": "Strings open up in the quiet"
+        },
+        {
+          "stem": "drums",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.5
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "Drums push with your heart rate"
+        }
+      ],
+      "sections": [
+        {
+          "id": "then",
+          "title": "Then",
+          "fromBar": 0,
+          "toBar": 4,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "turning",
+          "title": "Turning",
+          "fromBar": 4,
+          "toBar": 16,
+          "label": ""
+        },
+        {
+          "id": "letters",
+          "title": "Letters",
+          "fromBar": 16,
+          "toBar": 28,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "between",
+          "title": "Between",
+          "fromBar": 28,
+          "toBar": 44,
+          "label": ""
+        },
+        {
+          "id": "running-late",
+          "title": "Running Late",
+          "fromBar": 44,
+          "toBar": 64,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "timeWindow",
+                "from": 7,
+                "to": 18
+              }
+            ]
+          }
+        },
+        {
+          "id": "rush-hour",
+          "title": "Rush Hour",
+          "fromBar": 64,
+          "toBar": 92,
+          "label": "Your surroundings are loud",
+          "when": {
+            "all": [
+              {
+                "type": "loud"
+              }
+            ]
+          }
+        },
+        {
+          "id": "still-frame",
+          "title": "Still Frame",
+          "fromBar": 92,
+          "toBar": 104,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "passing",
+          "title": "Passing",
+          "fromBar": 104,
+          "toBar": 128,
+          "label": ""
+        },
+        {
+          "id": "heartbeat",
+          "title": "Heartbeat",
+          "fromBar": 128,
+          "toBar": 148,
+          "label": "Your heart rate is up",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        {
+          "id": "breath",
+          "title": "Breath",
+          "fromBar": 148,
+          "toBar": 152,
+          "label": ""
+        },
+        {
+          "id": "old-photographs",
+          "title": "Old Photographs",
+          "fromBar": 152,
+          "toBar": 164,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "timeWindow",
+                "from": 21,
+                "to": 5
+              }
+            ]
+          }
+        },
+        {
+          "id": "hinge",
+          "title": "Hinge",
+          "fromBar": 164,
+          "toBar": 168,
+          "label": ""
+        },
+        {
+          "id": "onward",
+          "title": "Onward",
+          "fromBar": 168,
+          "toBar": 200,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-city",
+          "title": "The City",
+          "fromBar": 200,
+          "toBar": 228,
+          "label": "Your surroundings are loud",
+          "when": {
+            "all": [
+              {
+                "type": "loud"
+              }
+            ]
+          }
+        },
+        {
+          "id": "now",
+          "title": "Now",
+          "fromBar": 228,
+          "toBar": 238.3,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "timeWindow",
+                "from": 21,
+                "to": 5
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

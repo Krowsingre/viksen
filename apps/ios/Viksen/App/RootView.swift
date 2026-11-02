@@ -2,8 +2,13 @@ import SwiftUI
 
 enum AppTab: Hashable { case home, experience, studio, library }
 
-/// Tabs: Home, Experience (Dimensions live here), Studio (only once purchased), Library.
+/// Tabs: Home and Dimensions (the Experience). Studio (once purchased) and Library are
+/// hidden for now by owner request; flip `showMoreTabs` to bring them back.
 /// Settings and About open from the gear on Home.
+enum AppTabs {
+    static let showMoreTabs = false
+}
+
 struct RootView: View {
     @Environment(Store.self) private var store
     @State private var tab: AppTab = .home
@@ -14,16 +19,18 @@ struct RootView: View {
                 .tabItem { Label("Home", systemImage: "house") }
                 .tag(AppTab.home)
             ExperienceView()
-                .tabItem { Label("Experience", systemImage: "play.circle") }
+                .tabItem { Label("Dimensions", systemImage: "square.stack.3d.up") }
                 .tag(AppTab.experience)
-            if store.tier >= .studio {
+            if AppTabs.showMoreTabs && store.tier >= .studio {
                 StudioView()
                     .tabItem { Label("Studio", systemImage: "slider.horizontal.3") }
                     .tag(AppTab.studio)
             }
-            LibraryView()
-                .tabItem { Label("Library", systemImage: "books.vertical") }
-                .tag(AppTab.library)
+            if AppTabs.showMoreTabs {
+                LibraryView()
+                    .tabItem { Label("Library", systemImage: "books.vertical") }
+                    .tag(AppTab.library)
+            }
         }
         .onChange(of: store.tier) { _, tier in
             if tier < .studio && tab == .studio { tab = .home }

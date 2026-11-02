@@ -38,12 +38,16 @@ constexpr int kMaxBlock = 8192;   // MiniaudioHost's largest period
 #endif
 
 @implementation AtmosWorldInfo
+- (instancetype)init {
+    if ((self = [super init])) { _worldID = @""; _name = @""; _artist = @""; _musicalKey = @""; _tier = @"free"; _songCount = 1; _songTitles = @[]; }
+    return self;
+}
 @end
 @implementation AtmosWorldStemStatus
 @end
 @implementation AtmosWorldStatus
 - (instancetype)init {
-    if ((self = [super init])) { _worldID = @""; _name = @""; _stems = @[]; _sectionTitle = @""; _sectionLabel = @""; _composed = YES; }
+    if ((self = [super init])) { _worldID = @""; _name = @""; _stems = @[]; _sectionTitle = @""; _sectionLabel = @""; _songTitle = @""; _songCount = 1; _composed = YES; }
     return self;
 }
 @end
@@ -61,18 +65,20 @@ NSURL* folderForWorld(NSString *worldID) {
     return [userDimensionsFolder() URLByAppendingPathComponent:worldID];
 }
 
-std::optional<atmos::core::WorldManifest> readWorld(NSURL* folder, std::string* error) {
+std::optional<atmos::core::DimensionManifest> readWorld(NSURL* folder, std::string* error) {
     NSData* data = [NSData dataWithContentsOfURL:[folder URLByAppendingPathComponent:@"world.json"]];
     if (!data) { if (error) *error = "world.json missing"; return std::nullopt; }
     const auto j = atmos::core::Json::parse(static_cast<const char*>(data.bytes), static_cast<const char*>(data.bytes) + data.length,
                                             nullptr, false);
     if (j.is_discarded()) { if (error) *error = "world.json is not valid JSON"; return std::nullopt; }
-    return atmos::core::parseWorld(j, error);
+    return atmos::core::parseDimension(j, error);
 }
 
-bool stemsPresent(NSURL* folder, const atmos::core::WorldManifest& w) {
-    for (const auto& s : w.stems)
-        if (![[NSFileManager defaultManager] fileExistsAtPath:[folder URLByAppendingPathComponent:@(s.file.c_str())].path]) return false;
+// Every stem of every song is in the folder.
+bool stemsPresent(NSURL* folder, const atmos::core::DimensionManifest& d) {
+    for (const auto& w : d.songs)
+        for (const auto& s : w.stems)
+            if (![[NSFileManager defaultManager] fileExistsAtPath:[folder URLByAppendingPathComponent:@(s.file.c_str())].path]) return false;
     return true;
 }
 } // namespace
@@ -461,10 +467,15 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
             info.worldID = wid;
             info.name = @(w->name.c_str());
             info.artist = @(w->artist.c_str());
-            info.musicalKey = @(w->key.c_str());
+            const auto &first = w->songs.front();
+            info.musicalKey = @(first.key.c_str());
             info.tier = pass == 0 ? @(w->tier.c_str()) : @"free";
-            info.tempo = w->tempo;
-            info.stemCount = static_cast<NSInteger>(w->stems.size());
+            info.tempo = first.tempo;
+            info.songCount = static_cast<NSInteger>(w->songs.size());
+            NSMutableArray<NSString *> *titles = [NSMutableArray array];
+            for (const auto &song : w->songs) [titles addObject:@(song.name.c_str())];
+            info.songTitles = titles;
+            info.stemCount = static_cast<NSInteger>(w->totalStems());
             info.audioAvailable = stemsPresent(dir, *w);
             info.userMade = pass == 1;
             info.folderURL = dir;
@@ -484,10 +495,11 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     if (!w) return [NSString stringWithFormat:@"Not a Dimension: %s", err.c_str()];
     if (!stemsPresent(folder, *w)) return @"Some of this Dimension's audio files are missing.";
     unsigned long long total = 0;
-    for (const auto &s : w->stems) {
-        NSDictionary *a = [[NSFileManager defaultManager] attributesOfItemAtPath:[folder URLByAppendingPathComponent:@(s.file.c_str())].path error:nil];
-        total += [a fileSize];
-    }
+    for (const auto &song : w->songs)
+        for (const auto &s : song.stems) {
+            NSDictionary *a = [[NSFileManager defaultManager] attributesOfItemAtPath:[folder URLByAppendingPathComponent:@(s.file.c_str())].path error:nil];
+            total += [a fileSize];
+        }
     if (total > 2ull * 1024 * 1024 * 1024) return @"This Dimension is larger than 2 GB.";
     return nil;
 }
@@ -501,18 +513,10 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         if (error) *error = makeError("This build does not include this Dimension's music yet.");
         return NO;
     }
-    std::vector<std::string> files;
-    for (const auto &s : w->stems) files.push_back(s.file);
-    atmos::core::StemDecoderFactory factory = [folder, files](double rate, std::string &e) {
-        std::vector<std::unique_ptr<atmos::core::StemDecoder>> v;
-        for (const auto &f : files) {
-            auto d = atmos::ios::makeStemDecoder([folder URLByAppendingPathComponent:@(f.c_str())], rate, e);
-            if (!d) return std::vector<std::unique_ptr<atmos::core::StemDecoder>>{};
-            v.push_back(std::move(d));
-        }
-        return v;
+    atmos::core::LiveSession::StemFileDecoder decode = [folder](const std::string &f, double rate, std::string &e) {
+        return atmos::ios::makeStemDecoder([folder URLByAppendingPathComponent:@(f.c_str())], rate, e);
     };
-    if (!_session->loadWorld(*w, factory, &err)) { if (error) *error = makeError(err); return NO; }
+    if (!_session->loadDimension(*w, decode, &err)) { if (error) *error = makeError(err); return NO; }
     return YES;
 }
 
@@ -703,6 +707,8 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     s.composed = st.composed;
     s.sectionTitle = @(st.sectionTitle.c_str());
     s.sectionLabel = @(st.sectionLabel.c_str());
+    s.songTitle = @(st.songTitle.c_str());
+    s.songCount = st.songCount;
     NSMutableArray *stems = [NSMutableArray array];
     for (const auto &x : st.stems) {
         AtmosWorldStemStatus *t = [AtmosWorldStemStatus new];

@@ -30,3 +30,5 @@
 | 26 | **Studio is invisible until purchased**: no Studio tab, Home card, song import, Library songs or projects for Free/Experience. **Dimensions live inside Experience** (no separate tab). **About** is only in Settings. | Owner directive |
 | 27 | The microphone in Experience **senses** the room by default; hearing the (transformed) room under the music is a separate opt-in ("Blend the room in"). | Fix for "not an enjoyable experience" |
 | 28 | Built-in songs may have up to **16 stems** (Light of a Distant Sun 11, Steel, Steam, and Borrowed Dreams 12). Studio imports stay at 8. | Engineering |
+| 29 | **Dimensions can hold several songs** (first: *The Silent Alley* + *In Different Times*). The Dimension moves to the other song when its parts fit the listener better, or when a song ends. | Owner request |
+| 30 | **Tab bar for now: Home and Dimensions only.** Studio and Library tabs are hidden (`AppTabs.showMoreTabs`). | Owner directive |

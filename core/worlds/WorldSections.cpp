@@ -95,6 +95,7 @@ int64_t SectionPlanner::decide(int64_t b) {
     if (sections_.empty() || composed) {
         if (!atSongEnd) return b;
         lastSection_ = -1;
+        if (stopAtEnd_.load(std::memory_order_relaxed)) return kEnd;
         return loopStart_;                     // as composed: play through, then from the top
     }
     const bool curOk = cur >= 0 && (acc >> cur & 1);

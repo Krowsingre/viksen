@@ -68,7 +68,7 @@ struct ExperienceView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("Experience")
+            .navigationTitle("Dimensions")
             .toolbar {
                 if store.tier >= .studio {
                     ToolbarItem(placement: .barLeading) {
@@ -270,6 +270,9 @@ private struct NowPlayingSection: View {
                 HStack(alignment: .center, spacing: 14) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(st.name).font(.title3.weight(.semibold))
+                        if st.songCount > 1 {
+                            Text(st.songTitle).font(.subheadline)
+                        }
                         if !st.sectionTitle.isEmpty {
                             Text(st.sectionTitle).font(.subheadline).foregroundStyle(Theme.accent)
                         }
@@ -352,6 +355,7 @@ private struct DimensionPickerSection: View {
     private func subtitle(_ w: AtmosWorldInfo, locked: Bool) -> String {
         var parts: [String] = []
         if !w.artist.isEmpty { parts.append(w.artist) }
+        if w.songCount > 1 { parts.append("\(w.songCount) songs") }
         if w.userMade { parts.append("yours") }
         if locked { parts.append(requiredTier(w).title) }
         else if !w.audioAvailable { parts.append("music not in this build") }

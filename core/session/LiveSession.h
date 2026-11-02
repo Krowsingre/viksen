@@ -72,6 +72,9 @@ struct WorldStatus {
     bool composed = true;           // no reactive input matched: playing as written
     std::string sectionTitle;       // part of the song being heard now
     std::string sectionLabel;       // why it is playing ("You are moving")
+    std::string songTitle;          // the song being heard (Dimensions can hold several)
+    int songIndex = 0, songCount = 1;
+    uint64_t songSwitches = 0;
     uint64_t sectionJumps = 0;
     std::vector<WorldStemStatus> stems;
 };
@@ -134,6 +137,10 @@ public:
 
     // ---- Worlds (built-in music re-mixed by the surroundings) ----
     bool loadWorld(const WorldManifest& world, StemDecoderFactory factory, std::string* error = nullptr);
+    // A Dimension with one or more songs; `decode` opens one stem file (relative to the
+    // Dimension folder) at the engine rate.
+    using StemFileDecoder = std::function<std::unique_ptr<StemDecoder>(const std::string& file, double rate, std::string& error)>;
+    bool loadDimension(const DimensionManifest& dimension, StemFileDecoder decode, std::string* error = nullptr);
     void unloadWorld();
     void startWorld(bool quickFade = false);  // fades in (quick: 150 ms, for transport play)
     void stopWorld(bool quickFade = false);   // fades out, then stops streaming (position kept)
@@ -179,6 +186,17 @@ private:
     std::unique_ptr<WorldFeeder> feeder_;
     std::shared_ptr<SectionPlanner> planner_;
     SectionChoice lastChoice_;
+    // Multi-song Dimensions.
+    std::optional<DimensionManifest> dimension_;
+    StemFileDecoder fileDecoder_;
+    int song_ = 0, switchTo_ = -1, candidate_ = -1;
+    double candidateFor_ = 0, switchFromSeconds_ = 0;
+    uint64_t songSwitches_ = 0;
+    bool loadSong(const WorldManifest& world, StemDecoderFactory factory, std::string* error);
+    StemDecoderFactory songFactory(int song) const;
+    void updateSongChoice(double dt, const ConditionContext& context);
+    void beginSongSwitch(int song, const ConditionContext& context, bool immediate);
+    void finishSongSwitch();
     std::unique_ptr<WorldDirector> director_;
     std::unique_ptr<WorldLifecycle> lifecycle_;
     int64_t resumeFrame_ = 0;

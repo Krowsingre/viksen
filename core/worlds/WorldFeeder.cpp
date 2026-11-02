@@ -42,6 +42,7 @@ void WorldFeeder::start(int64_t frame) {
         std::lock_guard<std::mutex> lock(segMutex_);
         segments_.assign(1, {0, frame});
     }
+    endWritten_.store(UINT64_MAX);
     player_.setStemCount(static_cast<int>(decoders_.size()));
     player_.requestFlush();       // feeder thread is not running: safe producer-side call
     running_.store(true);
@@ -72,6 +73,11 @@ int64_t WorldFeeder::playbackFrame() const {
         seg = s;
     }
     return std::clamp<int64_t>(seg.second + static_cast<int64_t>(played - seg.first), loopStart_, loopEnd_ - 1);
+}
+
+bool WorldFeeder::finishedPlaying() const {
+    const uint64_t end = endWritten_.load();
+    return end != UINT64_MAX && player_.framesPlayed() >= end;
 }
 
 void WorldFeeder::run() {
@@ -107,6 +113,16 @@ void WorldFeeder::run() {
 
         // ---- boundary: carry on, or jump (crossfaded) to another part of the song.
         const int64_t to = planner_ ? planner_->decide(pos) : (pos >= loopEnd_ ? loopStart_ : pos);
+        if (to == SectionPlanner::kEnd) {
+            // End of the song: keep the player fed with silence until the session moves on.
+            endWritten_.store(written);
+            std::fill(buf.begin(), buf.end(), 0.0f);
+            while (running_.load()) {
+                if (!waitForRoom(kChunk)) break;
+                for (size_t s = 0; s < stems; ++s) player_.write(static_cast<int>(s), buf.data(), kChunk);
+            }
+            break;
+        }
         if (to == pos && pos < loopEnd_) {
             boundary = boundaryAfter(pos);
             continue;

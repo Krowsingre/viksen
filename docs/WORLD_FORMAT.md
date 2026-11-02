@@ -69,3 +69,28 @@ parts of the song*.
   end of a part the song flows on if the next part suits, else moves to another suitable
   part. Jumps crossfade over `crossfadeBeats` and keep the bar phase.
 - Up to 64 sections and 16 stems.
+
+## Several songs in one Dimension
+
+List them under `songs`. Each song is a complete song description (its own `music`,
+`adaptive`, `stems`, `sections`, `rules`); the Dimension keeps `id`, `name`, `artist`,
+`tier` and `unlock`. Stem files share the Dimension folder, so prefix them by song.
+
+```json
+{"format": "atmos.world", "schemaVersion": 1, "id": "silent-alley-in-different-times",
+ "name": "…", "artist": "Krowsingre", "tier": "experience",
+ "songs": [
+   {"id": "the-silent-alley", "title": "The Silent Alley", "music": {"tempo": 89.145}, "stems": [{"id": "drums", "file": "silent-alley-drums.m4a"}], "sections": []},
+   {"id": "in-different-times", "title": "In Different Times", "music": {"tempo": 131.045}, "stems": [], "sections": []}
+ ]}
+```
+
+How the Dimension moves between its songs:
+- The current song keeps playing while one of its parts suits the listener.
+- When nothing in this song suits the listener's state but a part of another song does
+  (held for `minStayBars`), the song fades out over 3 s and the other song fades in at
+  the part that suits.
+- Played as composed (no sense steering), each song plays to its natural end and the next
+  song follows, in order, then around again.
+- Songs keep their own tempo and key; changes between songs are fades, not beat-matched.
+- Up to 8 songs.

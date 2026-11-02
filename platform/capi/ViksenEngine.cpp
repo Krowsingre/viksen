@@ -38,18 +38,19 @@ std::string pathUtf8(const fs::path& p) {
     return std::string(u.begin(), u.end());
 }
 
-std::optional<WorldManifest> readWorld(const fs::path& folder, std::string& error) {
+std::optional<DimensionManifest> readWorld(const fs::path& folder, std::string& error) {
     std::ifstream in(folder / "world.json", std::ios::binary);
     if (!in) { error = "world.json missing"; return std::nullopt; }
     const Json j = Json::parse(in, nullptr, false);
     if (j.is_discarded()) { error = "world.json is not valid JSON"; return std::nullopt; }
-    return parseWorld(j, &error);
+    return parseDimension(j, &error);
 }
 
-bool stemsPresent(const fs::path& folder, const WorldManifest& w) {
+bool stemsPresent(const fs::path& folder, const DimensionManifest& d) {
     std::error_code ec;
-    for (const auto& s : w.stems)
-        if (!fs::exists(folder / utf8Path(s.file.c_str()), ec)) return false;
+    for (const auto& w : d.songs)
+        for (const auto& s : w.stems)
+            if (!fs::exists(folder / utf8Path(s.file.c_str()), ec)) return false;
     return true;
 }
 
@@ -230,8 +231,11 @@ const char* vk_dimension_info(vk_engine* e, const char* folder) {
     const fs::path dir = utf8Path(folder);
     auto w = readWorld(dir, e->error);
     if (!w) return nullptr;
-    const Json j = {{"id", w->id}, {"name", w->name}, {"artist", w->artist}, {"key", w->key}, {"tier", w->tier},
-                    {"tempo", w->tempo}, {"stems", w->stems.size()}, {"audioAvailable", stemsPresent(dir, *w)}};
+    Json songs = Json::array();
+    for (const auto& song : w->songs) songs.push_back(song.name);
+    const Json j = {{"id", w->id}, {"name", w->name}, {"artist", w->artist}, {"key", w->songs.front().key}, {"tier", w->tier},
+                    {"tempo", w->songs.front().tempo}, {"stems", w->totalStems()}, {"songs", songs},
+                    {"audioAvailable", stemsPresent(dir, *w)}};
     return keep(e, j.dump());
 }
 
@@ -240,10 +244,11 @@ int vk_load_dimension(vk_engine* e, const char* folder) {
     auto w = readWorld(dir, e->error);
     if (!w) return 0;
     if (!stemsPresent(dir, *w)) return fail(e, "This build does not include this Dimension's music yet.");
-    std::vector<std::string> files;
-    for (const auto& s : w->stems) files.push_back(pathUtf8(dir / utf8Path(s.file.c_str())));
+    LiveSession::StemFileDecoder decode = [dir](const std::string& f, double rate, std::string& err) {
+        return atmos::desktop::makeMiniaudioStemDecoder(pathUtf8(dir / utf8Path(f.c_str())), rate, err);
+    };
     std::string err;
-    if (!e->session.loadWorld(*w, factoryFor(std::move(files)), &err)) return fail(e, err);
+    if (!e->session.loadDimension(*w, decode, &err)) return fail(e, err);
     return 1;
 }
 
@@ -299,6 +304,7 @@ const char* vk_world_status(vk_engine* e) {
                     {"position", st.positionSeconds}, {"length", st.lengthSeconds}, {"master", st.master},
                     {"underruns", st.underruns}, {"spatial", st.spatial}, {"hrtf", st.hrtf}, {"stems", stems},
                     {"adaptive", st.adaptive}, {"composed", st.composed}, {"section", st.sectionTitle},
+                    {"song", st.songTitle}, {"songCount", st.songCount},
                     {"why", st.sectionLabel}};
     return keep(e, j.dump());
 }

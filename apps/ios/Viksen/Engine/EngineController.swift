@@ -273,7 +273,12 @@ final class EngineController {
 
     private func refreshMeters() {
         meters = bridge.meters()
+        let previousSong = worldStatus.songTitle
         worldStatus = bridge.worldStatus()
+        if worldStatus.loaded && worldStatus.songCount > 1 && worldStatus.songTitle != previousSong && !previousSong.isEmpty {
+            AppLog.info("Dimension \(worldStatus.worldID): now \(worldStatus.songTitle)")
+            applySavedPositions(worldStatus.worldID)   // the new song has its own stems
+        }
         if isRecording {
             recordingSeconds = bridge.recordingSeconds
             if !bridge.recording {   // ended by the system (device change or storage limit)
@@ -723,7 +728,8 @@ final class EngineController {
         let elevation = worldStatus.stems[index].elevation
         bridge.moveStem(index, azimuth: azimuth, elevation: elevation, distance: distance)
         var saved = savedPositions(worldStatus.worldID)
-        saved[String(index)] = [Double(azimuth), Double(elevation), Double(distance)]
+        // Keyed by instrument, so a move carries across the songs of a Dimension.
+        saved[worldStatus.stems[index].title] = [Double(azimuth), Double(elevation), Double(distance)]
         UserDefaults.standard.set(saved, forKey: "positions." + worldStatus.worldID)
     }
 
@@ -740,8 +746,10 @@ final class EngineController {
     }
 
     private func applySavedPositions(_ worldID: String) {
-        for (key, v) in savedPositions(worldID) {
-            guard let i = Int(key), v.count == 3 else { continue }
+        let saved = savedPositions(worldID)
+        guard !saved.isEmpty else { return }
+        for (i, stem) in bridge.worldStatus().stems.enumerated() {
+            guard let v = saved[stem.title], v.count == 3 else { continue }
             bridge.moveStem(i, azimuth: Float(v[0]), elevation: Float(v[1]), distance: Float(v[2]))
         }
     }
