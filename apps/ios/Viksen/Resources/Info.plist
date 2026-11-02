@@ -30,6 +30,8 @@
 	<string>If you turn on weather-aware atmospheres, Viksen uses your approximate location to get the current weather from Apple. Your location is not stored.</string>
 	<key>NSLocationDefaultAccuracyReduced</key>
 	<true/>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Viksen does not write health data from iPhone. Workouts you start in the Viksen Apple Watch app are saved to Apple Health by the watch.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Motion and fitness data lets Viksen follow your head with compatible headphones and respond to walking, running and your step rhythm. It is used on this device only.</string>
 	<key>NSMicrophoneUsageDescription</key>
