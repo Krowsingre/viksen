@@ -94,3 +94,19 @@ How the Dimension moves between its songs:
   song follows, in order, then around again.
 - Songs keep their own tempo and key; changes between songs are fades, not beat-matched.
 - Up to 8 songs.
+
+## Shipping a Dimension (downloads)
+
+The app contains only each Dimension's `world.json`; the audio is an Apple-hosted,
+on-demand asset pack with the same id, holding `Dimensions/<id>/<stem files>`.
+
+1. Put the audio in the private assets repo: `worlds/<id>/*.m4a`.
+2. Put `world.json` in `apps/ios/Viksen/Resources/Worlds/<id>/`.
+3. Run the **Dimensions → App Store Connect (asset packs)** workflow with the id (or
+   empty for all). It packages with `xcrun ba-package` and uploads a new version;
+   once processed it is available to internal TestFlight builds.
+4. For external TestFlight and the App Store, submit the asset pack version for review
+   in App Store Connect (with or without an app build).
+
+Listeners download a Dimension by choosing it, and remove it from the Dimension list
+(swipe) or Settings › Downloaded Dimensions; removing frees the space immediately.
