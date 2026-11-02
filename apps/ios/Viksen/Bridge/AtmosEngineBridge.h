@@ -58,6 +58,8 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic) double tempo;
 @property (nonatomic) NSInteger stemCount;
 @property (nonatomic) BOOL audioAvailable;           // all stem files are in this build
+@property (nonatomic) BOOL userMade;                 // created/imported by the user (exportable); NO = built in
+@property (nonatomic, copy, nullable) NSURL *folderURL;
 @end
 
 @interface AtmosWorldStemStatus : NSObject
@@ -151,7 +153,10 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 - (AtmosMeterSnapshot *)meters NS_SWIFT_NAME(meters()); // also frees retired audio buffers; advances Worlds
 
 // ---- Worlds (built-in music that reacts to the surroundings) ----
-- (NSArray<AtmosWorldInfo *> *)availableWorlds;
+- (NSArray<AtmosWorldInfo *> *)availableWorlds;   // built-in + Documents/Dimensions
+// Validates a Dimension folder (world.json + every stem present, at most 8 stems, ≤ 2 GB).
+// Returns nil if valid, otherwise a user-facing reason.
+- (nullable NSString *)validateDimensionFolder:(NSURL *)folder NS_SWIFT_NAME(validateDimensionFolder(_:));
 - (BOOL)loadWorld:(NSString *)worldID error:(NSError **)error NS_SWIFT_NAME(loadWorld(_:));
 - (void)startWorld;
 - (void)stopWorld;

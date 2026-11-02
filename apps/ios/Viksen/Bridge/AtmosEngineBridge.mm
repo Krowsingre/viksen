@@ -37,6 +37,16 @@ using atmos::core::LiveSession;
 
 namespace {
 NSURL* worldsFolder() { return [[NSBundle mainBundle] URLForResource:@"Worlds" withExtension:nil]; }
+NSURL* userDimensionsFolder() {
+    NSURL *docs = [[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
+    return [docs URLByAppendingPathComponent:@"Dimensions" isDirectory:YES];
+}
+// Folder of a World by id: built-in first (built-ins can never be shadowed), then user-made.
+NSURL* folderForWorld(NSString *worldID) {
+    NSURL *builtIn = [worldsFolder() URLByAppendingPathComponent:worldID];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:[builtIn URLByAppendingPathComponent:@"world.json"].path]) return builtIn;
+    return [userDimensionsFolder() URLByAppendingPathComponent:worldID];
+}
 
 std::optional<atmos::core::WorldManifest> readWorld(NSURL* folder, std::string* error) {
     NSData* data = [NSData dataWithContentsOfURL:[folder URLByAppendingPathComponent:@"world.json"]];
@@ -333,30 +343,56 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 
 - (NSArray<AtmosWorldInfo *> *)availableWorlds {
     NSMutableArray *out = [NSMutableArray array];
-    NSURL *root = worldsFolder();
-    if (!root) return out;
-    NSArray<NSURL *> *dirs = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:root includingPropertiesForKeys:nil
-                                                                              options:NSDirectoryEnumerationSkipsHiddenFiles error:nil];
-    for (NSURL *dir in dirs) {
-        auto w = readWorld(dir, nullptr);
-        if (!w) continue;
-        AtmosWorldInfo *info = [AtmosWorldInfo new];
-        info.worldID = @(w->id.c_str());
-        info.name = @(w->name.c_str());
-        info.artist = @(w->artist.c_str());
-        info.musicalKey = @(w->key.c_str());
-        info.tier = @(w->tier.c_str());
-        info.tempo = w->tempo;
-        info.stemCount = static_cast<NSInteger>(w->stems.size());
-        info.audioAvailable = stemsPresent(dir, *w);
-        [out addObject:info];
+    NSMutableSet *seen = [NSMutableSet set];
+    for (int pass = 0; pass < 2; ++pass) {
+        NSURL *root = pass == 0 ? worldsFolder() : userDimensionsFolder();
+        if (!root) continue;
+        NSArray<NSURL *> *dirs = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:root includingPropertiesForKeys:nil
+                                                                                  options:NSDirectoryEnumerationSkipsHiddenFiles error:nil];
+        for (NSURL *dir in dirs) {
+            auto w = readWorld(dir, nullptr);
+            if (!w) continue;
+            NSString *wid = @(w->id.c_str());
+            // The folder name must match the id (that is how loadWorld finds it); built-ins win on clashes.
+            if ([seen containsObject:wid] || ![dir.lastPathComponent isEqualToString:wid]) continue;
+            [seen addObject:wid];
+            AtmosWorldInfo *info = [AtmosWorldInfo new];
+            info.worldID = wid;
+            info.name = @(w->name.c_str());
+            info.artist = @(w->artist.c_str());
+            info.musicalKey = @(w->key.c_str());
+            info.tier = pass == 0 ? @(w->tier.c_str()) : @"free";
+            info.tempo = w->tempo;
+            info.stemCount = static_cast<NSInteger>(w->stems.size());
+            info.audioAvailable = stemsPresent(dir, *w);
+            info.userMade = pass == 1;
+            info.folderURL = dir;
+            [out addObject:info];
+        }
     }
-    [out sortUsingComparator:^NSComparisonResult(AtmosWorldInfo *a, AtmosWorldInfo *b) { return [a.name compare:b.name]; }];
+    [out sortUsingComparator:^NSComparisonResult(AtmosWorldInfo *a, AtmosWorldInfo *b) {
+        if (a.userMade != b.userMade) return a.userMade ? NSOrderedDescending : NSOrderedAscending;
+        return [a.name compare:b.name];
+    }];
     return out;
 }
 
+- (NSString *)validateDimensionFolder:(NSURL *)folder {
+    std::string err;
+    auto w = readWorld(folder, &err);
+    if (!w) return [NSString stringWithFormat:@"Not a Dimension: %s", err.c_str()];
+    if (!stemsPresent(folder, *w)) return @"Some of this Dimension's audio files are missing.";
+    unsigned long long total = 0;
+    for (const auto &s : w->stems) {
+        NSDictionary *a = [[NSFileManager defaultManager] attributesOfItemAtPath:[folder URLByAppendingPathComponent:@(s.file.c_str())].path error:nil];
+        total += [a fileSize];
+    }
+    if (total > 2ull * 1024 * 1024 * 1024) return @"This Dimension is larger than 2 GB.";
+    return nil;
+}
+
 - (BOOL)loadWorld:(NSString *)worldID error:(NSError **)error {
-    NSURL *folder = [worldsFolder() URLByAppendingPathComponent:worldID];
+    NSURL *folder = folderForWorld(worldID);
     std::string err;
     auto w = readWorld(folder, &err);
     if (!w) { if (error) *error = makeError(err); return NO; }

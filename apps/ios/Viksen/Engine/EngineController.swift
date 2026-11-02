@@ -370,6 +370,108 @@ final class EngineController {
         studioActive ? studioStems.map { ["url": $0.url, "gainDb": $0.gainDb, "muted": $0.muted] } : []
     }
 
+    // MARK: User-made Dimensions (create, import, export, delete)
+
+    static var userDimensionsFolder: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Dimensions", isDirectory: true)
+    }
+
+    func refreshWorlds() { worlds = bridge.availableWorlds() }
+
+    private static func slug(_ name: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-"))
+        let base = name.lowercased().replacingOccurrences(of: " ", with: "-")
+            .unicodeScalars.filter { allowed.contains($0) }.map(String.init).joined()
+        return "user-" + (base.isEmpty ? "dimension" : String(base.prefix(40)))
+    }
+
+    /// Turns the current Studio session into a Dimension of your own (stems copied,
+    /// current levels and 3D layout kept).
+    func saveStudioAsDimension(named name: String) {
+        guard studioActive, !studioStems.isEmpty else { return }
+        let fm = FileManager.default
+        var id = Self.slug(name), n = 2
+        while fm.fileExists(atPath: Self.userDimensionsFolder.appendingPathComponent(id).path) { id = Self.slug(name) + "-\(n)"; n += 1 }
+        let folder = Self.userDimensionsFolder.appendingPathComponent(id, isDirectory: true)
+        do {
+            try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+            var stems: [[String: Any]] = []
+            for (i, st) in studioStems.enumerated() {
+                let file = String(format: "%02d-", i) + st.url.lastPathComponent
+                try fm.copyItem(at: st.url, to: folder.appendingPathComponent(file))
+                let pos = worldStatus.stems.indices.contains(i) ? worldStatus.stems[i] : nil
+                stems.append(["id": "stem\(i)", "file": file, "title": st.title,
+                              "baseGainDb": st.muted ? -60 : Double(st.gainDb),
+                              "spatial": ["azimuth": Double(pos?.azimuth ?? 0), "elevation": Double(pos?.elevation ?? 0),
+                                          "distance": Double(pos?.distance ?? 1.6), "width": Double(pos?.width ?? 40)]])
+            }
+            let json: [String: Any] = ["format": "atmos.world", "schemaVersion": 1, "id": id, "name": name,
+                                       "artist": "", "tier": "free", "fadeSeconds": 4,
+                                       "music": ["tempo": 0, "key": "", "loop": ["fromSeconds": 0]],   // unknown tempo
+                                       "stems": stems, "rules": []]
+            let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
+            try data.write(to: folder.appendingPathComponent("world.json"))
+            refreshWorlds()
+            statusMessage = "Saved Dimension \u{201C}\(name)\u{201D}"
+            AppLog.info("User Dimension created")
+        } catch {
+            try? fm.removeItem(at: folder)
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Imports a Dimension folder (world.json + audio) chosen in Files.
+    func importDimension(from picked: URL) {
+        let scoped = picked.startAccessingSecurityScopedResource()
+        defer { if scoped { picked.stopAccessingSecurityScopedResource() } }
+        if let problem = bridge.validateDimensionFolder(picked) { lastError = problem; return }
+        guard let data = try? Data(contentsOf: picked.appendingPathComponent("world.json")),
+              var json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+            lastError = "Not a Dimension."; return
+        }
+        let fm = FileManager.default
+        var id = Self.slug((json["name"] as? String) ?? "dimension"), n = 2
+        while fm.fileExists(atPath: Self.userDimensionsFolder.appendingPathComponent(id).path) { id = Self.slug((json["name"] as? String) ?? "dimension") + "-\(n)"; n += 1 }
+        json["id"] = id          // user Dimensions get their own id (never a built-in's)
+        let dest = Self.userDimensionsFolder.appendingPathComponent(id, isDirectory: true)
+        do {
+            try fm.createDirectory(at: Self.userDimensionsFolder, withIntermediateDirectories: true)
+            try fm.copyItem(at: picked, to: dest)
+            let out = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
+            try out.write(to: dest.appendingPathComponent("world.json"))
+            refreshWorlds()
+            statusMessage = "Imported \u{201C}\((json["name"] as? String) ?? id)\u{201D}"
+            AppLog.info("Dimension imported")
+        } catch {
+            try? fm.removeItem(at: dest)
+            lastError = error.localizedDescription
+        }
+    }
+
+    func deleteDimension(_ info: AtmosWorldInfo) {
+        guard info.userMade, let folder = info.folderURL else { return }   // built-ins can never be deleted
+        if worldStatus.loaded && worldStatus.worldID == info.worldID { bridge.unloadWorld() }
+        try? FileManager.default.removeItem(at: folder)
+        refreshWorlds()
+        AppLog.info("User Dimension deleted")
+    }
+
+    /// Zips a user-made Dimension for sharing. Built-in Dimensions are never exportable.
+    func exportDimension(_ info: AtmosWorldInfo) -> URL? {
+        guard info.userMade, let folder = info.folderURL else { return nil }
+        var result: URL?
+        var coordError: NSError?
+        NSFileCoordinator().coordinate(readingItemAt: folder, options: .forUploading, error: &coordError) { zipped in
+            let dest = FileManager.default.temporaryDirectory.appendingPathComponent(info.name + ".zip")
+            try? FileManager.default.removeItem(at: dest)
+            if (try? FileManager.default.copyItem(at: zipped, to: dest)) != nil { result = dest }
+        }
+        if let coordError { lastError = coordError.localizedDescription }
+        if result != nil { AppLog.info("Dimension exported") }
+        return result
+    }
+
     // MARK: Projects, autosave, crash recovery
 
     static var projectsFolder: URL {

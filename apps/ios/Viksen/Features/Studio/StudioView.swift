@@ -9,6 +9,8 @@ struct StudioView: View {
     @State private var showPaywall = false
     @State private var showSave = false
     @State private var projectName = ""
+    @State private var showSaveDimension = false
+    @State private var dimensionName = ""
 
     var body: some View {
         @Bindable var engine = engine
@@ -45,6 +47,9 @@ struct StudioView: View {
                         }
                         Section {
                             Button("Save as Project\u{2026}") { projectName = ""; showSave = true }
+                            Button("Save as Dimension\u{2026}") { dimensionName = ""; showSaveDimension = true }
+                        } footer: {
+                            Text("A Dimension of your own appears in the Dimensions tab with this mix and 3D layout.")
                         }
                     }
                 }
@@ -54,6 +59,11 @@ struct StudioView: View {
                 if case let .success(urls) = result, !urls.isEmpty { engine.importStudioStems(urls) }
             }
             .sheet(isPresented: $showPaywall) { PaywallView(highlight: .studio) }
+            .alert("Save as Dimension", isPresented: $showSaveDimension) {
+                TextField("Name", text: $dimensionName)
+                Button("Save") { engine.saveStudioAsDimension(named: dimensionName.isEmpty ? "My Dimension" : dimensionName) }
+                Button("Cancel", role: .cancel) {}
+            }
             .alert("Save as Project", isPresented: $showSave) {
                 TextField("Name", text: $projectName)
                 Button("Save") { engine.saveProject(named: projectName) }

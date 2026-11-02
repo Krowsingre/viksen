@@ -1,8 +1,10 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Built-in Dimensions (internally "Worlds"): music that re-mixes itself around the listener.
 struct WorldsView: View {
     @Environment(EngineController.self) private var engine
+    @State private var showImporter = false
 
     var body: some View {
         NavigationStack {
@@ -18,6 +20,11 @@ struct WorldsView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             HStack {
                                 Text(world.name).font(.headline)
+                                if world.userMade {
+                                    Text("Yours").font(.caption2.weight(.semibold))
+                                        .padding(.horizontal, 6).padding(.vertical, 2)
+                                        .background(Theme.accent.opacity(0.25), in: Capsule())
+                                }
                                 if engine.worldStatus.playing && engine.worldStatus.worldID == world.worldID {
                                     Image(systemName: "waveform").foregroundStyle(Theme.accent)
                                 }
@@ -25,16 +32,30 @@ struct WorldsView: View {
                             Text(subtitle(world)).font(.caption).foregroundStyle(.secondary)
                         }
                     }
+                    .swipeActions {
+                        if world.userMade {
+                            Button("Delete", role: .destructive) { engine.deleteDimension(world) }
+                        }
+                    }
                 }
             }
             .navigationTitle("Dimensions")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showImporter = true } label: { Label("Import", systemImage: "square.and.arrow.down") }
+                }
+            }
+            .fileImporter(isPresented: $showImporter, allowedContentTypes: [.folder]) { result in
+                if case let .success(url) = result { engine.importDimension(from: url) }
+            }
+            .onAppear { engine.refreshWorlds() }
         }
     }
 
     private func subtitle(_ w: AtmosWorldInfo) -> String {
         var parts: [String] = []
         if !w.artist.isEmpty { parts.append(w.artist) }
-        parts.append(String(format: "%.0f BPM", w.tempo))
+        if w.tempo > 0 { parts.append(String(format: "%.0f BPM", w.tempo)) }
         if !w.musicalKey.isEmpty { parts.append(w.musicalKey) }
         if !w.audioAvailable { parts.append("music not in this build") }
         return parts.joined(separator: " · ")
@@ -43,6 +64,8 @@ struct WorldsView: View {
 
 struct WorldDetailView: View {
     let world: AtmosWorldInfo
+    @State private var confirmRights = false
+    @State private var exportURL: URL?
     @Environment(EngineController.self) private var engine
     @Environment(Store.self) private var store
     @State private var showPaywall = false
@@ -57,8 +80,10 @@ struct WorldDetailView: View {
             Section {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(world.name).font(.title2.weight(.semibold))
-                    Text(String(format: "%.0f BPM · %@", world.tempo, world.musicalKey))
-                        .font(.subheadline).foregroundStyle(.secondary)
+                    if world.tempo > 0 {
+                        Text(String(format: "%.0f BPM · %@", world.tempo, world.musicalKey))
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
                 }
                 if !world.audioAvailable {
                     Label("This build does not include this Dimension's music yet.", systemImage: "exclamationmark.triangle")
@@ -77,6 +102,18 @@ struct WorldDetailView: View {
                 if isCurrent && engine.worldStatus.lengthSeconds > 0 {
                     ProgressView(value: engine.worldStatus.positionSeconds, total: engine.worldStatus.lengthSeconds)
                         .tint(Theme.music)
+                }
+            }
+
+            if world.userMade {
+                Section {
+                    if let exportURL {
+                        ShareLink(item: exportURL) { Label("Share \u{201C}\(world.name)\u{201D}", systemImage: "square.and.arrow.up") }
+                    } else {
+                        Button("Export\u{2026}") { confirmRights = true }
+                    }
+                } footer: {
+                    Text("Exports this Dimension and its audio as a .zip file.")
                 }
             }
 
@@ -138,6 +175,13 @@ struct WorldDetailView: View {
         .navigationTitle(world.name)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showPaywall) { PaywallView(highlight: requiredTier) }
+        .confirmationDialog("Do you have the right to share all of this audio?", isPresented: $confirmRights,
+                            titleVisibility: .visible) {
+            Button("Yes, I have the rights") { exportURL = engine.exportDimension(world) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Only share music and recordings you made or are licensed to share. Owning a copy of a song does not give you the right to redistribute it.")
+        }
     }
 }
 
