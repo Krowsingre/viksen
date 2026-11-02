@@ -77,7 +77,7 @@ List them under `songs`. Each song is a complete song description (its own `musi
 `tier` and `unlock`. Stem files share the Dimension folder, so prefix them by song.
 
 ```json
-{"format": "atmos.world", "schemaVersion": 1, "id": "silent-alley-in-different-times",
+{"format": "atmos.world", "schemaVersion": 1, "id": "the-quiet-storm",
  "name": "…", "artist": "Krowsingre", "tier": "experience",
  "songs": [
    {"id": "the-silent-alley", "title": "The Silent Alley", "music": {"tempo": 89.145}, "stems": [{"id": "drums", "file": "silent-alley-drums.m4a"}], "sections": []},

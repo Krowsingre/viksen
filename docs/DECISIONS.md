@@ -32,3 +32,4 @@
 | 28 | Built-in songs may have up to **16 stems** (Light of a Distant Sun 11, Steel, Steam, and Borrowed Dreams 12). Studio imports stay at 8. | Engineering |
 | 29 | **Dimensions can hold several songs** (first: *The Silent Alley* + *In Different Times*). The Dimension moves to the other song when its parts fit the listener better, or when a song ends. | Owner request |
 | 30 | **Tab bar for now: Home and Dimensions only.** Studio and Library tabs are hidden (`AppTabs.showMoreTabs`). | Owner directive |
+| 31 | The two-song Dimension (*The Silent Alley*, *In Different Times*) is named **The Quiet Storm**, after their album. The next two songs (album *Beneath the Listening Sky*) become the Dimension **The Listening Sky**. | Owner directive |

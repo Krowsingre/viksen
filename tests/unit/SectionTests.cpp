@@ -162,8 +162,8 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
     // Song lengths (seconds) of the built-in audio, which lives outside this repository.
     const std::map<std::string, double> lengths = {
         {"hinds-of-morrow", 561.4}, {"light-of-a-distant-sun", 425.97}, {"steel-steam-and-borrowed-dreams", 683.55},
-        {"silent-alley-in-different-times/the-silent-alley", 355.37},
-        {"silent-alley-in-different-times/in-different-times", 436.65}};
+        {"the-quiet-storm/the-silent-alley", 355.37},
+        {"the-quiet-storm/in-different-times", 436.65}};
     int songs = 0;
     for (const auto& dir : fs::directory_iterator(root)) {
         std::ifstream in(dir.path() / "world.json");

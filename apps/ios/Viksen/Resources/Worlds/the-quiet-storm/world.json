@@ -1,8 +1,8 @@
 {
   "format": "atmos.world",
   "schemaVersion": 1,
-  "id": "silent-alley-in-different-times",
-  "name": "The Silent Alley & In Different Times",
+  "id": "the-quiet-storm",
+  "name": "The Quiet Storm",
   "artist": "Krowsingre",
   "tier": "experience",
   "songs": [
@@ -694,5 +694,6 @@
         }
       ]
     }
-  ]
+  ],
+  "album": "The Quiet Storm"
 }
