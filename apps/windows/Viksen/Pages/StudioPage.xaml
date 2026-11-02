@@ -1,0 +1,49 @@
+<Page
+    x:Class="Viksen.Pages.StudioPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Viksen.Controls"
+    Background="{ThemeResource VkBackgroundBrush}">
+    <ScrollViewer>
+        <StackPanel MaxWidth="900" Padding="24" Spacing="4">
+            <Grid>
+                <TextBlock Text="Studio" FontSize="32" FontWeight="Light" />
+                <Button Content="Add stems…" Click="OnAddStems" HorizontalAlignment="Right" Style="{StaticResource AccentButtonStyle}" />
+            </Grid>
+            <TextBlock x:Name="EmptyText" Style="{StaticResource VkFootnote}"
+                       Text="Choose 1 to 8 stems (WAV, FLAC or MP3) of the same song. They play in sync; mix them and place each one around you." />
+
+            <StackPanel x:Name="LoadedPanel" Visibility="Collapsed" Spacing="4">
+                <TextBlock Text="TRANSPORT" Style="{StaticResource VkSectionHeader}" />
+                <Border Style="{StaticResource VkCardStyle}">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" /><ColumnDefinition /><ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="PlayButton" Click="OnPlay" Width="48" Height="40">
+                            <FontIcon x:Name="PlayIcon" Glyph="&#xE768;" />
+                        </Button>
+                        <Slider x:Name="Position" Grid.Column="1" Minimum="0" StepFrequency="0.1" VerticalAlignment="Center"
+                                ValueChanged="OnPositionChanged" />
+                        <TextBlock x:Name="TimeText" Grid.Column="2" VerticalAlignment="Center" Opacity="0.7" />
+                    </Grid>
+                </Border>
+
+                <TextBlock Text="MIXER" Style="{StaticResource VkSectionHeader}" />
+                <Border Style="{StaticResource VkCardStyle}">
+                    <StackPanel x:Name="Mixer" Spacing="6" />
+                </Border>
+
+                <TextBlock Text="SPACE" Style="{StaticResource VkSectionHeader}" />
+                <Border Style="{StaticResource VkCardStyle}">
+                    <StackPanel Spacing="8">
+                        <ToggleSwitch x:Name="SpatialSwitch" Header="3D for headphones" Toggled="OnSpatial" />
+                        <controls:SpatialCanvas x:Name="SpaceCanvas" />
+                        <Button Content="Reset layout" Click="OnReset" />
+                        <TextBlock x:Name="HrtfText" Style="{StaticResource VkFootnote}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

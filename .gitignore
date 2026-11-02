@@ -18,3 +18,8 @@ apps/ios/Viksen/Resources/Worlds/**/*.wav
 apps/ios/Viksen/Resources/Worlds/**/*.caf
 apps/ios/Viksen/Resources/Worlds/**/*.opus
 third_party/steamaudio/
+
+# Windows app
+apps/windows/**/bin/
+apps/windows/**/obj/
+build-win/

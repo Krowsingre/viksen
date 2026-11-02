@@ -1,0 +1,31 @@
+<Window
+    x:Class="Viksen.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Viksen">
+    <Grid x:Name="Root" Background="{ThemeResource VkBackgroundBrush}">
+        <NavigationView x:Name="Nav"
+                        PaneDisplayMode="Top"
+                        IsBackButtonVisible="Collapsed"
+                        IsSettingsVisible="True"
+                        SelectionChanged="OnNavSelectionChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Home" Tag="home" Icon="Home" />
+                <NavigationViewItem Content="Experience" Tag="experience" Icon="Play" />
+                <NavigationViewItem Content="Studio" Tag="studio" Icon="Audio" />
+                <NavigationViewItem Content="Dimensions" Tag="dimensions" Icon="World" />
+                <NavigationViewItem Content="Library" Tag="library" Icon="Library" />
+            </NavigationView.MenuItems>
+            <Frame x:Name="ContentFrame" />
+        </NavigationView>
+        <!-- Placeholder splash (the designed splash replaces it later), then Home. -->
+        <Grid x:Name="Splash" Background="{ThemeResource VkBackgroundBrush}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                <TextBlock Text="Viksen" FontSize="48" FontWeight="Light" HorizontalAlignment="Center"
+                           Foreground="{StaticResource VkAccentBrush}" CharacterSpacing="200" />
+                <TextBlock Text="AURAL DIMENSIONS" FontSize="13" Opacity="0.6" HorizontalAlignment="Center"
+                           CharacterSpacing="300" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

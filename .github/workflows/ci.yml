@@ -102,3 +102,27 @@ jobs:
           xcodebuild -project Viksen.xcodeproj -scheme ViksenMac \
             -destination 'generic/platform=macOS' \
             CODE_SIGNING_ALLOWED=NO build
+
+  windows-app:
+    name: Windows app (WinUI 3)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch Steam Audio
+        shell: bash
+        run: tools/fetch_steam_audio.sh
+      - name: Build engine DLL
+        run: |
+          cmake -S . -B build-win -DATMOS_BUILD_TESTS=OFF -DATMOS_WARNINGS_AS_ERRORS=ON
+          cmake --build build-win --config Release --target viksen_engine --parallel
+          Copy-Item third_party/steamaudio/lib/windows-x64/phonon.dll build-win/Release/
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build app
+        run: dotnet build apps/windows/Viksen/Viksen.csproj -c Release -p:Platform=x64
+      - name: Check the engine is in the output
+        shell: bash
+        run: |
+          out=$(find apps/windows/Viksen/bin -name Viksen.exe | head -1)
+          echo "$out"; dir=$(dirname "$out"); ls "$dir" | grep -E "viksen_engine.dll|phonon.dll|Worlds"

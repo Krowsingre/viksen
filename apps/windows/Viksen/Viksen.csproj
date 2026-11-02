@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Viksen for Windows: WinUI 3 (Windows App SDK), packaged as MSIX for the
+       Microsoft Store. The audio engine is the shared C++ engine, loaded from
+       viksen_engine.dll (built by CMake; see .github/workflows/ci.yml). -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>Viksen</RootNamespace>
+    <AssemblyName>Viksen</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- CMake output folder holding viksen_engine.dll (and phonon.dll for HRTF). -->
+    <NativeDir Condition="'$(NativeDir)' == ''">$(MSBuildThisFileDirectory)..\..\..\build-win\Release</NativeDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250205002" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**\*.png" />
+    <!-- Native engine. -->
+    <Content Include="$(NativeDir)\viksen_engine.dll" Link="viksen_engine.dll" CopyToOutputDirectory="PreserveNewest"
+             Condition="Exists('$(NativeDir)\viksen_engine.dll')" />
+    <Content Include="$(NativeDir)\phonon.dll" Link="phonon.dll" CopyToOutputDirectory="PreserveNewest"
+             Condition="Exists('$(NativeDir)\phonon.dll')" />
+    <!-- Built-in Dimensions: the same world.json files as iPhone. Their audio is
+         fetched from the private assets repository at release time only. -->
+    <Content Include="..\..\ios\Viksen\Resources\Worlds\**\*" Link="Worlds\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

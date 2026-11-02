@@ -1,0 +1,35 @@
+<Page
+    x:Class="Viksen.Pages.LibraryPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:pages="using:Viksen.Pages"
+    Background="{ThemeResource VkBackgroundBrush}">
+    <Grid Padding="24" RowSpacing="12" MaxWidth="900">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition /><RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Library" FontSize="32" FontWeight="Light" />
+        <AutoSuggestBox x:Name="Search" Grid.Row="1" PlaceholderText="Search recordings" QueryIcon="Find" TextChanged="OnSearch" />
+        <ListView x:Name="Recordings" Grid.Row="2" SelectionMode="Single">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="pages:RecordingItem">
+                    <Grid Padding="0,6" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="{x:Bind Name}" />
+                            <TextBlock Text="{x:Bind Detail}" FontSize="12" Opacity="0.7" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+        <StackPanel Grid.Row="3" Spacing="8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Play" Click="OnPlay" />
+                <Button Content="Save a copy…" Click="OnSaveCopy" />
+                <Button Content="Delete" Click="OnDelete" />
+            </StackPanel>
+            <TextBlock Style="{StaticResource VkFootnote}" Text="Recordings are 24-bit WAV files kept on this PC. They are never uploaded." />
+        </StackPanel>
+    </Grid>
+</Page>

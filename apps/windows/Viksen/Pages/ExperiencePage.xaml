@@ -1,0 +1,75 @@
+<Page
+    x:Class="Viksen.Pages.ExperiencePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{ThemeResource VkBackgroundBrush}">
+    <ScrollViewer>
+        <StackPanel MaxWidth="720" Padding="24" Spacing="4">
+            <Grid>
+                <TextBlock Text="Experience" FontSize="32" FontWeight="Light" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                    <Button x:Name="RecordButton" Click="OnRecord" ToolTipService.ToolTip="Record what you hear">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE7C8;" Foreground="{StaticResource VkDangerBrush}" />
+                            <TextBlock x:Name="RecordText" Text="Record" />
+                        </StackPanel>
+                    </Button>
+                    <Button Content="Silence" Click="OnPanic" ToolTipService.ToolTip="Stop all sound immediately" />
+                </StackPanel>
+            </Grid>
+
+            <TextBlock Text="AUDIO" Style="{StaticResource VkSectionHeader}" />
+            <Border Style="{StaticResource VkCardStyle}">
+                <StackPanel Spacing="8">
+                    <ToggleSwitch x:Name="AudioSwitch" Header="Sound" Toggled="OnAudioToggled" />
+                    <TextBlock x:Name="RouteText" Opacity="0.7" TextWrapping="Wrap" />
+                    <Slider x:Name="Master" Header="Master volume" Minimum="0" Maximum="1" StepFrequency="0.01" ValueChanged="OnMaster" />
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition /><ColumnDefinition /><ColumnDefinition /><ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0"><TextBlock Text="Music" FontSize="12" Opacity="0.7" /><ProgressBar x:Name="MeterMusic" Maximum="1" Foreground="{StaticResource VkMusicBrush}" /></StackPanel>
+                        <StackPanel Grid.Column="1"><TextBlock Text="Atmosphere" FontSize="12" Opacity="0.7" /><ProgressBar x:Name="MeterAtmosphere" Maximum="1" Foreground="{StaticResource VkAtmosphereBrush}" /></StackPanel>
+                        <StackPanel Grid.Column="2"><TextBlock Text="Live mic" FontSize="12" Opacity="0.7" /><ProgressBar x:Name="MeterMicRaw" Maximum="1" Foreground="{StaticResource VkMicRawBrush}" /></StackPanel>
+                        <StackPanel Grid.Column="3"><TextBlock Text="Transformed" FontSize="12" Opacity="0.7" /><ProgressBar x:Name="MeterMicTransformed" Maximum="1" Foreground="{StaticResource VkMicTransformedBrush}" /></StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="ATMOSPHERE" Style="{StaticResource VkSectionHeader}" />
+            <Border Style="{StaticResource VkCardStyle}">
+                <StackPanel Spacing="8">
+                    <ToggleSwitch x:Name="BedSwitch" Header="Atmosphere bed" Toggled="OnBed" />
+                    <Slider x:Name="BedLevel" Header="Level" Minimum="0" Maximum="0.6" StepFrequency="0.01" ValueChanged="OnBedLevel" />
+                    <Slider x:Name="BedColour" Header="Colour (Hz)" Minimum="100" Maximum="8000" StepFrequency="10" ValueChanged="OnBedColour" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="SURROUNDINGS" Style="{StaticResource VkSectionHeader}" />
+            <Border Style="{StaticResource VkCardStyle}">
+                <StackPanel Spacing="8">
+                    <ToggleSwitch x:Name="MicSwitch" Header="Microphone" Toggled="OnMic" />
+                    <TextBlock Style="{StaticResource VkFootnote}" Text="Use headphones: with speakers the microphone can feed back. Audio is processed on this PC and is never recorded or uploaded unless you record." />
+                    <TextBlock x:Name="EnvText" Opacity="0.7" />
+                    <Slider x:Name="RawLevel" Header="Live level" Minimum="0" Maximum="1" StepFrequency="0.01" ValueChanged="OnRawLevel" />
+                    <Slider x:Name="Wet" Header="Transform" Minimum="0" Maximum="1" StepFrequency="0.01" ValueChanged="OnWet" />
+                    <Slider x:Name="Echo" Header="Echo (s)" Minimum="0.02" Maximum="1.9" StepFrequency="0.01" ValueChanged="OnEcho" />
+                    <Slider x:Name="Feedback" Header="Feedback" Minimum="0" Maximum="0.9" StepFrequency="0.01" ValueChanged="OnFeedback" />
+                    <Slider x:Name="Tone" Header="Tone (Hz)" Minimum="100" Maximum="16000" StepFrequency="10" ValueChanged="OnTone" />
+                    <Slider x:Name="Shift" Header="Frequency shift (Hz)" Minimum="-2000" Maximum="2000" StepFrequency="10" ValueChanged="OnShift" />
+                    <Slider x:Name="ShiftMix" Header="Shift mix" Minimum="0" Maximum="1" StepFrequency="0.01" ValueChanged="OnShiftMix" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="ROOM MEMORY" Style="{StaticResource VkSectionHeader}" />
+            <Border Style="{StaticResource VkCardStyle}">
+                <StackPanel Spacing="8">
+                    <ToggleSwitch x:Name="MemorySwitch" Header="Replay moments of the room around you" Toggled="OnMemory" />
+                    <Slider x:Name="MemoryLevel" Header="Level" Minimum="0" Maximum="1" StepFrequency="0.01" ValueChanged="OnMemoryLevel" />
+                    <Slider x:Name="MemoryPitch" Header="Pitch (semitones)" Minimum="-12" Maximum="12" StepFrequency="1" ValueChanged="OnMemoryPitch" />
+                    <TextBlock Style="{StaticResource VkFootnote}" Text="Kept in memory only for a few seconds and wiped when the microphone stops." />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

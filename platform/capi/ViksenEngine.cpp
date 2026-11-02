@@ -218,7 +218,10 @@ void vk_tick(vk_engine* e, double intensity, vk_meters* out) {
     out->loudness = st.loudness;
     out->room_memory_voices = engine.roomMemory().activeVoices();
     out->lunar_day = lunarDay(days);
-    std::strncpy(out->moon_phase, moonPhaseId(moonPhaseName(days)), sizeof(out->moon_phase) - 1);
+    const std::string phase = moonPhaseId(moonPhaseName(days));
+    const size_t n = std::min(phase.size(), sizeof(out->moon_phase) - 1);
+    std::memcpy(out->moon_phase, phase.data(), n);
+    out->moon_phase[n] = '\0';
 }
 
 // ---------------------------------------------------------------- Dimensions
