@@ -55,6 +55,8 @@ targets:
       - sdk: HealthKit.framework
       - sdk: StoreKit.framework
       - sdk: WatchConnectivity.framework
+      - sdk: WeatherKit.framework
+      - sdk: CoreLocation.framework
     entitlements:
       path: Viksen/Resources/Viksen.entitlements
       properties:

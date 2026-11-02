@@ -34,6 +34,14 @@ struct ExperienceView: View {
                 }
 
                 Section {
+                    WeatherSection()
+                } header: {
+                    Text("Weather")
+                } footer: {
+                    Text("Optional. Uses your approximate location to get the current weather from Apple. Your location is not stored.")
+                }
+
+                Section {
                     BodyMotionSection()
                 } header: {
                     Text("Body & Motion")
@@ -356,6 +364,44 @@ private struct BodyMotionSection: View {
                 if let error = health.lastError {
                     Text(error).font(.footnote).foregroundStyle(Theme.danger)
                 }
+            }
+        }
+    }
+}
+
+private struct WeatherSection: View {
+    @Environment(EngineController.self) private var engine
+
+    var body: some View {
+        @Bindable var engine = engine
+        let weather = engine.weather
+        Gated(feature: .weather, title: "Weather-aware atmosphere") {
+            Toggle("Use local weather", isOn: $engine.weatherEnabled)
+        }
+        if engine.weatherEnabled {
+            if weather.locationDenied {
+                Text("Location access is off for Viksen. You can allow approximate location in iOS Settings.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            } else if let condition = weather.conditionText {
+                HStack {
+                    Text(condition)
+                    Spacer()
+                    if let t = weather.temperatureText { Text(t).foregroundStyle(.secondary) }
+                }
+                Toggle("Weather shapes the atmosphere", isOn: $engine.weatherShapesAtmosphere)
+            } else if let error = weather.lastError {
+                Text(error).font(.footnote).foregroundStyle(Theme.danger)
+            } else {
+                HStack { ProgressView(); Text("Getting the weather…").foregroundStyle(.secondary) }
+            }
+            // Apple Weather attribution (required wherever WeatherKit data is shown).
+            if let mark = weather.attributionMarkURL {
+                AsyncImage(url: mark) { image in image.resizable().scaledToFit() } placeholder: { Color.clear }
+                    .frame(height: 14)
+                    .accessibilityLabel("Apple Weather")
+            }
+            if let legal = weather.attributionLegalURL {
+                Link("Weather data sources", destination: legal).font(.footnote)
             }
         }
     }

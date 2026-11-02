@@ -41,8 +41,9 @@ final class EngineController {
     var masterGain: Float = 0.7 { didSet { bridge.setMasterGain(masterGain) } }
     var looping = false { didSet { bridge.setLooping(looping) } }
     var bedEnabled = false { didSet { bridge.setAtmosphereBedEnabled(bedEnabled) } }
-    var bedLevel: Float = 0.25 { didSet { bridge.setAtmosphereBedLevel(bedLevel) } }
-    var bedColourHz: Float = 900 { didSet { bridge.setAtmosphereBedColourHz(bedColourHz) } }
+    /// The user's own bed settings; reactions (intensity, weather) are applied on top.
+    var bedLevel: Float = 0.25 { didSet { applyBed() } }
+    var bedColourHz: Float = 900 { didSet { applyBed() } }
     var micToneHz: Float = 1800 { didSet { bridge.setMicToneHz(micToneHz) } }
     var micEchoSeconds: Float = 0.38 { didSet { bridge.setMicEchoSeconds(micEchoSeconds) } }
     var micFeedback: Float = 0.45 { didSet { bridge.setMicFeedback(micFeedback) } }
@@ -68,11 +69,21 @@ final class EngineController {
     private var echoBeforeStepSync: Float?
 
     var healthEnabled = false {
-        didSet { healthEnabled ? health.start() : health.stop(); if !healthEnabled { applyIntensity(nil) } }
+        didSet {
+            healthEnabled ? health.start() : health.stop()
+            if !healthEnabled { currentIntensity = nil; applyBed() }
+        }
     }
     /// Exercise intensity brightens and thickens the atmosphere bed.
-    var intensityShapesAtmosphere = false { didSet { applyIntensity(intensityShapesAtmosphere ? health.intensity : nil) } }
-    private var bedBeforeIntensity: (level: Float, colour: Float)?
+    var intensityShapesAtmosphere = false { didSet { applyBed() } }
+    private var currentIntensity: Double?
+
+    let weather = WeatherMonitor()
+    var weatherEnabled = false {
+        didSet { weatherEnabled ? weather.start() : weather.stop() }
+    }
+    /// Weather colours the atmosphere bed (rain darker and denser, clear days brighter).
+    var weatherShapesAtmosphere = false { didSet { applyBed() } }
 
     init() {
         delegateProxy.onChange = { [weak self] reason in self?.bridgeStateDidChange(reason) }
@@ -84,9 +95,10 @@ final class EngineController {
         watch.onHeartRate = { [weak self] bpm, date in self?.health.ingestLiveHeartRate(bpm, at: date) }
         watch.activate()
         health.onIntensity = { [weak self] i in
-            guard let self, self.intensityShapesAtmosphere else { return }
-            self.applyIntensity(i)
+            self?.currentIntensity = i
+            self?.applyBed()
         }
+        weather.onMood = { [weak self] _, _ in self?.applyBed() }
         meterTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshMeters() }
         }
@@ -177,6 +189,7 @@ final class EngineController {
         if tier < Feature.headTracking.requiredTier { headTrackingEnabled = false }
         if tier < Feature.activity.requiredTier { echoFollowsSteps = false; activityEnabled = false }
         if tier < Feature.health.requiredTier { intensityShapesAtmosphere = false; healthEnabled = false }
+        if tier < Feature.weather.requiredTier { weatherShapesAtmosphere = false; weatherEnabled = false }
         if tier < Feature.musicImport.requiredTier, trackName != nil { unloadTrack() }
     }
 
@@ -193,20 +206,29 @@ final class EngineController {
         if abs(seconds - micEchoSeconds) / micEchoSeconds > 0.03 { micEchoSeconds = seconds }
     }
 
-    private func applyIntensity(_ intensity: Double?) {
-        guard let intensity, intensityShapesAtmosphere else {
-            if let saved = bedBeforeIntensity {
-                bedLevel = saved.level
-                bedColourHz = saved.colour
-                bedBeforeIntensity = nil
-            }
-            return
+    /// Effective bed = user settings + enabled reactions. The sliders keep showing
+    /// the user's own values; only what is sent to the engine changes.
+    private func applyBed() {
+        var level = bedLevel
+        var colour = bedColourHz
+        if intensityShapesAtmosphere, let i = currentIntensity {
+            level += 0.15 * Float(i)
+            colour += 3000 * Float(i)
         }
-        if bedBeforeIntensity == nil { bedBeforeIntensity = (bedLevel, bedColourHz) }
-        let base = bedBeforeIntensity!
-        let i = Float(intensity)
-        bedLevel = min(0.6, base.level + 0.15 * i)
-        bedColourHz = min(6000, base.colour + 3000 * i)
+        if weatherShapesAtmosphere, let mood = weather.mood {
+            switch mood {
+            case .storm: level += 0.12; colour *= 0.45
+            case .rain: level += 0.08; colour *= 0.6
+            case .snow: level += 0.04; colour *= 0.5
+            case .fog: colour *= 0.7
+            case .wind: level += 0.06; colour *= 1.2
+            case .cloudy: colour *= 0.9
+            case .clear: colour *= weather.isDaylight ? 1.4 : 1.0
+            }
+            if !weather.isDaylight { colour *= 0.8 }
+        }
+        bridge.setAtmosphereBedLevel(min(0.6, max(0, level)))
+        bridge.setAtmosphereBedColourHz(min(8000, max(120, colour)))
     }
 
     // MARK: Meters / delegate
