@@ -590,7 +590,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         if (!importOrReuse(u, rel)) return NO;
         keep.push_back(rel);
         stems.push_back({SessionTrack{rel, u.lastPathComponent.UTF8String, mediaOf(u)},
-                         [d[@"gainDb"] floatValue], [d[@"muted"] boolValue]});
+                         [d[@"gainDb"] floatValue], static_cast<bool>([d[@"muted"] boolValue])});
     }
     // Drop audio no longer referenced (e.g. a replaced song).
     for (auto &e : fs::directory_iterator(pkg / "assets" / "audio", ec)) {
