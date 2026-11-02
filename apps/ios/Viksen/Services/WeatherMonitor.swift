@@ -47,7 +47,11 @@ final class WeatherMonitor {
 
     private var isAuthorized: Bool {
         let s = locationManager.authorizationStatus
+        #if os(iOS)
         return s == .authorizedWhenInUse || s == .authorizedAlways
+        #else
+        return s == .authorizedAlways   // macOS has a single "authorized" state
+        #endif
     }
 
     func start() {
