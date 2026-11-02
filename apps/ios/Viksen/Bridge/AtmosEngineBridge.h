@@ -3,7 +3,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import "platform/ios/IOSAudioSession.h"
+#import "platform/ios/AtmosTypes.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -92,7 +92,7 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 - (void)engineBridgeStateDidChange:(NSString *)reason;
 @end
 
-@interface AtmosEngineBridge : NSObject <AtmosAudioSessionDelegate>
+@interface AtmosEngineBridge : NSObject
 
 @property (nonatomic, weak, nullable) id<AtmosEngineBridgeDelegate> delegate;
 @property (nonatomic, readonly) BOOL audioRunning;

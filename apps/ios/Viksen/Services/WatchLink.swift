@@ -1,14 +1,19 @@
 import Foundation
+#if os(iOS)
 import WatchConnectivity
+#endif
 
 /// iPhone side of WatchConnectivity: receives live heart rate from the Viksen
 /// Apple Watch app during a workout and forwards it to HealthService.
 @MainActor
 final class WatchLink {
+    #if os(iOS)
     private let proxy = WatchSessionProxy()
+    #endif
     var onHeartRate: ((Double, Date) -> Void)?
     var onWorkoutStopped: (() -> Void)?
 
+    #if os(iOS)
     func activate() {
         guard WCSession.isSupported() else { return }
         proxy.onPayload = { [weak self] payload in self?.handle(payload) }
@@ -19,6 +24,10 @@ final class WatchLink {
     var isWatchAppInstalled: Bool {
         WCSession.isSupported() && WCSession.default.activationState == .activated && WCSession.default.isWatchAppInstalled
     }
+    #else
+    func activate() {}                       // the Watch pairs with iPhone only
+    var isWatchAppInstalled: Bool { false }
+    #endif
 
     private func handle(_ payload: [String: Any]) {
         if payload["stopped"] as? Bool == true { onWorkoutStopped?(); return }
@@ -30,6 +39,7 @@ final class WatchLink {
     }
 }
 
+#if os(iOS)
 private final class WatchSessionProxy: NSObject, WCSessionDelegate {
     var onPayload: (@MainActor ([String: Any]) -> Void)?
 
@@ -43,3 +53,4 @@ private final class WatchSessionProxy: NSObject, WCSessionDelegate {
     func sessionDidBecomeInactive(_ session: WCSession) {}
     func sessionDidDeactivate(_ session: WCSession) { WCSession.default.activate() }
 }
+#endif

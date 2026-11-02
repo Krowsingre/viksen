@@ -45,11 +45,11 @@ struct RecordSessionView: View {
                     }
                     .tint(Theme.danger)
                 } footer: {
-                    Text("Recordings are 24-bit WAV files saved on this iPhone (Library tab). They are never uploaded.")
+                    Text("Recordings are 24-bit WAV files saved on this \(Platform.deviceNoun) (Library tab). They are never uploaded.")
                 }
             }
             .navigationTitle("Record Session")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }

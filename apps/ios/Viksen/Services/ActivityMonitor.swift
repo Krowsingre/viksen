@@ -1,4 +1,6 @@
+#if os(iOS)
 import CoreMotion
+#endif
 import Foundation
 import Observation
 
@@ -21,19 +23,26 @@ final class ActivityMonitor {
         }
     }
 
+    #if os(iOS)
     private let activityManager = CMMotionActivityManager()
     private let pedometer = CMPedometer()
+    #endif
 
     private(set) var isRunning = false
     private(set) var activity: Activity = .unknown
     private(set) var cadenceStepsPerMinute: Double?
     private(set) var lastError: String?
 
+    #if os(iOS)
     var isSupported: Bool { CMMotionActivityManager.isActivityAvailable() }
     var permissionDenied: Bool {
         let s = CMMotionActivityManager.authorizationStatus()
         return s == .denied || s == .restricted
     }
+    #else
+    var isSupported: Bool { false }   // no motion coprocessor on Mac
+    var permissionDenied: Bool { false }
+    #endif
 
     /// Called when cadence changes (steps per minute, nil when unknown).
     var onCadence: ((Double?) -> Void)?
@@ -41,6 +50,7 @@ final class ActivityMonitor {
     func start() {
         guard isSupported, !isRunning else { return }
         lastError = nil
+        #if os(iOS)
         activityManager.startActivityUpdates(to: .main) { [weak self] a in
             MainActor.assumeIsolated {
                 guard let self, let a, a.confidence != .low else { return }
@@ -61,12 +71,15 @@ final class ActivityMonitor {
                 }
             }
         }
+        #endif
         isRunning = true
     }
 
     func stop() {
+        #if os(iOS)
         activityManager.stopActivityUpdates()
         pedometer.stopUpdates()
+        #endif
         isRunning = false
         activity = .unknown
         setCadence(nil)

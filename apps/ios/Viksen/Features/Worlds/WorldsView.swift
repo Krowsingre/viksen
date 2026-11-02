@@ -41,7 +41,7 @@ struct WorldsView: View {
             }
             .navigationTitle("Dimensions")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .barTrailing) {
                     Button { showImporter = true } label: { Label("Import", systemImage: "square.and.arrow.down") }
                 }
             }
@@ -173,7 +173,7 @@ struct WorldDetailView: View {
             }
         }
         .navigationTitle(world.name)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .sheet(isPresented: $showPaywall) { PaywallView(highlight: requiredTier) }
         .confirmationDialog("Do you have the right to share all of this audio?", isPresented: $confirmRights,
                             titleVisibility: .visible) {

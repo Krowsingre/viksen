@@ -48,12 +48,12 @@ struct HomeView: View {
             }
             .background(Theme.background.ignoresSafeArea())
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .barTrailing) {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }
                         .accessibilityLabel("Settings")
                 }
             }
-            .toolbarBackground(.hidden, for: .navigationBar)
+            .transparentNavigationBar()
             .sheet(isPresented: $showSettings) { SettingsView() }
             .sheet(isPresented: $showAbout) { AboutView() }
         }

@@ -79,3 +79,26 @@ jobs:
           xcodebuild -project Viksen.xcodeproj -scheme Viksen \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO build
+
+  mac:
+    name: Mac app (build)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Fetch Steam Audio
+        run: tools/fetch_steam_audio.sh
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        working-directory: apps/ios
+        run: xcodegen generate
+      - name: Build
+        working-directory: apps/ios
+        run: |
+          xcodebuild -project Viksen.xcodeproj -scheme ViksenMac \
+            -destination 'generic/platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO build

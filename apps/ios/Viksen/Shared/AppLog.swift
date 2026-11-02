@@ -78,6 +78,6 @@ enum AppLog {
             $0.withMemoryRebound(to: CChar.self, capacity: 1) { String(cString: $0) }
         }
         let os = ProcessInfo.processInfo.operatingSystemVersionString
-        return "Launch v\(version) (\(build)) on \(model), iOS \(os)"
+        return "Launch v\(version) (\(build)) on \(model), \(Platform.deviceNoun) \(os)"
     }
 }

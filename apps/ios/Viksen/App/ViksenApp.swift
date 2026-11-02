@@ -1,5 +1,7 @@
-import UIKit
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 @main
 struct ViksenApp: App {
@@ -12,8 +14,10 @@ struct ViksenApp: App {
 
     init() {
         AppLog.info(AppLog.launchBanner())
+        #if os(iOS)
         NotificationCenter.default.addObserver(forName: UIApplication.didReceiveMemoryWarningNotification,
                                                object: nil, queue: .main) { _ in AppLog.warning("Memory warning") }
+        #endif
     }
 
     var body: some Scene {

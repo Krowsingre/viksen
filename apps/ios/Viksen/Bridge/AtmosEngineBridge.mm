@@ -2,8 +2,7 @@
 
 #import <AVFoundation/AVFoundation.h>
 #import <QuartzCore/QuartzCore.h>
-
-#include <algorithm>
+#include <TargetConditionals.h>
 
 #include <algorithm>
 #include <memory>
@@ -12,17 +11,31 @@
 
 #include "core/assets/ClipPreparation.h"
 #include "core/session/LiveSession.h"
+#if TARGET_OS_IOS
 #include "platform/ios/IOSAudioIO.h"
+#import "platform/ios/IOSAudioSession.h"
+#import "platform/ios/IOSMotion.h"
+#else
+#include "platform/desktop/MiniaudioHost.h"
+#endif
 #include "platform/ios/IOSMediaDecoder.h"
 #include "platform/ios/IOSStemDecoder.h"
 #include "core/worlds/WorldManifest.h"
 #include "core/projects/ProjectPackage.h"
 #include "core/session/SessionDocument.h"
 #include "core/worlds/WorldConditions.h"
-#import "platform/ios/IOSMotion.h"
 
 using atmos::Bus;
 using atmos::core::LiveSession;
+
+#if TARGET_OS_IOS
+constexpr int kMaxBlock = atmos::ios::IOSAudioIO::kMaxFramesPerSlice;
+// iPhone: AVAudioSession reports interruptions and route changes to the bridge.
+@interface AtmosEngineBridge () <AtmosAudioSessionDelegate>
+@end
+#else
+constexpr int kMaxBlock = 8192;   // MiniaudioHost's largest period
+#endif
 
 @implementation AtmosWorldInfo
 @end
@@ -87,33 +100,47 @@ NSError* makeError(const std::string& msg) {
 @implementation AtmosEngineBridge {
     // Settings, track and engine rebuilds are handled by the shared LiveSession.
     std::unique_ptr<LiveSession> _session;
+#if TARGET_OS_IOS
     std::unique_ptr<atmos::ios::IOSAudioIO> _io;
     AtmosAudioSession *_audioSession;
     BOOL _wasRunningBeforeInterruption;
-    NSString *_loadedTrackName;
     AtmosMotionSource *_motion;
+#else
+    // Mac: Core Audio through miniaudio. The host rebuilds the engine for the device rate.
+    std::unique_ptr<atmos::desktop::MiniaudioHost> _host;
+#endif
+    NSString *_loadedTrackName;
     CFTimeInterval _lastMeterTime;
     double _intensity;
 }
 
 - (instancetype)init {
     if ((self = [super init])) {
+        _session = std::make_unique<LiveSession>(48000.0, kMaxBlock);
+#if TARGET_OS_IOS
         _audioSession = [AtmosAudioSession new];
         _audioSession.delegate = self;
-        _session = std::make_unique<LiveSession>(48000.0, atmos::ios::IOSAudioIO::kMaxFramesPerSlice);
         _io = std::make_unique<atmos::ios::IOSAudioIO>(_session->engine());
         _motion = [AtmosMotionSource new];
+#else
+        _host = std::make_unique<atmos::desktop::MiniaudioHost>(*_session);
+#endif
         _intensity = -1;
     }
     return self;
 }
 
 - (void)dealloc {
+#if TARGET_OS_IOS
     _io.reset();
+#else
+    _host.reset();   // stops the device before the session goes away
+#endif
 }
 
 // ------------------------------------------------------------------ properties
 
+#if TARGET_OS_IOS
 - (BOOL)audioRunning { return _io && _io->isRunning(); }
 - (BOOL)micEnabled { return _session->settings().micEnabled; }
 - (double)sampleRate { return _session->sampleRate(); }
@@ -127,7 +154,7 @@ NSError* makeError(const std::string& msg) {
 - (void)rebuildAtRate:(double)rate {
     if (_io) _io->stop();
     _io.reset();
-    _session->rebuild(rate, atmos::ios::IOSAudioIO::kMaxFramesPerSlice);
+    _session->rebuild(rate, kMaxBlock);
     _io = std::make_unique<atmos::ios::IOSAudioIO>(_session->engine());
 }
 
@@ -161,6 +188,61 @@ NSError* makeError(const std::string& msg) {
     if (![self startAudioWithError:&err])
         [self.delegate engineBridgeStateDidChange:[NSString stringWithFormat:@"Audio restart failed: %@", err.localizedDescription]];
 }
+
+#else
+- (BOOL)audioRunning { return _host && _host->running(); }
+- (BOOL)micEnabled { return _session->settings().micEnabled; }
+- (double)sampleRate { return _session->sampleRate(); }
+- (NSString *)loadedTrackName { return _loadedTrackName; }
+
+- (AtmosRouteInfo *)route {
+    AtmosRouteInfo *info = [AtmosRouteInfo new];
+    if (_host && _host->running()) {
+        info.outputName = @(_host->deviceName().c_str());
+        info.inputName = _session->settings().micEnabled ? @"Default input" : @"None";
+        info.sampleRate = _host->sampleRate();
+        info.ioBufferDuration = _host->sampleRate() > 0 ? _host->periodFrames() / _host->sampleRate() : 0;
+    }
+    // Core Audio does not say whether the output is headphones; treat it as unknown.
+    info.kind = AtmosRouteKindOther;
+    return info;
+}
+
+- (AtmosMicPermission)micPermission {
+    switch ([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio]) {
+        case AVAuthorizationStatusAuthorized: return AtmosMicPermissionGranted;
+        case AVAuthorizationStatusNotDetermined: return AtmosMicPermissionUndetermined;
+        default: return AtmosMicPermissionDenied;
+    }
+}
+
+// ------------------------------------------------------------------ engine lifecycle
+
+- (BOOL)startAudioWithError:(NSError **)error {
+    if (_host->running()) _host->stop();
+    atmos::desktop::HostOptions options;
+    options.withInput = _session->settings().micEnabled;
+    std::string msg;
+    if (!_host->start(options, msg)) {
+        if (error) *error = makeError(msg);
+        return NO;
+    }
+    return YES;
+}
+
+- (void)stopAudio {
+    if (_host) _host->stop();
+    _session->engine().pause();
+}
+
+- (void)restartIOIfRunning {
+    if (!self.audioRunning) return;
+    NSError *err = nil;
+    if (![self startAudioWithError:&err])
+        [self.delegate engineBridgeStateDidChange:[NSString stringWithFormat:@"Audio restart failed: %@", err.localizedDescription]];
+}
+
+#endif
 
 // ------------------------------------------------------------------ track
 
@@ -235,17 +317,29 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         }
         completion(YES, nil);
     };
-    switch ([_audioSession micPermission]) {
+    switch (self.micPermission) {
         case AtmosMicPermissionGranted: enable(); break;
         case AtmosMicPermissionDenied:
+#if TARGET_OS_IOS
             completion(NO, @"Microphone access is off. Enable it in Settings > Privacy & Security > Microphone.");
+#else
+            completion(NO, @"Microphone access is off. Enable it in System Settings > Privacy & Security > Microphone.");
+#endif
             break;
-        case AtmosMicPermissionUndetermined:
-            [_audioSession requestMicPermission:^(BOOL granted) {
+        case AtmosMicPermissionUndetermined: {
+            void (^answer)(BOOL) = ^(BOOL granted) {
                 if (granted) enable();
                 else completion(NO, @"Microphone permission was not granted.");
+            };
+#if TARGET_OS_IOS
+            [_audioSession requestMicPermission:answer];
+#else
+            [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {
+                dispatch_async(dispatch_get_main_queue(), ^{ answer(granted); });
             }];
+#endif
             break;
+        }
     }
 }
 
@@ -264,6 +358,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 
 - (void)setListenerYawDegrees:(float)degrees { _session->setListenerYaw(degrees); }
 
+#if TARGET_OS_IOS
 - (BOOL)motionSensingAvailable { return _motion.available; }
 - (BOOL)motionSensingEnabled { return _motion.running; }
 
@@ -280,6 +375,12 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         if (s) s->_session->addMotionSample(ax, ay, az, dt);
     }];
 }
+#else
+// No accelerometer on Mac: the still/moving states stay unavailable.
+- (BOOL)motionSensingAvailable { return NO; }
+- (BOOL)motionSensingEnabled { return NO; }
+- (void)setMotionSensingEnabled:(BOOL)enabled { (void)enabled; _session->setMotionAvailable(false); }
+#endif
 
 // ------------------------------------------------------------------ safety
 
@@ -617,6 +718,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     return s;
 }
 
+#if TARGET_OS_IOS
 // ------------------------------------------------------------------ AtmosAudioSessionDelegate
 
 - (void)audioSessionInterruptionBegan {
@@ -654,5 +756,6 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     if (wasRunning) [self startAudioWithError:nil];
     [self.delegate engineBridgeStateDidChange:@"Media services were reset"];
 }
+#endif
 
 @end

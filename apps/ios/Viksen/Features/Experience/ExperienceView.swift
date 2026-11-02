@@ -51,7 +51,7 @@ struct ExperienceView: View {
                 } header: {
                     Text("Body & Motion")
                 } footer: {
-                    Text("Head tracking keeps room memories fixed around you as you turn. Uses compatible AirPods or Beats. Motion data stays on this iPhone.")
+                    Text("Head tracking keeps room memories fixed around you as you turn. Uses compatible AirPods or Beats. Motion data stays on this \(Platform.deviceNoun).")
                 }
 
                 Section("Levels") {
@@ -75,18 +75,18 @@ struct ExperienceView: View {
             }
             .navigationTitle("Experience")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .barLeading) {
                     Button(engine.audioRunning ? "Stop audio" : "Start audio") {
                         if engine.audioRunning { engine.stopAudio() } else { engine.startAudio() }
                     }
                 }
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .barLeading) {
                     Menu {
                         Button("Save as Project\u{2026}") { projectName = engine.trackName.map { ($0 as NSString).deletingPathExtension } ?? ""; showSaveProject = true }
                     } label: { Image(systemName: "ellipsis.circle") }
                     .accessibilityLabel("More")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .barTrailing) {
                     Button {
                         if store.allows(.sessionRecording) { showRecorder = true } else { showPaywall = true }
                     } label: {
@@ -95,7 +95,7 @@ struct ExperienceView: View {
                     }
                     .accessibilityLabel(engine.isRecording ? "Recording" : "Record session")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .barTrailing) {
                     Button(role: .destructive) { engine.panic() } label: {
                         Label("Stop all sound", systemImage: "speaker.slash.fill")
                     }

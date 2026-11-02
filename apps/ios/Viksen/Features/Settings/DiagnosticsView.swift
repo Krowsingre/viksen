@@ -11,7 +11,7 @@ struct DiagnosticsView: View {
                 ShareLink(item: AppLog.fileURL) { Label("Share log", systemImage: "square.and.arrow.up") }
                 Button("Clear log", role: .destructive) { confirmClear = true }
             } footer: {
-                Text("The log records app events (audio start/stop, route changes, errors, dropouts). It never contains audio, health data, location or your files, and it stays on this iPhone unless you share it.")
+                Text("The log records app events (audio start/stop, route changes, errors, dropouts). It never contains audio, health data, location or your files, and it stays on this \(Platform.deviceNoun) unless you share it.")
             }
             Section("Recent events") {
                 if lines.isEmpty { Text("No events yet").foregroundStyle(.secondary) }
