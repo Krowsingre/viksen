@@ -701,7 +701,17 @@ final class EngineController {
     // MARK: Worlds
 
     /// Enters a World: loads its music, starts audio if needed and fades it in.
+    /// The Dimension the listener entered last (Home's "Enter Dimension" returns to it).
+    private(set) var lastDimensionID: String? = UserDefaults.standard.string(forKey: "lastDimension")
+
+    /// True when a Dimension's audio is on this device.
+    func isPlayable(_ world: AtmosWorldInfo) -> Bool {
+        world.audioAvailable || world.userMade || downloads.state(world.worldID) == .installed
+    }
+
     func enterWorld(_ world: AtmosWorldInfo) {
+        lastDimensionID = world.worldID
+        UserDefaults.standard.set(world.worldID, forKey: "lastDimension")
         if studioActive { studioStems = [] }   // a Dimension replaces the Studio session
         if worldStatus.loaded && worldStatus.worldID == world.worldID && worldStatus.playing { return }
         do {
