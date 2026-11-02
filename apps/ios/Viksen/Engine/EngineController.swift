@@ -709,7 +709,7 @@ final class EngineController {
                 try bridge.loadWorld(world.worldID)            // audio inside the app or the user's folder
             } else {
                 guard downloads.state(world.worldID) == .installed,
-                      let files = downloads.audioFiles(world.worldID, files: bridge.stemFiles(forWorld: world.worldID)) else {
+                      let files = downloads.audioFiles(world.worldID) else {
                     lastError = "Download \(world.name) first."
                     return
                 }
