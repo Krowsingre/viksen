@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  engine-tests:
+    name: Engine & core tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DATMOS_WARNINGS_AS_ERRORS=ON
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Benchmark (informational)
+        shell: bash
+        run: |
+          bin=$(find build -type f \( -name atmos_benchmark -o -name atmos_benchmark.exe \) | head -1)
+          "$bin"
+
+  desktop:
+    name: Desktop app (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            configure: -G "Visual Studio 17 2022" -A x64
+          - name: macOS (arm64)
+            os: macos-14
+            configure: -G Xcode -DCMAKE_OSX_ARCHITECTURES=arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build-desktop ${{ matrix.configure }} -DATMOS_BUILD_DESKTOP=ON -DATMOS_BUILD_TESTS=OFF
+      - name: Build
+        run: cmake --build build-desktop --config Release --target AtmosDesktop --parallel
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}
+          path: build-desktop/apps/desktop/AtmosDesktop_artefacts/Release
+          retention-days: 7
+
+  ios:
+    name: iPhone app (simulator build)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        working-directory: apps/ios
+        run: xcodegen generate
+      - name: Build
+        working-directory: apps/ios
+        run: |
+          xcodebuild -project Viksen.xcodeproj -scheme Viksen \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
