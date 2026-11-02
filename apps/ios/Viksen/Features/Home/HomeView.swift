@@ -16,7 +16,7 @@ struct HomeView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .top) {
-                DimensionArt(pillars: wide, horizon: wide ? 0.50 : 0.56)
+                HomeBackground(wide: wide)
                     .ignoresSafeArea()
                 VStack(spacing: 0) {
                     Spacer(minLength: geo.size.height * (wide ? 0.13 : 0.20))
@@ -25,19 +25,17 @@ struct HomeView: View {
                     enterButton
                     Spacer(minLength: wide ? 20 : 28)
                     if engine.previousRunEndedUnexpectedly { restoreCard.padding(.horizontal, 24).padding(.bottom, 12) }
-                    if wide {
-                        HStack(alignment: .center, spacing: 28) {
-                            continueCards.frame(maxWidth: 640)
-                            Divider().frame(height: 60).overlay(Color.white.opacity(0.2))
-                            moon(stacked: true)
+                    VStack(alignment: .leading, spacing: 12) {
+                        if wide && !continueItems.isEmpty {
+                            Text("Continue Listening").font(.title3.weight(.medium)).foregroundStyle(.white)
                         }
-                        .padding(.horizontal, 48)
-                    } else {
-                        continueCards.padding(.horizontal, 24)
+                        continueCards
                     }
+                    .frame(maxWidth: wide ? 820 : .infinity)
+                    .padding(.horizontal, wide ? 48 : 24)
                     if continueItems.count > 1 { pageDots.padding(.top, 14) }
-                    if !wide { moon(stacked: false).padding(.top, 18) }
-                    Spacer(minLength: 24)
+                    moon.padding(.top, wide ? 22 : 18)
+                    Spacer(minLength: wide ? 28 : 16)
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -98,6 +96,8 @@ struct HomeView: View {
 
     private var enterButton: some View {
         VStack(spacing: 18) {
+            HStack(spacing: 22) {
+            if wide { Rectangle().fill(Color.white.opacity(0.35)).frame(width: 90, height: 0.6) }
             Button {
                 if inDimension { selectedTab = .experience }
                 else if let w = enterTarget { engine.enterWorld(w) }
@@ -117,15 +117,17 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(inDimension ? "Open \(engine.worldStatus.name)" : (enterTarget.map { "Enter \($0.name)" } ?? "Choose a Dimension"))
+            if wide { Rectangle().fill(Color.white.opacity(0.35)).frame(width: 90, height: 0.6) }
+            }
             HStack(spacing: 16) {
-                if wide { Rectangle().fill(Color.white.opacity(0.3)).frame(width: 70, height: 0.6) }
+                if wide { Rectangle().fill(Color.white.opacity(0.3)).frame(width: 110, height: 0.6) }
                 Text(inDimension ? "IN \(engine.worldStatus.name.uppercased())" : "ENTER DIMENSION")
                     .font(.system(size: 15, weight: .light))
                     .tracking(5)
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
-                if wide { Rectangle().fill(Color.white.opacity(0.3)).frame(width: 70, height: 0.6) }
+                if wide { Rectangle().fill(Color.white.opacity(0.3)).frame(width: 110, height: 0.6) }
             }
             .accessibilityHidden(true)
         }
@@ -143,7 +145,7 @@ struct HomeView: View {
         let items = continueItems
         if items.isEmpty {
             Button { selectedTab = .experience } label: {
-                card(title: "Choose your first Dimension", subtitle: "Download one to begin", progress: nil, wideTime: nil)
+                card(art: nil, title: "Choose your first Dimension", subtitle: "Download one to begin", progress: nil, wideTime: nil)
             }
             .buttonStyle(.plain)
         } else {
@@ -167,13 +169,13 @@ struct HomeView: View {
         let progress = isCurrent && st.lengthSeconds > 0 ? st.positionSeconds / st.lengthSeconds : nil
         let title = isCurrent && st.songCount > 1 ? "\(w.name) · \(st.songTitle)" : w.name
         let time = isCurrent && st.lengthSeconds > 0 ? "\(clock(st.positionSeconds)) / \(clock(st.lengthSeconds))" : nil
-        return card(title: title, subtitle: isCurrent && st.playing ? (st.sectionTitle.isEmpty ? "Now playing" : st.sectionTitle) : "Continue Listening",
+        return card(art: w.worldID, title: title, subtitle: isCurrent && st.playing ? (st.sectionTitle.isEmpty ? "Now playing" : st.sectionTitle) : "Continue Listening",
                     progress: progress, wideTime: time)
     }
 
-    private func card(title: String, subtitle: String, progress: Double?, wideTime: String?) -> some View {
+    private func card(art: String?, title: String, subtitle: String, progress: Double?, wideTime: String?) -> some View {
         HStack(spacing: 16) {
-            DimensionArt(horizon: 0.62)
+            DimensionThumbnail(dimensionID: art)
                 .frame(width: wide ? 150 : 104, height: wide ? 94 : 96)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             VStack(alignment: .leading, spacing: 6) {
@@ -211,24 +213,16 @@ struct HomeView: View {
 
     // MARK: Moon
 
-    private func moon(stacked: Bool) -> some View {
-        let phase = Lunar.phaseName(engine.meters.moonPhaseId)
-        let day = "Lunar day \(engine.meters.lunarDay)"
-        return Group {
-            if stacked {
-                HStack(spacing: 14) {
-                    Image(systemName: Lunar.symbol(engine.meters.moonPhaseId)).font(.title)
-                    VStack(alignment: .leading, spacing: 2) { Text(phase); Text(day) }.font(.subheadline)
-                }
-            } else {
-                HStack(spacing: 10) {
-                    Image(systemName: Lunar.symbol(engine.meters.moonPhaseId)).font(.title3)
-                    Text("\(phase)  ·  \(day)").font(.subheadline)
-                }
-            }
+    private var moon: some View {
+        HStack(spacing: 14) {
+            if wide { Rectangle().fill(Color.white.opacity(0.3)).frame(width: 90, height: 0.6) }
+            Image(systemName: Lunar.symbol(engine.meters.moonPhaseId)).font(wide ? .title2 : .title3)
+            Text("\(Lunar.phaseName(engine.meters.moonPhaseId))  ·  Lunar day \(engine.meters.lunarDay)")
+                .font(wide ? .title3 : .subheadline)
+            if wide { Rectangle().fill(Color.white.opacity(0.3)).frame(width: 90, height: 0.6) }
         }
-        .foregroundStyle(.white.opacity(0.8))
-        .frame(maxWidth: stacked ? nil : .infinity)
+        .foregroundStyle(.white.opacity(0.85))
+        .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
         .accessibilityHint("The moon shapes the music; see Settings")
     }

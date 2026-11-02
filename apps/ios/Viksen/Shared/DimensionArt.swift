@@ -1,4 +1,9 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 /// The Home scene (owner's concept art), drawn in code so it is sharp at any size:
 /// night sky and violet nebula, a glowing eclipse ring with a starburst, misty
@@ -156,5 +161,63 @@ struct SeededRandom {
     mutating func next() -> Double {
         state ^= state << 13; state ^= state >> 7; state ^= state << 17
         return Double(state % 1_000_000) / 1_000_000
+    }
+}
+
+/// Home background: the owner's artwork when it is in the asset catalog
+/// ("HomeBackground" for phones, "HomeBackgroundWide" for wide layouts), otherwise
+/// the scene drawn in code.
+struct HomeBackground: View {
+    var wide: Bool
+
+    var body: some View {
+        let name = wide ? "HomeBackgroundWide" : "HomeBackground"
+        if let image = UIImageCompat.named(name) ?? (wide ? UIImageCompat.named("HomeBackground") : nil) {
+            image.resizable().scaledToFill()
+        } else {
+            DimensionArt(pillars: wide, horizon: wide ? 0.50 : 0.56)
+        }
+    }
+}
+
+/// A Dimension's artwork: "art.jpg"/"art.png" in its folder (shipped with the app),
+/// otherwise the drawn scene.
+struct DimensionThumbnail: View {
+    var dimensionID: String?
+
+    var body: some View {
+        if let id = dimensionID, let image = Self.artwork(id) {
+            image.resizable().scaledToFill()
+        } else {
+            DimensionArt(horizon: 0.62)
+        }
+    }
+
+    static func artwork(_ id: String) -> Image? {
+        guard let worlds = Bundle.main.url(forResource: "Worlds", withExtension: nil) else { return nil }
+        for name in ["art.jpg", "art.png"] {
+            let url = worlds.appendingPathComponent(id).appendingPathComponent(name)
+            if let image = UIImageCompat.file(url) { return image }
+        }
+        return nil
+    }
+}
+
+/// Loads images on iPhone (UIKit) and Mac (AppKit).
+enum UIImageCompat {
+    static func named(_ name: String) -> Image? {
+        #if os(iOS)
+        return UIImage(named: name).map { Image(uiImage: $0) }
+        #else
+        return NSImage(named: name).map { Image(nsImage: $0) }
+        #endif
+    }
+
+    static func file(_ url: URL) -> Image? {
+        #if os(iOS)
+        return UIImage(contentsOfFile: url.path).map { Image(uiImage: $0) }
+        #else
+        return NSImage(contentsOf: url).map { Image(nsImage: $0) }
+        #endif
     }
 }
