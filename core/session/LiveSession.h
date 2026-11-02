@@ -68,6 +68,11 @@ struct WorldStatus {
     uint64_t underruns = 0;
     bool spatial = false;           // 3D headphone mode on
     bool hrtf = false;              // true: Steam Audio HRTF; false: interim panner
+    bool adaptive = false;          // the Dimension has adaptive sections
+    bool composed = true;           // no reactive input matched: playing as written
+    std::string sectionTitle;       // part of the song being heard now
+    std::string sectionLabel;       // why it is playing ("You are moving")
+    uint64_t sectionJumps = 0;
     std::vector<WorldStemStatus> stems;
 };
 
@@ -172,6 +177,8 @@ private:
     std::optional<WorldManifest> worldAuthored_;   // as loaded, for "reset layout"
     StemDecoderFactory worldFactory_;
     std::unique_ptr<WorldFeeder> feeder_;
+    std::shared_ptr<SectionPlanner> planner_;
+    SectionChoice lastChoice_;
     std::unique_ptr<WorldDirector> director_;
     std::unique_ptr<WorldLifecycle> lifecycle_;
     int64_t resumeFrame_ = 0;

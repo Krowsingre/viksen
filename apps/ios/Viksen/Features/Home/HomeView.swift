@@ -5,8 +5,8 @@ import SwiftUI
 struct HomeView: View {
     @Binding var selectedTab: AppTab
     @Environment(EngineController.self) private var engine
+    @Environment(Store.self) private var store
     @State private var showSettings = false
-    @State private var showAbout = false
 
     var body: some View {
         NavigationStack {
@@ -20,26 +20,22 @@ struct HomeView: View {
                         Text("Create, enhance, transform, or simply explore.")
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.7))
-                        destination("Experience", "Immerse in sound, enhance a song, or transform your surroundings.",
+                        destination("Experience", "Step into a Dimension: music that follows where you are and what you do.",
                                     "play.fill", .experience)
-                        destination("Studio", "Your own stems: mix them and place them in 3D.",
-                                    "slider.horizontal.3", .studio)
-                        destination("Dimensions", "Music that re-mixes itself around you.",
-                                    "square.stack.3d.up", .worlds)
+                        if store.tier >= .studio {
+                            destination("Studio", "Your own stems: mix them and place them in 3D.",
+                                        "slider.horizontal.3", .studio)
+                        }
                         if engine.previousRunEndedUnexpectedly {
                             restoreCard
                         }
-                        if let name = engine.trackName {
-                            nowPlaying(name)
+                        if engine.worldStatus.loaded && engine.worldStatus.worldID != "studio" {
+                            nowPlaying(engine.worldStatus)
                         }
                         Label("\(Lunar.phaseName(engine.meters.moonPhaseId)) · lunar day \(engine.meters.lunarDay)",
                               systemImage: Lunar.symbol(engine.meters.moonPhaseId))
                             .font(.footnote)
                             .foregroundStyle(.white.opacity(0.6))
-                            .padding(.top, 4)
-                        Button("About Viksen") { showAbout = true }
-                            .font(.footnote)
-                            .underline()
                             .padding(.top, 4)
                     }
                     .padding(.horizontal, 20)
@@ -55,7 +51,6 @@ struct HomeView: View {
             }
             .transparentNavigationBar()
             .sheet(isPresented: $showSettings) { SettingsView() }
-            .sheet(isPresented: $showAbout) { AboutView() }
         }
         .preferredColorScheme(.dark)
     }
@@ -143,21 +138,25 @@ struct HomeView: View {
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
     }
 
-    private func nowPlaying(_ name: String) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Continue Listening").font(.caption).foregroundStyle(.white.opacity(0.6))
-                Text(name).font(.subheadline).foregroundStyle(.white).lineLimit(1)
-            }
-            Spacer()
-            Button { engine.togglePlay() } label: {
-                Image(systemName: engine.meters.playing ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.largeTitle)
+    private func nowPlaying(_ st: AtmosWorldStatus) -> some View {
+        Button { selectedTab = .experience } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(st.playing ? "Now in" : "Continue").font(.caption).foregroundStyle(.white.opacity(0.6))
+                    Text(st.name).font(.subheadline).foregroundStyle(.white).lineLimit(1)
+                    if st.playing && !st.sectionTitle.isEmpty {
+                        Text(st.sectionTitle).font(.caption).foregroundStyle(Theme.accent)
+                    }
+                }
+                Spacer()
+                Image(systemName: st.playing ? "waveform" : "play.circle.fill")
+                    .font(.title)
                     .foregroundStyle(Theme.accent)
+                    .symbolEffect(.variableColor.iterative, isActive: st.playing)
             }
-            .accessibilityLabel(engine.meters.playing ? "Pause" : "Play")
+            .padding(14)
+            .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
         }
-        .padding(14)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
+        .buttonStyle(.plain)
     }
 }

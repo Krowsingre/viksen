@@ -14,6 +14,7 @@ add_library(atmos_core STATIC
   worlds/WorldConditions.cpp
   worlds/WorldManifest.cpp
   worlds/WorldDirector.cpp
+  worlds/WorldSections.cpp
   worlds/WorldFeeder.cpp
 )
 target_include_directories(atmos_core PUBLIC ${PROJECT_SOURCE_DIR})

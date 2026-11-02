@@ -25,7 +25,7 @@ namespace atmos {
 
 class WorldStreamPlayer {
 public:
-    static constexpr int kMaxStems = 8;
+    static constexpr int kMaxStems = 16;   // built-in songs have up to 12 stems
 
     // Control thread, with the audio callback stopped or the player inactive.
     void prepare(double sampleRate, int maxBlockSize, int ringFrames = 1 << 17); // ~2.7 s at 48 kHz (1 MB per stem)

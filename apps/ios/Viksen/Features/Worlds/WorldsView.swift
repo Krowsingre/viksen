@@ -1,55 +1,43 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Built-in Dimensions (internally "Worlds"): music that re-mixes itself around the listener.
-struct WorldsView: View {
+/// Studio: Dimensions you made or imported (built-ins are listed in Experience).
+/// Import a Dimension folder, open one to arrange or export it, swipe to delete.
+struct DimensionsManagerView: View {
     @Environment(EngineController.self) private var engine
     @State private var showImporter = false
 
     var body: some View {
-        NavigationStack {
-            List {
-                if engine.worlds.isEmpty {
-                    ContentUnavailableView("No Dimensions yet", systemImage: "square.stack.3d.up",
-                                           description: Text("Dimensions will appear here."))
-                }
-                ForEach(engine.worlds, id: \.worldID) { world in
-                    NavigationLink {
-                        WorldDetailView(world: world)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 3) {
-                            HStack {
-                                Text(world.name).font(.headline)
-                                if world.userMade {
-                                    Text("Yours").font(.caption2.weight(.semibold))
-                                        .padding(.horizontal, 6).padding(.vertical, 2)
-                                        .background(Theme.accent.opacity(0.25), in: Capsule())
-                                }
-                                if engine.worldStatus.playing && engine.worldStatus.worldID == world.worldID {
-                                    Image(systemName: "waveform").foregroundStyle(Theme.accent)
-                                }
-                            }
-                            Text(subtitle(world)).font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    .swipeActions {
-                        if world.userMade {
-                            Button("Delete", role: .destructive) { engine.deleteDimension(world) }
-                        }
+        List {
+            let mine = engine.worlds.filter(\.userMade)
+            if mine.isEmpty {
+                ContentUnavailableView("No Dimensions of your own yet", systemImage: "square.stack.3d.up",
+                                       description: Text("Save one from your Studio mix, or import a Dimension folder."))
+            }
+            ForEach(mine, id: \.worldID) { world in
+                NavigationLink {
+                    WorldDetailView(world: world)
+                } label: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(world.name).font(.headline)
+                        Text(subtitle(world)).font(.caption).foregroundStyle(.secondary)
                     }
                 }
-            }
-            .navigationTitle("Dimensions")
-            .toolbar {
-                ToolbarItem(placement: .barTrailing) {
-                    Button { showImporter = true } label: { Label("Import", systemImage: "square.and.arrow.down") }
+                .swipeActions {
+                    Button("Delete", role: .destructive) { engine.deleteDimension(world) }
                 }
             }
-            .fileImporter(isPresented: $showImporter, allowedContentTypes: [.folder]) { result in
-                if case let .success(url) = result { engine.importDimension(from: url) }
-            }
-            .onAppear { engine.refreshWorlds() }
         }
+        .navigationTitle("Your Dimensions")
+        .toolbar {
+            ToolbarItem(placement: .barTrailing) {
+                Button { showImporter = true } label: { Label("Import", systemImage: "square.and.arrow.down") }
+            }
+        }
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.folder]) { result in
+            if case let .success(url) = result { engine.importDimension(from: url) }
+        }
+        .onAppear { engine.refreshWorlds() }
     }
 
     private func subtitle(_ w: AtmosWorldInfo) -> String {

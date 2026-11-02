@@ -43,4 +43,8 @@ public sealed class WorldStatus
     [JsonPropertyName("spatial")] public bool Spatial { get; set; }
     [JsonPropertyName("hrtf")] public bool Hrtf { get; set; }
     [JsonPropertyName("stems")] public List<StemStatus> Stems { get; set; } = new();
+    [JsonPropertyName("adaptive")] public bool Adaptive { get; set; }
+    [JsonPropertyName("composed")] public bool Composed { get; set; } = true;
+    [JsonPropertyName("section")] public string Section { get; set; } = "";
+    [JsonPropertyName("why")] public string Why { get; set; } = "";
 }

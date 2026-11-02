@@ -104,6 +104,7 @@ VK_API void vk_world_move_stem(vk_engine* e, int stem, float azimuth, float elev
 VK_API void vk_world_reset_positions(vk_engine* e);
 VK_API int vk_binaural_hrtf(void);                     /* 1 when Steam Audio is compiled in */
 /* JSON {"loaded","playing","id","name","position","length","master","spatial","hrtf",
+ *       "adaptive","composed","section","why",
  *       "stems":[{"title","azimuth","elevation","distance","width","gainDb","peak","reasons":[..]}]} */
 VK_API const char* vk_world_status(vk_engine* e);
 

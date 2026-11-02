@@ -44,7 +44,7 @@ public sealed partial class DimensionsPage : Page
         EnterButton.IsEnabled = _selected.AudioAvailable && !inside;
         LeaveButton.IsEnabled = inside;
         StatusText.Text = !_selected.AudioAvailable ? "This build does not include this Dimension's music yet."
-            : inside ? $"{TimeSpan.FromSeconds(w.Position):m\\:ss} · {(w.Spatial ? (w.Hrtf ? "3D (Steam Audio HRTF)" : "3D (simplified)") : "Stereo")}"
+            : inside ? $"{(w.Section.Length > 0 ? w.Section + " — " + (w.Composed ? "as composed" : w.Why) + " · " : "")}{TimeSpan.FromSeconds(w.Position):m\\:ss} · {(w.Spatial ? (w.Hrtf ? "3D (Steam Audio HRTF)" : "3D (simplified)") : "Stereo")}"
             : "";
         if (!IsInside) { Layers.Children.Clear(); return; }
         _updating = true;

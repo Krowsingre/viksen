@@ -4,68 +4,63 @@ import UniformTypeIdentifiers
 /// The everyday listening & augmented-reality surface (spec §5 "Experience").
 struct ExperienceView: View {
     @Environment(EngineController.self) private var engine
-    @Environment(MediaLibrary.self) private var library
-    @State private var showImporter = false
     @State private var showRecorder = false
     @State private var showSaveProject = false
     @State private var projectName = ""
     @Environment(Store.self) private var store
     @State private var showPaywall = false
+    @State private var showBlend = false
 
     var body: some View {
         @Bindable var engine = engine
         NavigationStack {
             List {
-                StatusSection()
-
-                Section("Music") {
-                    MusicSourceRow(showImporter: $showImporter)
-                }
-
-                Section("Atmosphere") {
-                    Toggle("Atmosphere bed", isOn: $engine.bedEnabled)
-                    if engine.bedEnabled {
-                        LabeledSlider(title: "Density", value: $engine.bedLevel, range: 0...0.6, format: "%.2f")
-                        LabeledSlider(title: "Colour", value: $engine.bedColourHz, range: 150...6000, format: "%.0f Hz")
-                    }
-                }
+                NowPlayingSection()
+                DimensionPickerSection(showPaywall: $showPaywall)
 
                 Section {
-                    EnvironmentSection()
-                } header: {
-                    Text("Environment")
-                } footer: {
-                    Text("Microphone audio is processed on this device only and is never recorded or uploaded.")
-                }
-
-                Section {
-                    WeatherSection()
-                } header: {
-                    Text("Weather")
-                } footer: {
-                    Text("Optional. Uses your approximate location to get the current weather from Apple. Your location is not stored.")
-                }
-
-                Section {
+                    SensesSection()
                     BodyMotionSection()
                 } header: {
-                    Text("Body & Motion")
+                    Text("Senses")
                 } footer: {
-                    Text("Head tracking keeps room memories fixed around you as you turn. Uses compatible AirPods or Beats. Motion data stays on this \(Platform.deviceNoun).")
+                    Text("Senses steer the music: each part of a Dimension belongs to a moment (still, moving, quiet, loud, working out), and the song moves to the part that fits you. With every sense off it plays as composed. The time of day and the moon always shape it a little. Everything stays on this \(Platform.deviceNoun).")
                 }
 
-                Section("Levels") {
-                    ForEach(EngineController.BusLevel.allCases) { bus in
-                        BusSlider(title: bus.title,
-                                  color: Theme.color(for: bus),
-                                  value: Binding(get: { engine.busGains[bus.rawValue] },
-                                                 set: { engine.setGain($0, for: bus) }),
-                                  peak: engine.meters.busPeaks.indices.contains(bus.rawValue)
-                                      ? engine.meters.busPeaks[bus.rawValue].floatValue : 0)
+                if engine.worldStatus.loaded && engine.worldStatus.worldID != "studio" {
+                    Section("Space") {
+                        Toggle("3D for headphones", isOn: $engine.dimension3D)
+                        if let current = engine.worlds.first(where: { $0.worldID == engine.worldStatus.worldID }) {
+                            NavigationLink("Arrange the instruments") { WorldDetailView(world: current) }
+                        }
                     }
-                    BusSlider(title: "Master", color: .primary, value: $engine.masterGain,
-                              peak: max(engine.meters.outputPeakLeft, engine.meters.outputPeakRight))
                 }
+
+                Section {
+                    DisclosureGroup("Blend the room in", isExpanded: $showBlend) {
+                        BlendSection()
+                        Toggle("Atmosphere bed", isOn: $engine.bedEnabled)
+                        if engine.bedEnabled {
+                            LabeledSlider(title: "Density", value: $engine.bedLevel, range: 0...0.6, format: "%.2f")
+                            LabeledSlider(title: "Colour", value: $engine.bedColourHz, range: 150...6000, format: "%.0f Hz")
+                        }
+                        WeatherSection()
+                        ForEach(EngineController.BusLevel.allCases) { bus in
+                            BusSlider(title: bus.title,
+                                      color: Theme.color(for: bus),
+                                      value: Binding(get: { engine.busGains[bus.rawValue] },
+                                                     set: { engine.setGain($0, for: bus) }),
+                                      peak: engine.meters.busPeaks.indices.contains(bus.rawValue)
+                                          ? engine.meters.busPeaks[bus.rawValue].floatValue : 0)
+                        }
+                        BusSlider(title: "Master", color: .primary, value: $engine.masterGain,
+                                  peak: max(engine.meters.outputPeakLeft, engine.meters.outputPeakRight))
+                    }
+                } footer: {
+                    Text("Optional: hear your surroundings, transformed, under the music. Off by default; the microphone is never recorded or uploaded.")
+                }
+
+                StatusSection()
 
                 Section {
                     Text("Immersive audio can mask traffic and other important sounds. Stay aware of your surroundings.")
@@ -75,16 +70,13 @@ struct ExperienceView: View {
             }
             .navigationTitle("Experience")
             .toolbar {
-                ToolbarItem(placement: .barLeading) {
-                    Button(engine.audioRunning ? "Stop audio" : "Start audio") {
-                        if engine.audioRunning { engine.stopAudio() } else { engine.startAudio() }
+                if store.tier >= .studio {
+                    ToolbarItem(placement: .barLeading) {
+                        Menu {
+                            Button("Save as Project\u{2026}") { projectName = engine.worldStatus.name; showSaveProject = true }
+                        } label: { Image(systemName: "ellipsis.circle") }
+                        .accessibilityLabel("More")
                     }
-                }
-                ToolbarItem(placement: .barLeading) {
-                    Menu {
-                        Button("Save as Project\u{2026}") { projectName = engine.trackName.map { ($0 as NSString).deletingPathExtension } ?? ""; showSaveProject = true }
-                    } label: { Image(systemName: "ellipsis.circle") }
-                    .accessibilityLabel("More")
                 }
                 ToolbarItem(placement: .barTrailing) {
                     Button {
@@ -109,14 +101,9 @@ struct ExperienceView: View {
                 Button("Save") { engine.saveProject(named: projectName) }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Saves your song (copied), levels, atmosphere, microphone effects and current Dimension.")
+                Text("Saves your levels, atmosphere, microphone effects and current Dimension.")
             }
             .sheet(isPresented: $showPaywall) { PaywallView(highlight: .experience) }
-            .fileImporter(isPresented: $showImporter, allowedContentTypes: [.audio], allowsMultipleSelection: false) { result in
-                if case let .success(urls) = result, let url = urls.first, let local = library.importCopy(of: url) {
-                    engine.loadTrack(url: local)
-                }
-            }
             .alert("Problem", isPresented: Binding(get: { engine.lastError != nil }, set: { if !$0 { engine.lastError = nil } })) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -207,83 +194,49 @@ private struct EnvironmentStateChips: View {
     }
 }
 
-private struct MusicSourceRow: View {
-    @Environment(EngineController.self) private var engine
-    @Binding var showImporter: Bool
-
-    var body: some View {
-        @Bindable var engine = engine
-        if let name = engine.trackName {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(name).lineLimit(1)
-                    Spacer()
-                    Button { engine.togglePlay() } label: {
-                        Image(systemName: engine.meters.playing ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.title)
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel(engine.meters.playing ? "Pause" : "Play")
-                }
-                let duration = max(engine.meters.durationSeconds, 0.001)
-                Slider(value: Binding(get: { min(engine.meters.positionSeconds, duration) },
-                                      set: { engine.seek(to: $0) }),
-                       in: 0...duration)
-                    .tint(Theme.music)
-                HStack {
-                    Text(timeString(engine.meters.positionSeconds))
-                    Spacer()
-                    Text(timeString(duration))
-                }
-                .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                Toggle("Loop", isOn: $engine.looping)
-            }
-            Gated(feature: .musicImport, title: "Replace song…") {
-                Button("Replace song…") { showImporter = true }
-            }
-            Button("Remove song", role: .destructive) { engine.unloadTrack() }
-        } else if engine.isLoadingTrack {
-            HStack { ProgressView(); Text("Decoding…").foregroundStyle(.secondary) }
-        } else {
-            Gated(feature: .musicImport, title: "Import a song…") {
-                Button { showImporter = true } label: { Label("Import a song…", systemImage: "square.and.arrow.down") }
-            }
-            Text("Or play atmosphere and environment on their own — no music needed.")
-                .font(.footnote).foregroundStyle(.secondary)
-        }
-    }
-
-    private func timeString(_ s: Double) -> String {
-        let t = Int(s.rounded(.down))
-        return String(format: "%ld:%02ld", t / 60, t % 60)
-    }
-}
-
-private struct EnvironmentSection: View {
+/// What the Dimension listens to. The microphone here only analyses the room.
+private struct SensesSection: View {
     @Environment(EngineController.self) private var engine
 
     var body: some View {
         @Bindable var engine = engine
-        Toggle("Microphone", isOn: Binding(get: { engine.micEnabled }, set: { engine.setMicEnabled($0) }))
-        if engine.micPermission == .denied {
-            Text("Microphone access is off for this app. You can turn it on in iOS Settings.")
-                .font(.footnote).foregroundStyle(.secondary)
-        }
         if engine.motionSensingAvailable {
-            Toggle("Motion sensing", isOn: $engine.motionSensing)
+            Toggle(isOn: $engine.motionSensing) {
+                senseLabel("Motion", "Moving brings the driving parts; stillness brings the calm ones.")
+            }
+        }
+        Toggle(isOn: Binding(get: { engine.micEnabled }, set: { engine.setMicEnabled($0) })) {
+            senseLabel("Listen to the room", "Quiet and loud surroundings choose different parts. The room is only analysed, not played to you.")
+        }
+        if engine.micPermission == .denied {
+            Text("Microphone access is off for this app. You can turn it on in Settings.")
+                .font(.footnote).foregroundStyle(.secondary)
         }
         if engine.micEnabled || engine.motionSensing {
             EnvironmentStateChips(meters: engine.meters)
         }
-        if engine.micEnabled {
-            HStack {
-                Text("Surroundings")
-                Spacer()
-                Text(engine.meters.environmentSilent ? "quiet" : String(format: "%.0f dBFS", engine.meters.environmentLevelDb))
-                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                Text("· \(engine.meters.transientCount) events")
-                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-            }
+    }
+
+    private func senseLabel(_ title: String, _ detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+            Text(detail).font(.caption).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Optional: hear the surroundings, transformed, under the music.
+private struct BlendSection: View {
+    @Environment(EngineController.self) private var engine
+
+    var body: some View {
+        @Bindable var engine = engine
+        Toggle("Hear the room", isOn: $engine.hearRoom)
+        if engine.hearRoom && !engine.micEnabled {
+            Text("Turn on \u{201C}Listen to the room\u{201D} above to hear it.")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+        if engine.hearRoom && engine.micEnabled {
             LabeledSlider(title: "Tone", value: $engine.micToneHz, range: 200...12000, format: "%.0f Hz")
             LabeledSlider(title: "Echo time", value: $engine.micEchoSeconds, range: 0.05...1.5, format: "%.2f s")
             LabeledSlider(title: "Echo feedback", value: $engine.micFeedback, range: 0...0.9, format: "%.2f")
@@ -300,12 +253,109 @@ private struct EnvironmentSection: View {
                     .font(.footnote).foregroundStyle(.secondary)
                 LabeledSlider(title: "Memory level", value: $engine.roomMemoryLevel, range: 0...1, format: "%.2f")
                 LabeledSlider(title: "Memory pitch", value: $engine.roomMemoryPitch, range: -12...12, format: "%.0f st")
-                if engine.meters.roomMemoryVoices > 0 {
-                    Text("Replaying \(engine.meters.roomMemoryVoices) memor\(engine.meters.roomMemoryVoices == 1 ? "y" : "ies")")
-                        .font(.caption).foregroundStyle(Theme.micTransformed)
+            }
+        }
+    }
+}
+
+/// The Dimension being heard: which part of its song, and why.
+private struct NowPlayingSection: View {
+    @Environment(EngineController.self) private var engine
+
+    var body: some View {
+        let st = engine.worldStatus
+        let inDimension = st.loaded && st.worldID != "studio"
+        Section {
+            if inDimension {
+                HStack(alignment: .center, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(st.name).font(.title3.weight(.semibold))
+                        if !st.sectionTitle.isEmpty {
+                            Text(st.sectionTitle).font(.subheadline).foregroundStyle(Theme.accent)
+                        }
+                        Text(reason(st)).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button {
+                        if st.playing { engine.leaveWorld() }
+                        else if let w = engine.worlds.first(where: { $0.worldID == st.worldID }) { engine.enterWorld(w) }
+                    } label: {
+                        Image(systemName: st.playing ? "stop.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 44)).foregroundStyle(Theme.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(st.playing ? "Leave \(st.name)" : "Enter \(st.name)")
+                }
+                .padding(.vertical, 6)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Step into a Dimension").font(.title3.weight(.semibold))
+                    Text("Choose one below. Headphones recommended.").font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 6)
+            }
+        }
+    }
+
+    private func reason(_ st: AtmosWorldStatus) -> String {
+        if !st.playing { return "Paused" }
+        if !st.adaptive { return "Playing" }
+        if st.composed { return "Playing as composed. Turn on a sense and the song will follow you." }
+        return st.sectionLabel.isEmpty ? "Following you" : st.sectionLabel
+    }
+}
+
+/// Built-in songs (and your own, made in Studio) to step into.
+private struct DimensionPickerSection: View {
+    @Environment(EngineController.self) private var engine
+    @Environment(Store.self) private var store
+    @Binding var showPaywall: Bool
+
+    var body: some View {
+        Section("Dimensions") {
+            if engine.worlds.isEmpty {
+                Text("No Dimensions in this build yet.").foregroundStyle(.secondary)
+            }
+            ForEach(engine.worlds, id: \.worldID) { world in
+                let locked = requiredTier(world) > store.tier
+                let current = engine.worldStatus.playing && engine.worldStatus.worldID == world.worldID
+                Button {
+                    if locked { showPaywall = true } else if world.audioAvailable { engine.enterWorld(world) }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: current ? "waveform" : (locked ? "lock.fill" : "circle.dotted"))
+                            .foregroundStyle(current ? Theme.accent : .secondary)
+                            .frame(width: 24)
+                            .symbolEffect(.variableColor.iterative, isActive: current)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(world.name).font(.headline).foregroundStyle(.primary)
+                            Text(subtitle(world, locked: locked)).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                }
+                .disabled(!locked && !world.audioAvailable)
+                .swipeActions {
+                    if world.userMade {
+                        Button("Delete", role: .destructive) { engine.deleteDimension(world) }
+                    }
                 }
             }
         }
+        .onAppear { engine.refreshWorlds() }
+    }
+
+    private func requiredTier(_ w: AtmosWorldInfo) -> Tier {
+        switch w.tier { case "studio": .studio; case "experience": .experience; default: .free }
+    }
+
+    private func subtitle(_ w: AtmosWorldInfo, locked: Bool) -> String {
+        var parts: [String] = []
+        if !w.artist.isEmpty { parts.append(w.artist) }
+        if w.userMade { parts.append("yours") }
+        if locked { parts.append(requiredTier(w).title) }
+        else if !w.audioAvailable { parts.append("music not in this build") }
+        return parts.joined(separator: " · ")
     }
 }
 

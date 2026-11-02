@@ -39,3 +39,33 @@ committed to this public repository.
   `moonPhase`, `lunarDay`, `listeningAtLeast`, `consecutiveWorldsAtLeast`.
   Unknown types are preserved and make the rule/unlock unsatisfiable on older builds.
 - **Tier**: `free`, `experience` or `studio`.
+
+## Adaptive sections (optional)
+
+A Dimension can divide its song into **sections**. The listener's state chooses
+which sections may play; the stream moves between them on the musical grid, so
+being still, moving, in a quiet or loud place, or working out plays *different
+parts of the song*.
+
+```json
+"music": {"tempo": 110, "key": "G minor", "beatsPerBar": 4, "barOffsetSeconds": 0},
+"adaptive": {"jumpEveryBars": 4, "minStayBars": 8, "crossfadeBeats": 1},
+"sections": [
+  {"id": "first-light", "title": "First Light", "fromBar": 0, "toBar": 16,
+   "when": {"all": [{"type": "still"}]}, "prefer": {"all": [{"type": "timeWindow", "from": 21, "to": 5}]},
+   "label": "You are still"},
+  {"id": "gathering", "title": "Gathering", "fromBar": 16, "toBar": 32}
+]
+```
+
+- `fromBar`/`toBar` count bars from `barOffsetSeconds` (or use `fromSeconds`/`toSeconds`).
+- `when`: the state this part belongs to. No `when` = a neutral bridge, heard when the
+  song plays as composed. Use sensor states (still, moving, quiet, loud, intensityAtLeast).
+- `prefer`: favours this part among the suitable ones (time of day, moon phase).
+- `label`: shown to the listener as the reason this part is playing.
+- If no reactive section matches (or every sense is off) the song plays as composed and
+  loops from the top. Otherwise, at each `jumpEveryBars` grid point, a part that no longer
+  suits (after `minStayBars`) hands over to the next suitable part in song order; at the
+  end of a part the song flows on if the next part suits, else moves to another suitable
+  part. Jumps crossfade over `crossfadeBeats` and keep the bar phase.
+- Up to 64 sections and 16 stems.

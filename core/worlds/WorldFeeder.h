@@ -7,11 +7,13 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
 #include "engine/audio/AudioClip.h"
 #include "engine/audio/WorldStreamPlayer.h"
+#include "core/worlds/WorldSections.h"
 
 namespace atmos::core {
 
@@ -40,8 +42,11 @@ private:
 
 class WorldFeeder {
 public:
+    // `planner` (optional) chooses where the stream continues at grid boundaries
+    // (adaptive sections); jumps crossfade over `crossfadeFrames`.
     WorldFeeder(WorldStreamPlayer& player, std::vector<std::unique_ptr<StemDecoder>> decoders,
-                int64_t loopStart, int64_t loopEnd);
+                int64_t loopStart, int64_t loopEnd, std::shared_ptr<SectionPlanner> planner = nullptr,
+                int64_t crossfadeFrames = 0);
     ~WorldFeeder();
     WorldFeeder(const WorldFeeder&) = delete;
     WorldFeeder& operator=(const WorldFeeder&) = delete;
@@ -55,9 +60,11 @@ public:
     int64_t loopStart() const { return loopStart_; }
     int64_t loopEnd() const { return loopEnd_; }
     double rate() const { return rate_; }
+    uint64_t jumps() const { return jumps_.load(); }   // boundary jumps/loops made (diagnostics)
 
 private:
     void run();
+    void noteSegment(uint64_t written, int64_t source);
 
     WorldStreamPlayer& player_;
     std::vector<std::unique_ptr<StemDecoder>> decoders_;
@@ -66,6 +73,13 @@ private:
     std::atomic<bool> running_{false};
     std::atomic<int64_t> startFrame_{0};
     std::thread thread_;
+    std::shared_ptr<SectionPlanner> planner_;
+    int64_t crossfade_ = 0;
+    std::atomic<uint64_t> jumps_{0};
+    // Map from frames written to the ring (= frames the player will play) to source
+    // frames, one entry per contiguous run. Feeder appends, control thread reads.
+    mutable std::mutex segMutex_;
+    std::vector<std::pair<uint64_t, int64_t>> segments_;
 };
 
 } // namespace atmos::core

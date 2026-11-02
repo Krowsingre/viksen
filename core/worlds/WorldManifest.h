@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "core/worlds/WorldConditions.h"
+#include "core/worlds/WorldSections.h"
 
 namespace atmos::core {
 
@@ -37,6 +38,13 @@ struct WorldManifest {
     double loopFromSeconds = 0.0;
     std::optional<double> loopToSeconds;  // nullopt = end of the stems
     float fadeSeconds = 4.0f;
+    // Musical grid for adaptive sections: bar 1 starts at barOffsetSeconds.
+    int beatsPerBar = 4;
+    double barOffsetSeconds = 0.0;
+    int jumpEveryBars = 4;           // possible jump points (phrase length)
+    double minStayBars = 8;          // a part plays at least this long before the state can move it
+    double crossfadeBeats = 1.0;     // length of the crossfade when jumping
+    std::vector<WorldSection> sections;
     std::vector<WorldStem> stems;
     std::vector<WorldRule> rules;
     ConditionSet unlock;                  // when this World becomes available (empty = always)

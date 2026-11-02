@@ -44,6 +44,15 @@ final class EngineController {
     private var lastUnderrunLog = Date.distantPast
 
     var busGains: [Float] = [1.0, 0.5, 0.0, 0.5]
+    /// The microphone normally only lets the music sense the room. With this on, the room
+    /// itself (transformed) is also heard under the music, at the mic bus levels.
+    var hearRoom: Bool = UserDefaults.standard.bool(forKey: "hearRoom") {
+        didSet {
+            UserDefaults.standard.set(hearRoom, forKey: "hearRoom")
+            applyRoomBlend()
+            AppLog.info("Hear the room \(hearRoom ? "on" : "off")")
+        }
+    }
     var masterGain: Float = 0.7 { didSet { bridge.setMasterGain(masterGain) } }
     var looping = false { didSet { bridge.setLooping(looping) } }
     var bedEnabled = false { didSet { bridge.setAtmosphereBedEnabled(bedEnabled) } }
@@ -95,6 +104,7 @@ final class EngineController {
         delegateProxy.onChange = { [weak self] reason in self?.bridgeStateDidChange(reason) }
         bridge.delegate = delegateProxy
         for bus in BusLevel.allCases { busGains[bus.rawValue] = bridge.gain(for: AtmosBusId(rawValue: bus.rawValue)!) }
+        applyRoomBlend()
         route = bridge.route
         headTracker.onYaw = { [weak self] yaw in self?.bridge.setListenerYawDegrees(Float(yaw)) }
         bridge.setDimensionSpatialEnabled(dimension3D)
@@ -158,7 +168,15 @@ final class EngineController {
 
     func setGain(_ gain: Float, for bus: BusLevel) {
         busGains[bus.rawValue] = gain
+        if bus == .micRaw || bus == .micTransformed { applyRoomBlend(); return }
         bridge.setGain(gain, for: AtmosBusId(rawValue: bus.rawValue)!)
+    }
+
+    /// Mic buses reach the ears only while "Hear the room" is on.
+    private func applyRoomBlend() {
+        for bus in [BusLevel.micRaw, .micTransformed] {
+            bridge.setGain(hearRoom ? busGains[bus.rawValue] : 0, for: AtmosBusId(rawValue: bus.rawValue)!)
+        }
     }
 
     // MARK: Media
@@ -584,7 +602,12 @@ final class EngineController {
     /// (didSet handlers re-send the same values, which is harmless.)
     private func syncSettingsFromEngine() {
         let s = bridge.currentSettings()
-        busGains = (0..<4).map { Float(truncating: s["busGain\($0)"] ?? 0) }
+        let engineGains = (0..<4).map { Float(truncating: s["busGain\($0)"] ?? 0) }
+        // While the room is not heard the engine's mic buses read 0: keep the user's levels.
+        busGains = engineGains.indices.map { i in
+            (!hearRoom && (i == BusLevel.micRaw.rawValue || i == BusLevel.micTransformed.rawValue)) ? busGains[i] : engineGains[i]
+        }
+        applyRoomBlend()
         masterGain = Float(truncating: s["masterGain"] ?? 0.7)
         limiterCeilingDb = Float(truncating: s["limiterCeilingDb"] ?? -1)
         bedEnabled = (s["bedEnabled"]?.boolValue) ?? false

@@ -84,6 +84,10 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic) uint64_t underruns;
 @property (nonatomic) BOOL spatial;       // 3D headphone mode
 @property (nonatomic) BOOL hrtf;          // Steam Audio HRTF (NO = simplified panner, e.g. Simulator)
+@property (nonatomic) BOOL adaptive;      // the Dimension moves between parts of its song
+@property (nonatomic) BOOL composed;      // no sense is steering it: playing as written
+@property (nonatomic, copy) NSString *sectionTitle;   // part of the song being heard
+@property (nonatomic, copy) NSString *sectionLabel;   // why ("You are moving")
 @property (nonatomic, copy) NSArray<AtmosWorldStemStatus *> *stems;
 @end
 
@@ -154,7 +158,7 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 
 // ---- Worlds (built-in music that reacts to the surroundings) ----
 - (NSArray<AtmosWorldInfo *> *)availableWorlds;   // built-in + Documents/Dimensions
-// Validates a Dimension folder (world.json + every stem present, at most 8 stems, ≤ 2 GB).
+// Validates a Dimension folder (world.json + every stem present, at most 16 stems, ≤ 2 GB).
 // Returns nil if valid, otherwise a user-facing reason.
 - (nullable NSString *)validateDimensionFolder:(NSURL *)folder NS_SWIFT_NAME(validateDimensionFolder(_:));
 - (BOOL)loadWorld:(NSString *)worldID error:(NSError **)error NS_SWIFT_NAME(loadWorld(_:));

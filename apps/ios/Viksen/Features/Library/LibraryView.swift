@@ -16,13 +16,15 @@ struct LibraryView: View {
     var body: some View {
         NavigationStack {
             List {
+                if store.tier >= .studio {
+                Section("Songs") {
                 if library.items.isEmpty {
-                    ContentUnavailableView("No audio yet", systemImage: "music.note",
-                                           description: Text("Songs you import from Experience are copied here. Originals are never changed."))
+                    Text("Songs you import in Studio are copied here. Originals are never changed.")
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
                 ForEach(visibleItems) { item in
                     Button {
-                        if store.allows(.musicImport) { engine.loadTrack(url: item.url) } else { showPaywall = true }
+                        if store.allows(.musicImport) { engine.loadStudio([.init(url: item.url)]) } else { showPaywall = true }
                     } label: {
                         VStack(alignment: .leading) {
                             Text(item.name).lineLimit(1)
@@ -30,15 +32,16 @@ struct LibraryView: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
-                    .accessibilityHint("Loads this file into Experience")
+                    .accessibilityHint("Opens this song in Studio")
                 }
                 .onDelete { idx in idx.map { visibleItems[$0] }.forEach(library.delete) } // indices refer to the filtered list
-
+                }
                 ProjectsSection(query: query)
+                }
                 RecordingsSection(query: query)
             }
             .navigationTitle("Library")
-            .searchable(text: $query, prompt: "Songs, projects, recordings")
+            .searchable(text: $query, prompt: store.tier >= .studio ? "Songs, projects, recordings" : "Recordings")
             .refreshable { library.refresh() }
             .sheet(isPresented: $showPaywall) { PaywallView(highlight: .studio) }
         }

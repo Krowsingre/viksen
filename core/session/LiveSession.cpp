@@ -157,7 +157,27 @@ bool LiveSession::startFeeder(int64_t fromFrame, std::string* error) {
     const double rate = sampleRate();
     const int64_t loopStart = static_cast<int64_t>(world_->loopFromSeconds * rate);
     const int64_t loopEnd = world_->loopToSeconds ? static_cast<int64_t>(*world_->loopToSeconds * rate) : 0;
-    feeder_ = std::make_unique<WorldFeeder>(engine_->worldPlayer(), std::move(decoders), loopStart, loopEnd);
+    planner_.reset();
+    int64_t crossfade = 0;
+    if (!world_->sections.empty()) {
+        // Adaptive sections: jump points on the bar grid of the song.
+        int64_t len = 0;
+        for (auto& d : decoders) len = std::max(len, d->lengthFrames());
+        const int64_t end = loopEnd > 0 ? std::min(loopEnd, len) : len;
+        const double beat = 60.0 / std::max(1.0, world_->tempo);
+        const double bar = beat * world_->beatsPerBar;
+        std::vector<std::pair<int64_t, int64_t>> frames;
+        for (const auto& sec : world_->sections)
+            frames.emplace_back(static_cast<int64_t>(std::llround(sec.fromSeconds * rate)),
+                                static_cast<int64_t>(std::llround(sec.toSeconds * rate)));
+        const int64_t gridStart = static_cast<int64_t>(std::llround(world_->barOffsetSeconds * rate));
+        planner_ = std::make_shared<SectionPlanner>(std::move(frames), static_cast<int64_t>(std::llround(bar * world_->jumpEveryBars * rate)),
+                                                    std::max(loopStart, gridStart), end,
+                                                    static_cast<int64_t>(std::llround(bar * world_->minStayBars * rate)));
+        crossfade = static_cast<int64_t>(std::llround(beat * world_->crossfadeBeats * rate));
+        planner_->setChoice(lastChoice_);
+    }
+    feeder_ = std::make_unique<WorldFeeder>(engine_->worldPlayer(), std::move(decoders), loopStart, loopEnd, planner_, crossfade);
     applyWorldSpatial();
     for (int i = 0; i < static_cast<int>(world_->stems.size()); ++i)
         engine_->worldPlayer().setStemGain(i, director_ ? director_->linearGain(i) * static_cast<float>(lifecycle_ ? lifecycle_->gain() : 0.0) : 0.0f);
@@ -191,6 +211,8 @@ void LiveSession::unloadWorld() {
     worldFactory_ = nullptr;
     director_.reset();
     lifecycle_.reset();
+    planner_.reset();
+    lastChoice_ = SectionChoice{};
     resumeFrame_ = 0;
 }
 
@@ -239,6 +261,10 @@ void LiveSession::updateWorld(double dt, const ConditionContext& context) {
         return;
     }
     director_->update(context, dt);
+    if (!world_->sections.empty()) {
+        lastChoice_ = chooseSections(world_->sections, context);
+        if (planner_) planner_->setChoice(lastChoice_);
+    }
     lifecycle_->update(true, dt);
     const float master = static_cast<float>(lifecycle_->gain());
     for (int i = 0; i < director_->stemCount(); ++i)
@@ -293,6 +319,18 @@ WorldStatus LiveSession::worldStatus() const {
     st.spatial = worldSpatial_;
     st.hrtf = p.hrtfActive();
     st.underruns = p.underruns();
+    st.adaptive = !world_->sections.empty();
+    st.composed = lastChoice_.composed;
+    if (feeder_ && planner_) {
+        const int sec = planner_->sectionAt(feeder_->playbackFrame());
+        // The planner sorts by start time; find the authored section with that range.
+        if (sec >= 0) {
+            const double t = static_cast<double>(feeder_->playbackFrame()) / feeder_->rate();
+            for (const auto& ws : world_->sections)
+                if (t >= ws.fromSeconds && t < ws.toSeconds) { st.sectionTitle = ws.title; st.sectionLabel = ws.label; break; }
+        }
+        st.sectionJumps = feeder_->jumps();
+    }
     if (feeder_) {
         st.positionSeconds = static_cast<double>(feeder_->playbackFrame()) / feeder_->rate();
         st.lengthSeconds = static_cast<double>(feeder_->loopEnd()) / feeder_->rate();

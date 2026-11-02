@@ -26,3 +26,7 @@
 | 22 | **Experience mirrors the the reference app model with built-in music**: Worlds ship with the owner's own music (from the owner's published albums, owner holds the rights). Importing your own songs/stems stays in **Studio**. | Owner directive |
 | 23 | App Store name: **Viksen: Aural Dimensions** (App Apple ID 6829630437). | Set by owner in App Store Connect |
 | 24 | User-facing name for Worlds is **Dimensions** (tab, screens, buttons, paywall). Code and file formats keep "World". Upcoming Dimensions: *Light of a Distant Sun*, *Steel, Steam, and Borrowed Dreams*. | Owner directive |
+| 25 | **Dimensions are truly adaptive**: different situations play *different parts of the song* (sections), not just a re-balanced mix. Jumps happen on the bar grid with a one-beat crossfade; with no sense on, the song plays as composed. | Owner directive |
+| 26 | **Studio is invisible until purchased**: no Studio tab, Home card, song import, Library songs or projects for Free/Experience. **Dimensions live inside Experience** (no separate tab). **About** is only in Settings. | Owner directive |
+| 27 | The microphone in Experience **senses** the room by default; hearing the (transformed) room under the music is a separate opt-in ("Blend the room in"). | Fix for "not an enjoyable experience" |
+| 28 | Built-in songs may have up to **16 stems** (Light of a Distant Sun 11, Steel, Steam, and Borrowed Dreams 12). Studio imports stay at 8. | Engineering |

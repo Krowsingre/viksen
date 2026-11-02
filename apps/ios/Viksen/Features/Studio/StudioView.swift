@@ -23,12 +23,13 @@ struct StudioView: View {
                     }
                 } else {
                     Section {
+                        NavigationLink("Your Dimensions") { DimensionsManagerView() }
                         Button { showImporter = true } label: {
-                            Label(engine.studioStems.isEmpty ? "Import stems\u{2026}" : "Replace stems\u{2026}",
+                            Label(engine.studioStems.isEmpty ? "Import a song or its stems\u{2026}" : "Replace\u{2026}",
                                   systemImage: "square.and.arrow.down.on.square")
                         }
                     } footer: {
-                        Text("Choose up to 8 stems exported from the same song (WAV, AIFF, FLAC, M4A, MP3). They are copied into Viksen; your originals are never changed. Stems stay aligned at their start, including any leading silence.")
+                        Text("Choose one song, or up to 8 stems exported from the same song (WAV, AIFF, FLAC, M4A, MP3). They are copied into Viksen; your originals are never changed. Stems stay aligned at their start, including any leading silence.")
                     }
 
                     if engine.studioActive && !engine.studioStems.isEmpty {
@@ -49,7 +50,7 @@ struct StudioView: View {
                             Button("Save as Project\u{2026}") { projectName = ""; showSave = true }
                             Button("Save as Dimension\u{2026}") { dimensionName = ""; showSaveDimension = true }
                         } footer: {
-                            Text("A Dimension of your own appears in the Dimensions tab with this mix and 3D layout.")
+                            Text("A Dimension of your own appears in Experience with this mix and 3D layout.")
                         }
                     }
                 }

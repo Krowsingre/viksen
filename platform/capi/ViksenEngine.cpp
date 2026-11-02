@@ -297,7 +297,9 @@ const char* vk_world_status(vk_engine* e) {
                          {"reasons", s.reasons}});
     const Json j = {{"loaded", st.loaded}, {"playing", st.playing}, {"id", st.id}, {"name", st.name},
                     {"position", st.positionSeconds}, {"length", st.lengthSeconds}, {"master", st.master},
-                    {"underruns", st.underruns}, {"spatial", st.spatial}, {"hrtf", st.hrtf}, {"stems", stems}};
+                    {"underruns", st.underruns}, {"spatial", st.spatial}, {"hrtf", st.hrtf}, {"stems", stems},
+                    {"adaptive", st.adaptive}, {"composed", st.composed}, {"section", st.sectionTitle},
+                    {"why", st.sectionLabel}};
     return keep(e, j.dump());
 }
 

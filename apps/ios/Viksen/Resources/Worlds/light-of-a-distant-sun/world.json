@@ -1,0 +1,295 @@
+{
+  "format": "atmos.world",
+  "schemaVersion": 1,
+  "id": "light-of-a-distant-sun",
+  "name": "Light of a Distant Sun",
+  "artist": "Krowsingre",
+  "tier": "experience",
+  "music": {
+    "tempo": 80,
+    "key": "E♭ major",
+    "beatsPerBar": 4,
+    "barOffsetSeconds": 0.17,
+    "loop": {
+      "fromSeconds": 0,
+      "toSeconds": null
+    }
+  },
+  "adaptive": {
+    "jumpEveryBars": 4,
+    "minStayBars": 8,
+    "crossfadeBeats": 1
+  },
+  "fadeSeconds": 4,
+  "stems": [
+    {
+      "id": "lead-vocals",
+      "file": "lead-vocals.m4a",
+      "title": "Lead Vocals",
+      "spatial": {
+        "azimuth": 0,
+        "elevation": 5,
+        "distance": 1.2,
+        "width": 20
+      }
+    },
+    {
+      "id": "backing-vocals",
+      "file": "backing-vocals.m4a",
+      "title": "Backing Vocals",
+      "spatial": {
+        "azimuth": 0,
+        "elevation": 10,
+        "distance": 2.2,
+        "width": 150
+      }
+    },
+    {
+      "id": "drums",
+      "file": "drums.m4a",
+      "title": "Drums",
+      "spatial": {
+        "azimuth": 0,
+        "elevation": -5,
+        "distance": 2.0,
+        "width": 70
+      }
+    },
+    {
+      "id": "bass",
+      "file": "bass.m4a",
+      "title": "Bass",
+      "spatial": {
+        "azimuth": 0,
+        "elevation": -10,
+        "distance": 1.4,
+        "width": 20
+      }
+    },
+    {
+      "id": "guitar",
+      "file": "guitar.m4a",
+      "title": "Guitar",
+      "spatial": {
+        "azimuth": 65,
+        "elevation": 0,
+        "distance": 1.8,
+        "width": 30
+      }
+    },
+    {
+      "id": "keyboard",
+      "file": "keyboard.m4a",
+      "title": "Keyboard",
+      "spatial": {
+        "azimuth": -40,
+        "elevation": 0,
+        "distance": 1.8,
+        "width": 60
+      }
+    },
+    {
+      "id": "percussion",
+      "file": "percussion.m4a",
+      "title": "Percussion",
+      "spatial": {
+        "azimuth": -110,
+        "elevation": 0,
+        "distance": 2.2,
+        "width": 50
+      }
+    },
+    {
+      "id": "strings",
+      "file": "strings.m4a",
+      "title": "Strings",
+      "spatial": {
+        "azimuth": 0,
+        "elevation": 20,
+        "distance": 3.0,
+        "width": 160
+      }
+    },
+    {
+      "id": "synth",
+      "file": "synth.m4a",
+      "title": "Synth",
+      "spatial": {
+        "azimuth": 180,
+        "elevation": 25,
+        "distance": 3.0,
+        "width": 100
+      }
+    },
+    {
+      "id": "other",
+      "file": "other.m4a",
+      "title": "Textures",
+      "spatial": {
+        "azimuth": 140,
+        "elevation": 10,
+        "distance": 2.5,
+        "width": 60
+      }
+    },
+    {
+      "id": "woodwinds",
+      "file": "woodwinds.m4a",
+      "title": "Woodwinds",
+      "spatial": {
+        "azimuth": -65,
+        "elevation": 10,
+        "distance": 2.0,
+        "width": 30
+      }
+    }
+  ],
+  "sections": [
+    {
+      "id": "arrival",
+      "title": "Arrival",
+      "fromBar": 0,
+      "toBar": 16,
+      "label": "You are still",
+      "when": {
+        "all": [
+          {
+            "type": "still"
+          }
+        ]
+      },
+      "prefer": {
+        "all": [
+          {
+            "type": "timeWindow",
+            "from": 21,
+            "to": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "drift",
+      "title": "Drift",
+      "fromBar": 16,
+      "toBar": 48,
+      "label": "It is quiet around you",
+      "when": {
+        "all": [
+          {
+            "type": "quiet"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ascent",
+      "title": "Ascent",
+      "fromBar": 48,
+      "toBar": 84,
+      "label": "You are moving",
+      "when": {
+        "all": [
+          {
+            "type": "moving"
+          }
+        ]
+      }
+    },
+    {
+      "id": "distant-sun",
+      "title": "Distant Sun",
+      "fromBar": 84,
+      "toBar": 116,
+      "label": "Your surroundings are loud",
+      "when": {
+        "all": [
+          {
+            "type": "loud"
+          }
+        ]
+      },
+      "prefer": {
+        "all": [
+          {
+            "type": "timeWindow",
+            "from": 7,
+            "to": 18
+          }
+        ]
+      }
+    },
+    {
+      "id": "crossing",
+      "title": "Crossing",
+      "fromBar": 116,
+      "toBar": 128,
+      "label": ""
+    },
+    {
+      "id": "afterglow",
+      "title": "Afterglow",
+      "fromBar": 128,
+      "toBar": 141.9,
+      "label": "You are still",
+      "when": {
+        "all": [
+          {
+            "type": "still"
+          }
+        ]
+      },
+      "prefer": {
+        "all": [
+          {
+            "type": "timeWindow",
+            "from": 21,
+            "to": 5
+          }
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "stem": "strings",
+      "when": {
+        "all": [
+          {
+            "type": "quiet"
+          }
+        ]
+      },
+      "gainDb": 0,
+      "otherwiseDb": -4,
+      "label": "Strings open up in the quiet"
+    },
+    {
+      "stem": "drums",
+      "when": {
+        "all": [
+          {
+            "type": "intensityAtLeast",
+            "value": 0.5
+          }
+        ]
+      },
+      "gainDb": 2,
+      "otherwiseDb": 0,
+      "label": "Drums push with your heart rate"
+    },
+    {
+      "stem": "synth",
+      "when": {
+        "all": [
+          {
+            "type": "loud"
+          }
+        ]
+      },
+      "gainDb": 2,
+      "otherwiseDb": 0,
+      "label": "Synth rises over loud surroundings"
+    }
+  ]
+}

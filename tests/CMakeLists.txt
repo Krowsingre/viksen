@@ -6,12 +6,14 @@ add_executable(atmos_tests
   unit/LiveSessionTests.cpp
   unit/ReactiveTests.cpp
   unit/WorldTests.cpp
+  unit/SectionTests.cpp
   unit/SpatialTests.cpp
   unit/RecordingTests.cpp
   unit/SessionDocumentTests.cpp
   integration/RoundTripTests.cpp
 )
 target_link_libraries(atmos_tests PRIVATE atmos_core)
+target_compile_definitions(atmos_tests PRIVATE ATMOS_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 atmos_set_warnings(atmos_tests)
 
 foreach(suite dsp spatial engine environment reactive automation worlds recording wav clip project session integration)

@@ -11,7 +11,9 @@
     "loop": {
       "fromSeconds": 0,
       "toSeconds": null
-    }
+    },
+    "beatsPerBar": 4,
+    "barOffsetSeconds": 0
   },
   "fadeSeconds": 4,
   "stems": [
@@ -104,21 +106,8 @@
         ]
       },
       "gainDb": 0,
-      "otherwiseDb": -8,
-      "label": "Strings bloom when it is quiet"
-    },
-    {
-      "stem": "woodwinds",
-      "when": {
-        "all": [
-          {
-            "type": "quiet"
-          }
-        ]
-      },
-      "gainDb": 0,
-      "otherwiseDb": -60,
-      "label": "Woodwinds drift in when it is quiet"
+      "otherwiseDb": -4,
+      "label": "Strings open up in the quiet"
     },
     {
       "stem": "woodwinds",
@@ -130,8 +119,8 @@
         ]
       },
       "gainDb": 0,
-      "otherwiseDb": -60,
-      "label": "Woodwinds drift in when you are still"
+      "otherwiseDb": -5,
+      "label": "Woodwinds come close when you are still"
     },
     {
       "stem": "synth",
@@ -142,62 +131,9 @@
           }
         ]
       },
-      "gainDb": 0,
-      "otherwiseDb": -10,
-      "label": "Synth rises with loud surroundings"
-    },
-    {
-      "stem": "guitar",
-      "when": {
-        "all": [
-          {
-            "type": "moving"
-          }
-        ]
-      },
-      "gainDb": 0,
-      "otherwiseDb": -14,
-      "label": "Guitar joins when you move"
-    },
-    {
-      "stem": "bass",
-      "when": {
-        "all": [
-          {
-            "type": "moving"
-          }
-        ]
-      },
-      "gainDb": 0,
-      "otherwiseDb": -10,
-      "label": "Bass follows your movement"
-    },
-    {
-      "stem": "bass",
-      "when": {
-        "all": [
-          {
-            "type": "intensityAtLeast",
-            "value": 0.35
-          }
-        ]
-      },
       "gainDb": 2,
-      "otherwiseDb": -10,
-      "label": "Bass drives harder as you work out"
-    },
-    {
-      "stem": "percussion",
-      "when": {
-        "all": [
-          {
-            "type": "moving"
-          }
-        ]
-      },
-      "gainDb": 0,
-      "otherwiseDb": -60,
-      "label": "Percussion starts when you move"
+      "otherwiseDb": 0,
+      "label": "Synth rises over loud surroundings"
     },
     {
       "stem": "percussion",
@@ -209,9 +145,196 @@
           }
         ]
       },
-      "gainDb": 2,
-      "otherwiseDb": -60,
+      "gainDb": 3,
+      "otherwiseDb": 0,
       "label": "Percussion pushes with your heart rate"
+    },
+    {
+      "stem": "bass",
+      "when": {
+        "all": [
+          {
+            "type": "moving"
+          }
+        ]
+      },
+      "gainDb": 1,
+      "otherwiseDb": -2,
+      "label": "Bass follows your stride"
+    }
+  ],
+  "adaptive": {
+    "jumpEveryBars": 4,
+    "minStayBars": 8,
+    "crossfadeBeats": 1
+  },
+  "sections": [
+    {
+      "id": "first-light",
+      "title": "First Light",
+      "fromBar": 0,
+      "toBar": 16,
+      "label": "You are still",
+      "when": {
+        "all": [
+          {
+            "type": "still"
+          }
+        ]
+      },
+      "prefer": {
+        "all": [
+          {
+            "type": "timeWindow",
+            "from": 21,
+            "to": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "gathering",
+      "title": "Gathering",
+      "fromBar": 16,
+      "toBar": 32,
+      "label": ""
+    },
+    {
+      "id": "morrow",
+      "title": "Morrow",
+      "fromBar": 32,
+      "toBar": 64,
+      "label": "It is quiet around you",
+      "when": {
+        "all": [
+          {
+            "type": "quiet"
+          }
+        ]
+      }
+    },
+    {
+      "id": "open-field",
+      "title": "Open Field",
+      "fromBar": 64,
+      "toBar": 96,
+      "label": "Your surroundings are loud",
+      "when": {
+        "all": [
+          {
+            "type": "loud"
+          }
+        ]
+      }
+    },
+    {
+      "id": "breath",
+      "title": "Breath",
+      "fromBar": 96,
+      "toBar": 100,
+      "label": ""
+    },
+    {
+      "id": "running",
+      "title": "Running With the Hinds",
+      "fromBar": 100,
+      "toBar": 128,
+      "label": "You are moving",
+      "when": {
+        "all": [
+          {
+            "type": "moving"
+          }
+        ]
+      }
+    },
+    {
+      "id": "clearing",
+      "title": "Clearing",
+      "fromBar": 128,
+      "toBar": 136,
+      "label": "You are still",
+      "when": {
+        "all": [
+          {
+            "type": "still"
+          }
+        ]
+      }
+    },
+    {
+      "id": "stampede",
+      "title": "Stampede",
+      "fromBar": 136,
+      "toBar": 176,
+      "label": "Your heart rate is up",
+      "when": {
+        "all": [
+          {
+            "type": "intensityAtLeast",
+            "value": 0.5
+          }
+        ]
+      }
+    },
+    {
+      "id": "dusk",
+      "title": "Dusk",
+      "fromBar": 176,
+      "toBar": 192,
+      "label": "You are still",
+      "when": {
+        "all": [
+          {
+            "type": "still"
+          }
+        ]
+      },
+      "prefer": {
+        "all": [
+          {
+            "type": "timeWindow",
+            "from": 21,
+            "to": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "moonlit",
+      "title": "Moonlit Meadow",
+      "fromBar": 192,
+      "toBar": 232,
+      "label": "It is quiet around you",
+      "when": {
+        "all": [
+          {
+            "type": "quiet"
+          }
+        ]
+      },
+      "prefer": {
+        "all": [
+          {
+            "type": "moonPhase",
+            "phase": "full"
+          }
+        ]
+      }
+    },
+    {
+      "id": "homeward",
+      "title": "Homeward",
+      "fromBar": 232,
+      "toBar": 257,
+      "label": "You are moving",
+      "when": {
+        "all": [
+          {
+            "type": "moving"
+          }
+        ]
+      }
     }
   ]
 }

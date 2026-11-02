@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "engine/audio/WorldStreamPlayer.h"
+
 namespace atmos::core {
 
 int WorldManifest::stemIndex(const std::string& sid) const {
@@ -29,6 +31,8 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
                 if (m["loop"].contains("toSeconds") && m["loop"]["toSeconds"].is_number())
                     w.loopToSeconds = m["loop"]["toSeconds"].get<double>();
             }
+            w.beatsPerBar = std::clamp(m.value("beatsPerBar", 4), 1, 16);
+            w.barOffsetSeconds = std::max(0.0, m.value("barOffsetSeconds", 0.0));
         }
         for (const auto& s : j.value("stems", Json::array())) {
             WorldStem st;
@@ -48,7 +52,7 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
             w.stems.push_back(st);
         }
         if (w.id.empty() || w.stems.empty()) return fail("World needs an id and at least one stem");
-        if (w.stems.size() > 8) return fail("at most 8 stems");
+        if (w.stems.size() > static_cast<size_t>(WorldStreamPlayer::kMaxStems)) return fail("at most 16 stems");
         for (const auto& r : j.value("rules", Json::array())) {
             WorldRule rule;
             rule.stem = r.value("stem", std::string{});
@@ -61,13 +65,42 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
             rule.label = r.value("label", std::string{});
             w.rules.push_back(rule);
         }
+        if (j.contains("adaptive") && j["adaptive"].is_object()) {
+            const Json& a = j["adaptive"];
+            w.jumpEveryBars = std::clamp(a.value("jumpEveryBars", 4), 1, 64);
+            w.minStayBars = std::clamp(a.value("minStayBars", 8.0), 0.0, 256.0);
+            w.crossfadeBeats = std::clamp(a.value("crossfadeBeats", 1.0), 0.0, 8.0);
+        }
+        const double barSeconds = 60.0 / std::max(1.0, w.tempo) * w.beatsPerBar;
+        for (const auto& sj : j.value("sections", Json::array())) {
+            WorldSection sec;
+            sec.id = sj.value("id", std::string{});
+            sec.title = sj.value("title", sec.id);
+            sec.label = sj.value("label", std::string{});
+            if (sj.contains("fromBar")) {
+                sec.fromSeconds = w.barOffsetSeconds + sj["fromBar"].get<double>() * barSeconds;
+                sec.toSeconds = w.barOffsetSeconds + sj.value("toBar", 0.0) * barSeconds;
+            } else {
+                sec.fromSeconds = sj.value("fromSeconds", 0.0);
+                sec.toSeconds = sj.value("toSeconds", 0.0);
+            }
+            if (sec.id.empty() || sec.toSeconds <= sec.fromSeconds) return fail("section needs an id and a positive length");
+            auto when = parseConditions(sj.value("when", Json(nullptr)), error);
+            if (!when) return std::nullopt;
+            sec.when = *when;
+            auto pref = parseConditions(sj.value("prefer", Json(nullptr)), error);
+            if (!pref) return std::nullopt;
+            sec.prefer = *pref;
+            w.sections.push_back(std::move(sec));
+        }
+        if (w.sections.size() > static_cast<size_t>(SectionPlanner::kMaxSections)) return fail("at most 64 sections");
         if (j.contains("unlock")) {
             auto u = parseConditions(j["unlock"], error);
             if (!u) return std::nullopt;
             w.unlock = *u;
         }
         w.extra = j;
-        for (const char* k : {"format", "schemaVersion", "id", "name", "artist", "tier", "fadeSeconds", "music", "stems", "rules", "unlock"})
+        for (const char* k : {"format", "schemaVersion", "id", "name", "artist", "tier", "fadeSeconds", "music", "stems", "rules", "unlock", "adaptive", "sections"})
             w.extra.erase(k);
         return w;
     } catch (const std::exception& e) {
@@ -83,7 +116,18 @@ Json worldToJson(const WorldManifest& w) {
     j["fadeSeconds"] = w.fadeSeconds;
     Json loop = {{"fromSeconds", w.loopFromSeconds}};
     loop["toSeconds"] = w.loopToSeconds ? Json(*w.loopToSeconds) : Json(nullptr);
-    j["music"] = {{"tempo", w.tempo}, {"key", w.key}, {"loop", loop}};
+    j["music"] = {{"tempo", w.tempo}, {"key", w.key}, {"loop", loop}, {"beatsPerBar", w.beatsPerBar},
+                  {"barOffsetSeconds", w.barOffsetSeconds}};
+    j["adaptive"] = {{"jumpEveryBars", w.jumpEveryBars}, {"minStayBars", w.minStayBars}, {"crossfadeBeats", w.crossfadeBeats}};
+    Json sections = Json::array();
+    for (const auto& sec : w.sections) {
+        Json o = {{"id", sec.id}, {"title", sec.title}, {"fromSeconds", sec.fromSeconds}, {"toSeconds", sec.toSeconds},
+                  {"label", sec.label}};
+        if (!sec.when.all.empty() || sec.when.hasUnknown()) o["when"] = conditionsToJson(sec.when);
+        if (!sec.prefer.all.empty() || sec.prefer.hasUnknown()) o["prefer"] = conditionsToJson(sec.prefer);
+        sections.push_back(o);
+    }
+    if (!sections.empty()) j["sections"] = sections;
     Json stems = Json::array();
     for (const auto& s : w.stems)
         stems.push_back({{"id", s.id}, {"file", s.file}, {"title", s.title}, {"baseGainDb", s.baseGainDb},
