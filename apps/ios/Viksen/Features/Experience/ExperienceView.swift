@@ -308,13 +308,12 @@ private struct NowPlayingSection: View {
     }
 }
 
-/// Built-in songs (and your own, made in Studio) to step into. Built-in Dimensions are
-/// downloaded on request and can be removed to save space, then downloaded again.
+/// Built-in Dimensions (and your own, made in Studio). Each row shows how many of its
+/// tracks are on this device; open it to download or remove tracks one by one or all.
 private struct DimensionPickerSection: View {
     @Environment(EngineController.self) private var engine
     @Environment(Store.self) private var store
     @Binding var showPaywall: Bool
-    @State private var confirmRemove: AtmosWorldInfo?
 
     var body: some View {
         Section {
@@ -327,19 +326,9 @@ private struct DimensionPickerSection: View {
         } header: {
             Text("Dimensions")
         } footer: {
-            Text("Each Dimension downloads when you choose it. Swipe left on a downloaded Dimension to remove it from this \(Platform.deviceNoun) and free up space; you can download it again any time.")
+            Text("Open a Dimension to choose which of its tracks to download. A Dimension plays the tracks you have; remove any track to free up space, and download it again any time.")
         }
         .onAppear { engine.refreshWorlds() }
-        .confirmationDialog("Remove \(confirmRemove?.name ?? "") from this \(Platform.deviceNoun)?",
-                            isPresented: Binding(get: { confirmRemove != nil }, set: { if !$0 { confirmRemove = nil } }),
-                            titleVisibility: .visible) {
-            Button("Remove Download", role: .destructive) {
-                if let w = confirmRemove { engine.removeDownload(w) }
-                confirmRemove = nil
-            }
-        } message: {
-            Text("Frees the space it uses. You can download it again any time.")
-        }
     }
 
     private func isBundled(_ w: AtmosWorldInfo) -> Bool { w.audioAvailable || w.userMade }
@@ -347,61 +336,36 @@ private struct DimensionPickerSection: View {
     @ViewBuilder private func row(_ world: AtmosWorldInfo) -> some View {
         let locked = requiredTier(world) > store.tier
         let current = engine.worldStatus.playing && engine.worldStatus.worldID == world.worldID
-        let state: DimensionDownloads.State = isBundled(world) ? .installed : engine.downloads.state(world.worldID)
-        Button {
-            if locked { showPaywall = true; return }
-            switch state {
-            case .installed: engine.enterWorld(world)
-            case .notInstalled, .failed: engine.downloads.download(world.worldID)
-            case .downloading: break
-            }
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: current ? "waveform" : (locked ? "lock.fill" : "circle.dotted"))
-                    .foregroundStyle(current ? Theme.accent : .secondary)
-                    .frame(width: 24)
-                    .symbolEffect(.variableColor.iterative, isActive: current)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(world.name).font(.headline).foregroundStyle(.primary)
-                    Text(subtitle(world, locked: locked, state: state)).font(.caption).foregroundStyle(.secondary)
+        HStack(spacing: 12) {
+            NavigationLink {
+                DimensionTracksView(world: world, showPaywall: $showPaywall)
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: current ? "waveform" : (locked ? "lock.fill" : "square.stack.3d.up"))
+                        .foregroundStyle(current ? Theme.accent : .secondary)
+                        .frame(width: 24)
+                        .symbolEffect(.variableColor.iterative, isActive: current)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(world.name).font(.headline)
+                        Text(subtitle(world, locked: locked)).font(.caption).foregroundStyle(.secondary)
+                    }
                 }
-                Spacer()
-                if !locked { trailing(world, state) }
+            }
+            if !locked && engine.isPlayable(world) {
+                Button {
+                    if current { engine.leaveWorld() } else { engine.enterWorld(world) }
+                } label: {
+                    Image(systemName: current ? "stop.circle.fill" : "play.circle.fill")
+                        .font(.title2).foregroundStyle(Theme.accent)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(current ? "Leave \(world.name)" : "Enter \(world.name)")
             }
         }
         .swipeActions {
             if world.userMade {
                 Button("Delete", role: .destructive) { engine.deleteDimension(world) }
-            } else if !isBundled(world) && state == .installed {
-                Button("Remove", role: .destructive) { confirmRemove = world }
             }
-        }
-        .contextMenu {
-            if !world.userMade && !isBundled(world) && state == .installed {
-                Button("Remove Download", systemImage: "trash", role: .destructive) { confirmRemove = world }
-            }
-        }
-    }
-
-    @ViewBuilder private func trailing(_ world: AtmosWorldInfo, _ state: DimensionDownloads.State) -> some View {
-        switch state {
-        case .installed:
-            EmptyView()
-        case .notInstalled:
-            Image(systemName: "arrow.down.circle").font(.title2).foregroundStyle(Theme.accent)
-                .accessibilityLabel("Download")
-        case .failed:
-            Image(systemName: "arrow.clockwise.circle").font(.title2).foregroundStyle(Theme.danger)
-                .accessibilityLabel("Try the download again")
-        case .downloading(let p):
-            Button { engine.downloads.cancel(world.worldID) } label: {
-                ZStack {
-                    ProgressView(value: p).progressViewStyle(.circular)
-                    Image(systemName: "stop.fill").font(.system(size: 8))
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(format: "Downloading, %.0f percent. Cancel", p * 100))
         }
     }
 
@@ -409,22 +373,17 @@ private struct DimensionPickerSection: View {
         switch w.tier { case "studio": .studio; case "experience": .experience; default: .free }
     }
 
-    private func subtitle(_ w: AtmosWorldInfo, locked: Bool, state: DimensionDownloads.State) -> String {
+    private func subtitle(_ w: AtmosWorldInfo, locked: Bool) -> String {
         var parts: [String] = []
         if !w.artist.isEmpty { parts.append(w.artist) }
-        if w.songCount > 1 { parts.append("\(w.songCount) songs") }
         if w.userMade { parts.append("yours") }
         if locked { parts.append(requiredTier(w).title) }
+        else if isBundled(w) { parts.append(w.songCount > 1 ? "\(w.songCount) tracks" : "1 track") }
         else {
-            switch state {
-            case .notInstalled: parts.append("tap to download")
-            case .downloading(let p): parts.append(String(format: "downloading %.0f%%", p * 100))
-            case .failed(let why): parts.append("download failed: \(why)")
-            case .installed:
-                if let bytes = engine.downloads.sizes[w.worldID] {
-                    parts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
-                }
-            }
+            let total = engine.downloads.tracks(w.worldID).count
+            let have = engine.downloads.installedCount(w.worldID)
+            if engine.downloads.isDownloading(w.worldID) { parts.append("downloading") }
+            parts.append(have == 0 ? "\(total) track\(total == 1 ? "" : "s") to download" : "\(have) of \(total) on this \(Platform.deviceNoun)")
         }
         return parts.joined(separator: " · ")
     }
@@ -559,6 +518,128 @@ private struct WeatherSection: View {
             }
             if let legal = weather.attributionLegalURL {
                 Link("Weather data sources", destination: legal).font(.footnote)
+            }
+        }
+    }
+}
+
+/// A Dimension's tracks: download or remove each one, or all of them, and enter it.
+struct DimensionTracksView: View {
+    let world: AtmosWorldInfo
+    @Binding var showPaywall: Bool
+    @Environment(EngineController.self) private var engine
+    @Environment(Store.self) private var store
+    @State private var confirmRemoveAll = false
+
+    private var tracks: [DimensionDownloads.Track] { engine.downloads.tracks(world.worldID) }
+    private var bundled: Bool { world.audioAvailable || world.userMade }
+    private var locked: Bool {
+        let need: Tier = world.tier == "studio" ? .studio : world.tier == "experience" ? .experience : .free
+        return need > store.tier
+    }
+
+    var body: some View {
+        let current = engine.worldStatus.playing && engine.worldStatus.worldID == world.worldID
+        List {
+            Section {
+                if locked {
+                    Button("Unlock \(world.name)") { showPaywall = true }
+                } else {
+                    Button {
+                        if current { engine.leaveWorld() } else { engine.enterWorld(world) }
+                    } label: {
+                        Label(current ? "Leave" : "Enter", systemImage: current ? "stop.fill" : "play.fill")
+                    }
+                    .disabled(!engine.isPlayable(world))
+                }
+            } footer: {
+                if !locked && !engine.isPlayable(world) {
+                    Text("Download at least one track to enter.")
+                } else if !locked && !bundled && engine.downloads.installedCount(world.worldID) < tracks.count {
+                    Text("Plays the tracks on this \(Platform.deviceNoun). Tracks you download later join the next time you enter.")
+                }
+            }
+
+            Section {
+                if bundled {
+                    ForEach(engine.bridgeSongTitles(world), id: \.self) { Text($0) }
+                } else {
+                    ForEach(tracks) { t in trackRow(t) }
+                }
+            } header: {
+                Text("Tracks")
+            } footer: {
+                if !bundled, engine.downloads.bytes(world.worldID) > 0 {
+                    Text("Using \(ByteCountFormatter.string(fromByteCount: engine.downloads.bytes(world.worldID), countStyle: .file)) on this \(Platform.deviceNoun).")
+                }
+            }
+
+            if !bundled && !locked && tracks.count > 1 {
+                Section {
+                    if engine.downloads.installedCount(world.worldID) < tracks.count {
+                        Button("Download All Tracks", systemImage: "arrow.down.circle") { engine.downloads.downloadAll(world.worldID) }
+                    }
+                    if engine.downloads.installedCount(world.worldID) > 0 {
+                        Button("Remove All Tracks", systemImage: "trash", role: .destructive) { confirmRemoveAll = true }
+                    }
+                }
+            }
+        }
+        .navigationTitle(world.name)
+        .inlineNavigationTitle()
+        .onAppear { engine.refreshWorlds() }
+        .confirmationDialog("Remove every track of \(world.name) from this \(Platform.deviceNoun)?",
+                            isPresented: $confirmRemoveAll, titleVisibility: .visible) {
+            Button("Remove All Tracks", role: .destructive) { engine.removeAllTracks(world) }
+        } message: {
+            Text("You can download them again any time.")
+        }
+    }
+
+    @ViewBuilder private func trackRow(_ t: DimensionDownloads.Track) -> some View {
+        let state = engine.downloads.state(t.id)
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(t.title)
+                switch state {
+                case .installed:
+                    Text(engine.downloads.sizes[t.id].map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "On this \(Platform.deviceNoun)")
+                        .font(.caption).foregroundStyle(.secondary)
+                case .downloading(let p):
+                    Text(String(format: "Downloading %.0f%%", p * 100)).font(.caption).foregroundStyle(.secondary)
+                case .failed(let why):
+                    Text("Download failed: \(why)").font(.caption).foregroundStyle(Theme.danger)
+                case .notInstalled:
+                    EmptyView()
+                }
+            }
+            Spacer()
+            if locked {
+                Image(systemName: "lock.fill").foregroundStyle(.secondary)
+            } else {
+                switch state {
+                case .installed:
+                    Button(role: .destructive) { engine.removeTrack(t) } label: {
+                        Image(systemName: "trash").foregroundStyle(Theme.danger)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Remove \(t.title)")
+                case .downloading(let p):
+                    Button { engine.downloads.cancel(t) } label: {
+                        ZStack {
+                            ProgressView(value: p).progressViewStyle(.circular)
+                            Image(systemName: "stop.fill").font(.system(size: 8))
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Cancel download of \(t.title)")
+                case .notInstalled, .failed:
+                    Button { engine.downloads.download(t) } label: {
+                        Image(systemName: "arrow.down.circle").font(.title2).foregroundStyle(Theme.accent)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Download \(t.title)")
+                }
             }
         }
     }

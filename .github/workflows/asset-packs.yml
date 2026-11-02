@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       dimensions:
-        description: "Dimension ids to upload (space separated); empty = all"
+        description: "Dimension ids to upload (space separated; each track is its own pack); empty = all"
         required: false
         default: ""
       dry_run:
@@ -42,20 +42,18 @@ jobs:
           for dir in "$RUNNER_TEMP"/assets/worlds/*/; do
             id=$(basename "$dir")
             if [ -n "$ONLY" ] && ! echo " $ONLY " | grep -q " $id "; then continue; fi
-            [ -f "apps/ios/Viksen/Resources/Worlds/$id/world.json" ] || { echo "::warning::$id has no world.json in the app; skipped"; continue; }
+            manifest="apps/ios/Viksen/Resources/Worlds/$id/world.json"
+            [ -f "$manifest" ] || { echo "::warning::$id has no world.json in the app; skipped"; continue; }
             mkdir -p "$root/Dimensions/$id"
             cp "$dir"*.m4a "$root/Dimensions/$id/"
-            python3 - "$id" "$root/$id.manifest.json" <<'PY'
-          import json, sys
-          pack, path = sys.argv[1], sys.argv[2]
-          json.dump({"assetPackID": pack,
-                     "downloadPolicy": {"onDemand": {}},
-                     "fileSelectors": [{"directory": f"Dimensions/{pack}"}],
-                     "platforms": ["iOS"]}, open(path, "w"), indent=2)
-          PY
-            (cd "$root" && xcrun ba-package "$id.manifest.json" -o "$out/$id.aar")
-            echo "$id $out/$id.aar" >> "$RUNNER_TEMP/packs.txt"
-            ls -la "$out/$id.aar"
+            # One on-demand pack per track: "<dimension>" for single-song Dimensions,
+            # "<dimension>.<song>" for each song of a multi-song Dimension.
+            python3 tools/asset_pack_manifests.py "$manifest" "$root" > "$RUNNER_TEMP/$id.packs"
+            while read -r pack; do
+              (cd "$root" && xcrun ba-package "$pack.manifest.json" -o "$out/$pack.aar")
+              echo "$pack $out/$pack.aar" >> "$RUNNER_TEMP/packs.txt"
+              ls -la "$out/$pack.aar"
+            done < "$RUNNER_TEMP/$id.packs"
           done
           cat "$RUNNER_TEMP/packs.txt"
       - name: Upload to App Store Connect

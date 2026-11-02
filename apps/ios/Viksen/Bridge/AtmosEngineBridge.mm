@@ -517,6 +517,18 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     return out;
 }
 
+- (NSArray<NSDictionary<NSString *, id> *> *)songsForWorld:(NSString *)worldID {
+    auto w = readWorld(folderForWorld(worldID), nullptr);
+    NSMutableArray *out = [NSMutableArray array];
+    if (!w) return out;
+    for (const auto &song : w->songs) {
+        NSMutableArray<NSString *> *files = [NSMutableArray array];
+        for (const auto &st : song.stems) [files addObject:@(st.file.c_str())];
+        [out addObject:@{@"id": @(song.id.c_str()), @"title": @(song.name.c_str()), @"files": files}];
+    }
+    return out;
+}
+
 - (BOOL)loadWorld:(NSString *)worldID audioFiles:(NSDictionary<NSString *, NSURL *> *)files error:(NSError **)error {
     NSURL *folder = folderForWorld(worldID);
     std::string err;
@@ -527,12 +539,19 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         NSURL *u = map[@(f.c_str())];
         return u ?: [folder URLByAppendingPathComponent:@(f.c_str())];
     };
-    for (const auto &song : w->songs)
+    // Keep only the songs whose every stem is on this device (tracks download one by one).
+    std::vector<atmos::core::WorldManifest> present;
+    for (const auto &song : w->songs) {
+        bool all = true;
         for (const auto &st : song.stems)
-            if (![[NSFileManager defaultManager] fileExistsAtPath:urlFor(st.file).path]) {
-                if (error) *error = makeError("This Dimension is not downloaded yet.");
-                return NO;
-            }
+            if (![[NSFileManager defaultManager] fileExistsAtPath:urlFor(st.file).path]) { all = false; break; }
+        if (all) present.push_back(song);
+    }
+    if (present.empty()) {
+        if (error) *error = makeError("Download a track of this Dimension first.");
+        return NO;
+    }
+    w->songs = std::move(present);
     atmos::core::LiveSession::StemFileDecoder decode = [urlFor](const std::string &f, double rate, std::string &e) {
         return atmos::ios::makeStemDecoder(urlFor(f), rate, e);
     };

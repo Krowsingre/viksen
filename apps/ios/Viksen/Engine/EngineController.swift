@@ -403,18 +403,39 @@ final class EngineController {
 
     func refreshWorlds() {
         worlds = bridge.availableWorlds()
-        downloads.stemFiles = { [bridge] id in bridge.stemFiles(forWorld: id) }
-        downloads.refresh(worlds.filter { !$0.userMade }.map(\.worldID),
-                          bundled: Set(worlds.filter(\.audioAvailable).map(\.worldID)))
+        for w in worlds where !w.userMade {
+            let tracks = bridge.songs(forWorld: w.worldID).compactMap { s -> DimensionDownloads.Track? in
+                guard let id = s["id"] as? String, let title = s["title"] as? String, let files = s["files"] as? [String] else { return nil }
+                return DimensionDownloads.Track(id: id, dimensionID: w.worldID, title: title, files: files)
+            }
+            downloads.setTracks(tracks, for: w.worldID)
+        }
+        downloads.refresh(bundled: Set(worlds.filter(\.audioAvailable).map(\.worldID)))
     }
 
-    /// Removes a downloaded Dimension's audio from this device (it can be downloaded again).
-    func removeDownload(_ world: AtmosWorldInfo) {
-        if worldStatus.loaded && worldStatus.worldID == world.worldID {
+    /// Removes one downloaded track (it can be downloaded again). If its Dimension is
+    /// playing, the Dimension stops first so the audio can go.
+    func removeTrack(_ track: DimensionDownloads.Track) {
+        stopIfPlaying(track.dimensionID)
+        downloads.remove(track)
+    }
+
+    /// Removes every downloaded track of a Dimension.
+    func removeAllTracks(_ world: AtmosWorldInfo) {
+        stopIfPlaying(world.worldID)
+        downloads.removeAll(world.worldID)
+    }
+
+    /// Song titles of a Dimension (for Dimensions whose audio ships with the app).
+    func bridgeSongTitles(_ world: AtmosWorldInfo) -> [String] {
+        bridge.songs(forWorld: world.worldID).compactMap { $0["title"] as? String }
+    }
+
+    private func stopIfPlaying(_ dimensionID: String) {
+        if worldStatus.loaded && worldStatus.worldID == dimensionID {
             bridge.unloadWorld()
             worldStatus = bridge.worldStatus()
         }
-        downloads.remove(world.worldID)
     }
 
     private static func slug(_ name: String) -> String {
@@ -706,7 +727,7 @@ final class EngineController {
 
     /// True when a Dimension's audio is on this device.
     func isPlayable(_ world: AtmosWorldInfo) -> Bool {
-        world.audioAvailable || world.userMade || downloads.state(world.worldID) == .installed
+        world.audioAvailable || world.userMade || downloads.isAnyInstalled(world.worldID)
     }
 
     func enterWorld(_ world: AtmosWorldInfo) {
@@ -718,9 +739,8 @@ final class EngineController {
             if world.audioAvailable || world.userMade {
                 try bridge.loadWorld(world.worldID)            // audio inside the app or the user's folder
             } else {
-                guard downloads.state(world.worldID) == .installed,
-                      let files = downloads.audioFiles(world.worldID) else {
-                    lastError = "Download \(world.name) first."
+                guard let files = downloads.audioFiles(world.worldID) else {
+                    lastError = "Download a track of \(world.name) first."
                     return
                 }
                 try bridge.loadWorld(world.worldID, audioFiles: files)

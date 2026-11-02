@@ -5,10 +5,12 @@ import BackgroundAssets
 import System
 #endif
 
-/// Dimensions are downloaded after install (Apple-hosted asset packs, one per Dimension,
-/// on demand) and can be removed and downloaded again to save space. Each pack holds
-/// "Dimensions/<id>/<stem files>". A build with the audio inside the app (development)
-/// treats those Dimensions as installed and never removes them.
+/// Dimension tracks are downloaded after install, one by one or all at once, and can be
+/// removed the same way to save space. Each track (song) is its own Apple-hosted,
+/// on-demand asset pack holding "Dimensions/<dimension id>/<its stem files>".
+/// Pack ids: a single-song Dimension uses the Dimension id; songs of multi-song
+/// Dimensions use "<dimension id>.<song id>". A build with the audio inside the app
+/// (development) treats those tracks as installed and never removes them.
 @MainActor
 @Observable
 final class DimensionDownloads {
@@ -19,112 +21,145 @@ final class DimensionDownloads {
         case failed(String)
     }
 
-    private(set) var states: [String: State] = [:]
-    private(set) var sizes: [String: Int64] = [:]   // bytes on this device, when installed
-    private var tasks: [String: Task<Void, Never>] = [:]
+    struct Track: Identifiable, Equatable {
+        let id: String            // song id ("dimension" or "dimension/song")
+        let dimensionID: String
+        let title: String
+        let files: [String]
+        var packID: String { id.replacingOccurrences(of: "/", with: ".") }
+    }
 
-    static func packID(_ dimensionID: String) -> String { dimensionID }
+    private(set) var states: [String: State] = [:]   // by track id
+    private(set) var sizes: [String: Int64] = [:]    // bytes on this device, by track id
+    private var tasks: [String: Task<Void, Never>] = [:]
+    private var fileMaps: [String: [String: URL]] = [:]
+    private var tracksByDimension: [String: [Track]] = [:]
+
     static func path(_ dimensionID: String, _ file: String) -> String { "Dimensions/\(dimensionID)/\(file)" }
 
-    func state(_ id: String) -> State { states[id] ?? .notInstalled }
+    // MARK: Tracks
 
-    /// Stem file names of a Dimension (set by the engine controller).
-    var stemFiles: ((String) -> [String])?
+    func setTracks(_ tracks: [Track], for dimensionID: String) { tracksByDimension[dimensionID] = tracks }
+    func tracks(_ dimensionID: String) -> [Track] { tracksByDimension[dimensionID] ?? [] }
+    func state(_ trackID: String) -> State { states[trackID] ?? .notInstalled }
 
+    func installedCount(_ dimensionID: String) -> Int { tracks(dimensionID).filter { state($0.id) == .installed }.count }
+    func isAnyInstalled(_ dimensionID: String) -> Bool { installedCount(dimensionID) > 0 }
+    func isDownloading(_ dimensionID: String) -> Bool {
+        tracks(dimensionID).contains { if case .downloading = state($0.id) { return true }; return false }
+    }
+    func bytes(_ dimensionID: String) -> Int64 { tracks(dimensionID).compactMap { sizes[$0.id] }.reduce(0, +) }
+
+    /// Local URLs of every downloaded track's audio in a Dimension (file name -> URL).
+    func audioFiles(_ dimensionID: String) -> [String: URL]? {
+        var map: [String: URL] = [:]
+        for t in tracks(dimensionID) { if let m = fileMaps[t.id] { map.merge(m) { a, _ in a } } }
+        return map.isEmpty ? nil : map
+    }
+
+    // MARK: Refresh
 
     /// Refreshes what is on the device. `bundled`: Dimensions whose audio ships in the app.
-    func refresh(_ ids: [String], bundled: Set<String>) {
-        for id in ids {
-            if bundled.contains(id) { states[id] = .installed; continue }
-            if case .downloading = states[id] { continue }
-            #if os(iOS)
-            Task {
-                let files = self.stemFiles?(id) ?? []
-                let map = files.isEmpty ? nil : await self.resolve(id, files: files)
-                if case .downloading = self.states[id] { return }
-                if let map {
-                    self.fileMaps[id] = map
-                    self.states[id] = .installed
-                    self.sizes[id] = Self.measure(map)
-                } else {
-                    self.fileMaps[id] = nil
-                    if case .failed = self.states[id] {} else { self.states[id] = .notInstalled }
+    func refresh(bundled: Set<String>) {
+        for (dimension, tracks) in tracksByDimension {
+            for t in tracks {
+                if bundled.contains(dimension) { states[t.id] = .installed; continue }
+                if case .downloading = states[t.id] { continue }
+                #if os(iOS)
+                Task {
+                    let map = await self.resolve(t)
+                    if case .downloading = self.states[t.id] { return }
+                    if let map {
+                        self.fileMaps[t.id] = map
+                        self.states[t.id] = .installed
+                        self.sizes[t.id] = Self.measure(map)
+                    } else {
+                        self.fileMaps[t.id] = nil
+                        self.sizes[t.id] = nil
+                        if case .failed = self.states[t.id] {} else { self.states[t.id] = .notInstalled }
+                    }
                 }
+                #else
+                states[t.id] = .notInstalled
+                #endif
             }
-            #else
-            states[id] = .notInstalled
-            #endif
         }
     }
 
-    func download(_ id: String) {
+    // MARK: Download / remove
+
+    func download(_ track: Track) {
         #if os(iOS)
-        guard tasks[id] == nil else { return }
-        states[id] = .downloading(0)
-        AppLog.info("Download Dimension \(id)")
-        let packID = Self.packID(id)
+        guard tasks[track.id] == nil, state(track.id) != .installed else { return }
+        states[track.id] = .downloading(0)
+        AppLog.info("Download track \(track.id)")
+        let packID = track.packID
         let progressTask = Task {
             for await update in AssetPackManager.shared.statusUpdates(forAssetPackWithID: packID) {
                 if case .downloading(_, let progress) = update {
-                    self.states[id] = .downloading(progress.fractionCompleted)
+                    self.states[track.id] = .downloading(progress.fractionCompleted)
                 }
             }
         }
-        tasks[id] = Task {
-            defer { progressTask.cancel(); self.tasks[id] = nil }
+        tasks[track.id] = Task {
+            defer { progressTask.cancel(); self.tasks[track.id] = nil }
             do {
                 let pack = try await AssetPackManager.shared.assetPack(withID: packID)
                 try await AssetPackManager.shared.ensureLocalAvailability(of: pack)
-                let map = await self.resolve(id, files: self.stemFiles?(id) ?? [])
-                self.fileMaps[id] = map
-                self.states[id] = map == nil ? .failed("the download is incomplete") : .installed
-                self.sizes[id] = map.map(Self.measure)
-                AppLog.info("Dimension \(id) downloaded")
+                let map = await self.resolve(track)
+                self.fileMaps[track.id] = map
+                self.states[track.id] = map == nil ? .failed("the download is incomplete") : .installed
+                self.sizes[track.id] = map.map(Self.measure)
+                AppLog.info("Track \(track.id) downloaded")
             } catch is CancellationError {
-                self.states[id] = .notInstalled
+                self.states[track.id] = .notInstalled
             } catch {
-                self.states[id] = .failed(error.localizedDescription)
-                AppLog.error("Dimension \(id) download failed: \(error.localizedDescription)")
+                self.states[track.id] = .failed(error.localizedDescription)
+                AppLog.error("Track \(track.id) download failed: \(error.localizedDescription)")
             }
         }
         #endif
     }
 
-    func cancel(_ id: String) {
-        tasks[id]?.cancel()
-        tasks[id] = nil
-        states[id] = .notInstalled
+    func downloadAll(_ dimensionID: String) {
+        for t in tracks(dimensionID) where state(t.id) != .installed { download(t) }
     }
 
-    func remove(_ id: String) {
+    func cancel(_ track: Track) {
+        tasks[track.id]?.cancel()
+        tasks[track.id] = nil
+        states[track.id] = .notInstalled
+    }
+
+    func remove(_ track: Track) {
         #if os(iOS)
         Task {
             do {
-                try await AssetPackManager.shared.remove(assetPackWithID: Self.packID(id))
-                self.states[id] = .notInstalled
-                self.sizes[id] = nil
-                self.fileMaps[id] = nil
-                AppLog.info("Dimension \(id) removed from this device")
+                try await AssetPackManager.shared.remove(assetPackWithID: track.packID)
+                self.states[track.id] = .notInstalled
+                self.sizes[track.id] = nil
+                self.fileMaps[track.id] = nil
+                AppLog.info("Track \(track.id) removed from this device")
             } catch {
-                self.states[id] = .failed(error.localizedDescription)
-                AppLog.error("Remove Dimension \(id) failed: \(error.localizedDescription)")
+                self.states[track.id] = .failed(error.localizedDescription)
+                AppLog.error("Remove track \(track.id) failed: \(error.localizedDescription)")
             }
         }
         #endif
     }
 
-    /// Local URLs of a downloaded Dimension's audio (file name -> URL), or nil when it is
-    /// not on this device. Known after refresh() / download().
-    func audioFiles(_ id: String) -> [String: URL]? { fileMaps[id] }
+    func removeAll(_ dimensionID: String) {
+        for t in tracks(dimensionID) where state(t.id) == .installed { remove(t) }
+    }
 
-    private var fileMaps: [String: [String: URL]] = [:]
+    // MARK: Files
 
-    private func resolve(_ id: String, files: [String]) async -> [String: URL]? {
+    private func resolve(_ track: Track) async -> [String: URL]? {
         #if os(iOS)
-        guard !files.isEmpty else { return nil }
+        guard !track.files.isEmpty else { return nil }
         var map: [String: URL] = [:]
-        for f in files {
-            guard let url = try? await AssetPackManager.shared.url(for: FilePath(Self.path(id, f))),
+        for f in track.files {
+            guard let url = try? await AssetPackManager.shared.url(for: FilePath(Self.path(track.dimensionID, f))),
                   FileManager.default.fileExists(atPath: url.path) else { return nil }
             map[f] = url
         }

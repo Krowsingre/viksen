@@ -85,33 +85,36 @@ struct SettingsView: View {
     }
 }
 
-/// Downloaded Dimensions and the space each uses; remove any to free it.
+/// Downloaded tracks per Dimension and the space they use; open one to remove tracks.
 private struct DownloadsSettingsSection: View {
     @Environment(EngineController.self) private var engine
 
     var body: some View {
-        let downloaded = engine.worlds.filter { !$0.userMade && !$0.audioAvailable && engine.downloads.state($0.worldID) == .installed }
+        let downloaded = engine.worlds.filter { !$0.userMade && !$0.audioAvailable && engine.downloads.isAnyInstalled($0.worldID) }
         Section {
             if downloaded.isEmpty {
-                Text("No Dimensions downloaded.").foregroundStyle(.secondary)
+                Text("No tracks downloaded.").foregroundStyle(.secondary)
             }
             ForEach(downloaded, id: \.worldID) { w in
-                HStack {
-                    Text(w.name)
-                    Spacer()
-                    if let bytes = engine.downloads.sizes[w.worldID] {
-                        Text(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
+                NavigationLink {
+                    DimensionTracksView(world: w, showPaywall: .constant(false))
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(w.name)
+                            Text("\(engine.downloads.installedCount(w.worldID)) of \(engine.downloads.tracks(w.worldID).count) tracks")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(ByteCountFormatter.string(fromByteCount: engine.downloads.bytes(w.worldID), countStyle: .file))
                             .foregroundStyle(.secondary).monospacedDigit()
                     }
                 }
-                .swipeActions {
-                    Button("Remove", role: .destructive) { engine.removeDownload(w) }
-                }
             }
         } header: {
-            Text("Downloaded Dimensions")
+            Text("Downloaded Tracks")
         } footer: {
-            Text("Swipe left to remove a Dimension and free its space. Download it again from Dimensions any time.")
+            Text("Open a Dimension to remove tracks one by one or all at once. Download them again from Dimensions any time.")
         }
         .onAppear { engine.refreshWorlds() }
     }
