@@ -379,6 +379,11 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 - (void)stopWorld { _session->stopWorld(); }
 - (void)unloadWorld { _session->unloadWorld(); }
 - (void)setExerciseIntensity:(double)intensity { _intensity = intensity; }
+- (void)setDimensionSpatialEnabled:(BOOL)enabled { _session->setWorldSpatialEnabled(enabled); }
+- (void)moveStem:(NSInteger)index azimuth:(float)az elevation:(float)el distance:(float)d {
+    _session->setWorldStemPosition(static_cast<int>(index), az, el, d);
+}
+- (BOOL)binauralHRTF { return _session->engine().worldPlayer().hrtfActive(); }
 
 - (AtmosWorldStatus *)worldStatus {
     const atmos::core::WorldStatus st = _session->worldStatus();
@@ -391,10 +396,16 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     s.lengthSeconds = st.lengthSeconds;
     s.master = st.master;
     s.underruns = st.underruns;
+    s.spatial = st.spatial;
+    s.hrtf = st.hrtf;
     NSMutableArray *stems = [NSMutableArray array];
     for (const auto &x : st.stems) {
         AtmosWorldStemStatus *t = [AtmosWorldStemStatus new];
         t.title = @(x.title.c_str());
+        t.azimuth = x.azimuthDeg;
+        t.elevation = x.elevationDeg;
+        t.distance = x.distanceM;
+        t.width = x.widthDeg;
         t.gainDb = x.gainDb;
         t.peak = x.peak;
         NSMutableArray *r = [NSMutableArray array];

@@ -17,3 +17,4 @@ apps/ios/Viksen/Resources/Worlds/**/*.m4a
 apps/ios/Viksen/Resources/Worlds/**/*.wav
 apps/ios/Viksen/Resources/Worlds/**/*.caf
 apps/ios/Viksen/Resources/Worlds/**/*.opus
+third_party/steamaudio/

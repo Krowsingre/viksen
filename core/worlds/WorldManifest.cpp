@@ -1,5 +1,7 @@
 #include "core/worlds/WorldManifest.h"
 
+#include <algorithm>
+
 namespace atmos::core {
 
 int WorldManifest::stemIndex(const std::string& sid) const {
@@ -34,6 +36,13 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
             st.file = s.value("file", std::string{});
             st.title = s.value("title", st.id);
             st.baseGainDb = s.value("baseGainDb", 0.0f);
+            if (s.contains("spatial") && s["spatial"].is_object()) {
+                const Json& sp = s["spatial"];
+                st.azimuthDeg = sp.value("azimuth", 0.0f);
+                st.elevationDeg = std::clamp(sp.value("elevation", 0.0f), -90.0f, 90.0f);
+                st.distanceM = std::clamp(sp.value("distance", 1.5f), 0.25f, 20.0f);
+                st.widthDeg = std::clamp(sp.value("width", 60.0f), 0.0f, 180.0f);
+            }
             if (st.id.empty() || st.file.empty()) return fail("stem needs id and file");
             if (st.file.find("..") != std::string::npos || st.file.front() == '/') return fail("stem file escapes the World folder");
             w.stems.push_back(st);
@@ -76,7 +85,10 @@ Json worldToJson(const WorldManifest& w) {
     loop["toSeconds"] = w.loopToSeconds ? Json(*w.loopToSeconds) : Json(nullptr);
     j["music"] = {{"tempo", w.tempo}, {"key", w.key}, {"loop", loop}};
     Json stems = Json::array();
-    for (const auto& s : w.stems) stems.push_back({{"id", s.id}, {"file", s.file}, {"title", s.title}, {"baseGainDb", s.baseGainDb}});
+    for (const auto& s : w.stems)
+        stems.push_back({{"id", s.id}, {"file", s.file}, {"title", s.title}, {"baseGainDb", s.baseGainDb},
+                         {"spatial", {{"azimuth", s.azimuthDeg}, {"elevation", s.elevationDeg},
+                                      {"distance", s.distanceM}, {"width", s.widthDeg}}}});
     j["stems"] = stems;
     Json rules = Json::array();
     for (const auto& r : w.rules)

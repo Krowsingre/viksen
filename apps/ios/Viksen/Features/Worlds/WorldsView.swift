@@ -80,6 +80,28 @@ struct WorldDetailView: View {
                 }
             }
 
+            Section {
+                Toggle("3D headphone audio", isOn: $engine.dimension3D)
+                if isCurrent && engine.dimension3D {
+                    Gated(feature: .spatialCanvas, title: "Arrange instruments in 3D") {
+                        SpatialCanvasView()
+                        Button("Reset layout") { engine.resetPositions(world.worldID) }
+                            .font(.footnote)
+                    }
+                }
+                if engine.headTracker.isSupported {
+                    Gated(feature: .headTracking, title: "Follow my head (AirPods)") {
+                        Toggle("Follow my head (AirPods)", isOn: $engine.headTrackingEnabled)
+                    }
+                }
+            } header: {
+                Text("Space")
+            } footer: {
+                Text(engine.binauralHRTF
+                     ? "Binaural 3D (Steam Audio HRTF). Drag an instrument to move it around you. Best with headphones."
+                     : "Simplified 3D in this build (no HRTF). Drag an instrument to move it around you.")
+            }
+
             if isCurrent {
                 Section("Layers") {
                     ForEach(Array(engine.worldStatus.stems.enumerated()), id: \.offset) { _, stem in

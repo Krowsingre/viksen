@@ -9,6 +9,7 @@
 #include "core/worlds/WorldManifest.h"
 #include "engine/audio/WorldStreamPlayer.h"
 #include "engine/dsp/Resampler.h"
+#include "engine/spatial/BinauralFactory.h"
 #include "tests/TestHarness.h"
 #include "tests/TestUtil.h"
 
@@ -41,7 +42,7 @@ Json demoWorldJson() {
 
 TEST_CASE("worlds/stream player plays only when every stem has data, and flushes in sync") {
     WorldStreamPlayer p;
-    p.prepare(48000, 4096);
+    p.prepare(48000, 512, 4096);
     p.setStemCount(2);
     p.setActive(true);
     std::vector<float> ones(2 * 1000, 0.25f), twos(2 * 1000, 0.5f);
@@ -74,6 +75,14 @@ TEST_CASE("worlds/manifest parses, validates and round-trips unknown keys") {
     auto again = parseWorld(worldToJson(*w));
     REQUIRE(again.has_value());
     CHECK(again->stems[1].baseGainDb == -6.0f);
+
+    CHECK(w->stems[0].distanceM == 1.5f);                      // default position
+    Json spatial = demoWorldJson();
+    spatial["stems"][1]["spatial"] = {{"azimuth", -120}, {"elevation", 200}, {"distance", 3}, {"width", 20}};
+    auto ws = parseWorld(spatial);
+    REQUIRE(ws.has_value());
+    CHECK(ws->stems[1].azimuthDeg == -120.0f && ws->stems[1].elevationDeg == 90.0f); // clamped
+    CHECK(worldToJson(*ws)["stems"][1]["spatial"]["distance"] == 3.0);
 
     Json bad = demoWorldJson();
     bad["rules"][0]["stem"] = "nope";
@@ -179,6 +188,13 @@ TEST_CASE("session/World fades in, reacts, survives a sample-rate change and fad
     st = s.worldStatus();
     CHECK(st.playing);
     CHECK(test::peakOf(l.data(), 512) > 0.05f);
+
+    s.setWorldStemPosition(0, 450.0f, 10.0f, 40.0f);           // canvas drag: wrapped and clamped
+    st = s.worldStatus();
+    CHECK_NEAR(st.stems[0].azimuthDeg, 90.0, 1e-4);
+    CHECK_NEAR(st.stems[0].distanceM, 20.0, 1e-4);
+    CHECK(st.spatial);
+    CHECK(st.hrtf == binauralHrtfCompiledIn());
 
     s.stopWorld();
     run(3.0);

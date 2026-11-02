@@ -31,7 +31,7 @@ void AudioEngine::prepare(const EngineConfig& config) {
     features_.prepare(sr);
     micTransform_.prepare(sr, config_.maxBlockSize);
     roomMemory_.prepare(sr);
-    world_.prepare(sr);
+    world_.prepare(sr, config_.maxBlockSize);
     prepared_ = true;
 }
 

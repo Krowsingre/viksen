@@ -1,0 +1,1 @@
+pffft v1.1.0 (https://github.com/marton78/pffft, commit 1fdcb508e5082052ab406d560b7c4622b8b4b0dd). Only the float FFT. Needed by Steam Audio's iOS static library.

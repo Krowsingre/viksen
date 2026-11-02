@@ -61,6 +61,9 @@ jobs:
           done
           rm -rf "$RUNNER_TEMP/assets"
 
+      - name: Fetch Steam Audio SDK (pinned, checksum-verified)
+        run: ./tools/fetch_steam_audio.sh
+
       - name: Install XcodeGen
         run: brew install xcodegen
 

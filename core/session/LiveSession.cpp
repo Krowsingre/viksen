@@ -71,6 +71,8 @@ void LiveSession::applySettings() {
     e.roomMemory().level.set(settings_.roomMemoryLevel);
     e.roomMemory().pitchSemitones.store(settings_.roomMemoryPitch);
     e.roomMemory().listenerYawDeg.store(listenerYaw_);
+    e.worldPlayer().setListenerYaw(listenerYaw_);
+    e.worldPlayer().setSpatialEnabled(worldSpatial_);
     e.setMicInputEnabled(settings_.micEnabled);
     e.setLooping(settings_.looping);
 }
@@ -113,6 +115,7 @@ void LiveSession::setMotionAvailable(bool available) { states_.setMotionAvailabl
 void LiveSession::setListenerYaw(float degrees) {
     listenerYaw_ = degrees;
     engine_->roomMemory().listenerYawDeg.store(degrees, std::memory_order_relaxed);
+    engine_->worldPlayer().setListenerYaw(degrees);
 }
 
 // ---------------------------------------------------------------- Worlds
@@ -137,6 +140,7 @@ bool LiveSession::startFeeder(int64_t fromFrame, std::string* error) {
     const int64_t loopStart = static_cast<int64_t>(world_->loopFromSeconds * rate);
     const int64_t loopEnd = world_->loopToSeconds ? static_cast<int64_t>(*world_->loopToSeconds * rate) : 0;
     feeder_ = std::make_unique<WorldFeeder>(engine_->worldPlayer(), std::move(decoders), loopStart, loopEnd);
+    applyWorldSpatial();
     for (int i = 0; i < static_cast<int>(world_->stems.size()); ++i)
         engine_->worldPlayer().setStemGain(i, director_ ? director_->linearGain(i) * static_cast<float>(lifecycle_ ? lifecycle_->gain() : 0.0) : 0.0f);
     feeder_->start(fromFrame);
@@ -201,6 +205,30 @@ void LiveSession::updateWorld(double dt, const ConditionContext& context) {
     }
 }
 
+void LiveSession::applyWorldSpatial() {
+    WorldStreamPlayer& p = engine_->worldPlayer();
+    p.setSpatialEnabled(worldSpatial_);
+    if (!world_) return;
+    for (size_t i = 0; i < world_->stems.size(); ++i) {
+        const auto& s = world_->stems[i];
+        p.setStemPosition(static_cast<int>(i), s.azimuthDeg, s.elevationDeg, s.distanceM, s.widthDeg);
+    }
+}
+
+void LiveSession::setWorldSpatialEnabled(bool on) {
+    worldSpatial_ = on;
+    engine_->worldPlayer().setSpatialEnabled(on);
+}
+
+void LiveSession::setWorldStemPosition(int stem, float az, float el, float dist) {
+    if (!world_ || stem < 0 || stem >= static_cast<int>(world_->stems.size())) return;
+    auto& s = world_->stems[static_cast<size_t>(stem)];
+    s.azimuthDeg = std::remainder(az, 360.0f);
+    s.elevationDeg = std::clamp(el, -90.0f, 90.0f);
+    s.distanceM = std::clamp(dist, 0.25f, 20.0f);
+    engine_->worldPlayer().setStemPosition(stem, s.azimuthDeg, s.elevationDeg, s.distanceM, s.widthDeg);
+}
+
 WorldStatus LiveSession::worldStatus() const {
     WorldStatus st;
     if (!world_) return st;
@@ -210,6 +238,8 @@ WorldStatus LiveSession::worldStatus() const {
     st.playing = lifecycle_ != nullptr;
     st.master = lifecycle_ ? static_cast<float>(lifecycle_->gain()) : 0.0f;
     const WorldStreamPlayer& p = const_cast<AudioEngine&>(*engine_).worldPlayer();
+    st.spatial = worldSpatial_;
+    st.hrtf = p.hrtfActive();
     st.underruns = p.underruns();
     if (feeder_) {
         st.positionSeconds = static_cast<double>(feeder_->playbackFrame()) / feeder_->rate();
@@ -221,6 +251,10 @@ WorldStatus LiveSession::worldStatus() const {
         WorldStemStatus s;
         s.id = world_->stems[static_cast<size_t>(i)].id;
         s.title = world_->stems[static_cast<size_t>(i)].title;
+        s.azimuthDeg = world_->stems[static_cast<size_t>(i)].azimuthDeg;
+        s.elevationDeg = world_->stems[static_cast<size_t>(i)].elevationDeg;
+        s.distanceM = world_->stems[static_cast<size_t>(i)].distanceM;
+        s.widthDeg = world_->stems[static_cast<size_t>(i)].widthDeg;
         s.gainDb = director_ ? director_->currentDb(i) : -60.0f;
         s.peak = p.stemPeak(i);
         if (director_) s.reasons = director_->reasons(i);

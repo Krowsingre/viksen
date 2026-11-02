@@ -52,6 +52,7 @@ using StemDecoderFactory =
 
 struct WorldStemStatus {
     std::string id, title;
+    float azimuthDeg = 0, elevationDeg = 0, distanceM = 1.5f, widthDeg = 60;
     float gainDb = -60.0f;
     float peak = 0.0f;
     std::vector<std::string> reasons;
@@ -64,6 +65,8 @@ struct WorldStatus {
     double positionSeconds = 0.0, lengthSeconds = 0.0;
     float master = 0.0f;
     uint64_t underruns = 0;
+    bool spatial = false;           // 3D headphone mode on
+    bool hrtf = false;              // true: Steam Audio HRTF; false: interim panner
     std::vector<WorldStemStatus> stems;
 };
 
@@ -129,6 +132,11 @@ public:
     // Call regularly (e.g. 30 Hz): advances rule fades and the lifecycle.
     void updateWorld(double dtSeconds, const ConditionContext& context);
     WorldStatus worldStatus() const;
+    // 3D headphone rendering of the World's stems (kept across rebuilds).
+    void setWorldSpatialEnabled(bool on);
+    bool worldSpatialEnabled() const { return worldSpatial_; }
+    // Moves a stem (spatial canvas). Kept until the World is unloaded.
+    void setWorldStemPosition(int stem, float azimuthDeg, float elevationDeg, float distanceM);
     ~LiveSession();
 
 private:
@@ -149,6 +157,8 @@ private:
     std::unique_ptr<WorldDirector> director_;
     std::unique_ptr<WorldLifecycle> lifecycle_;
     int64_t resumeFrame_ = 0;
+    bool worldSpatial_ = true;
+    void applyWorldSpatial();
 };
 
 } // namespace atmos::core

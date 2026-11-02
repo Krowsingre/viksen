@@ -37,7 +37,9 @@ final class EngineController {
     private(set) var worlds: [AtmosWorldInfo] = []
     private(set) var route = AtmosRouteInfo()
     private(set) var statusMessage: String?
-    var lastError: String?
+    var lastError: String? { didSet { if let e = lastError { AppLog.error(e) } } }
+    private var loggedUnderruns: UInt64 = 0
+    private var lastUnderrunLog = Date.distantPast
 
     var busGains: [Float] = [1.0, 0.5, 0.0, 0.5]
     var masterGain: Float = 0.7 { didSet { bridge.setMasterGain(masterGain) } }
@@ -93,6 +95,7 @@ final class EngineController {
         for bus in BusLevel.allCases { busGains[bus.rawValue] = bridge.gain(for: AtmosBusId(rawValue: bus.rawValue)!) }
         route = bridge.route
         headTracker.onYaw = { [weak self] yaw in self?.bridge.setListenerYawDegrees(Float(yaw)) }
+        bridge.setDimensionSpatialEnabled(dimension3D)
         activity.onCadence = { [weak self] spm in self?.applyCadence(spm) }
         watch.onHeartRate = { [weak self] bpm, date in self?.health.ingestLiveHeartRate(bpm, at: date) }
         watch.activate()
@@ -121,6 +124,8 @@ final class EngineController {
             try bridge.startAudio()
             audioRunning = true
             lastError = nil
+            AppLog.info(String(format: "Audio started: %@, %.0f Hz, buffer %.1f ms", bridge.route.outputName,
+                               bridge.route.sampleRate, bridge.route.ioBufferDuration * 1000))
         } catch {
             lastError = error.localizedDescription
         }
@@ -130,6 +135,7 @@ final class EngineController {
     func stopAudio() {
         bridge.stopAudio()
         audioRunning = false
+        AppLog.info("Audio stopped")
     }
 
     func togglePlay() {
@@ -141,6 +147,7 @@ final class EngineController {
 
     /// Immediate silence: stops playback and every output path.
     func panic() {
+        AppLog.warning("Stop all sound pressed")
         bridge.panic()
         statusMessage = "Output stopped. Press Start to resume."
     }
@@ -160,7 +167,10 @@ final class EngineController {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 self.isLoadingTrack = false
-                if ok { self.trackName = self.bridge.loadedTrackName } else { self.lastError = error }
+                if ok {
+                    self.trackName = self.bridge.loadedTrackName
+                    AppLog.info("Song loaded (\(url.pathExtension.lowercased()))")
+                } else { self.lastError = error }
             }
         }
     }
@@ -177,7 +187,7 @@ final class EngineController {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 self.micEnabled = ok ? enabled : false
-                if !ok { self.lastError = error }
+                if !ok { self.lastError = error } else { AppLog.info("Microphone \(enabled ? "on" : "off")") }
                 self.audioRunning = self.bridge.audioRunning
                 self.route = self.bridge.route
             }
@@ -188,6 +198,7 @@ final class EngineController {
 
     /// Switches off anything the current tier no longer includes (e.g. after a refund).
     func enforce(_ tier: Tier) {
+        AppLog.info("Edition: \(tier.title)")
         if tier < Feature.roomMemory.requiredTier { roomMemoryEnabled = false }
         if tier < Feature.frequencyShift.requiredTier { micShiftMix = 0 }
         if tier < Feature.headTracking.requiredTier { headTrackingEnabled = false }
@@ -240,6 +251,13 @@ final class EngineController {
     private func refreshMeters() {
         meters = bridge.meters()
         worldStatus = bridge.worldStatus()
+        // Dropouts: log the increase at most once a minute.
+        let total = meters.underruns + worldStatus.underruns
+        if total > loggedUnderruns, Date().timeIntervalSince(lastUnderrunLog) > 60 {
+            AppLog.warning("Audio dropouts: +\(total - loggedUnderruns) (total \(total))")
+            loggedUnderruns = total
+            lastUnderrunLog = Date()
+        }
     }
 
     // MARK: Worlds
@@ -249,19 +267,73 @@ final class EngineController {
         if worldStatus.loaded && worldStatus.worldID == world.worldID && worldStatus.playing { return }
         do {
             try bridge.loadWorld(world.worldID)
+            bridge.setDimensionSpatialEnabled(dimension3D)
+            applySavedPositions(world.worldID)
+            AppLog.info("Enter Dimension \(world.worldID) (3D \(dimension3D), HRTF \(bridge.binauralHRTF))")
             if trackName != nil { bridge.pause() }   // one music source at a time
             if !audioRunning { startAudio() }
             bridge.clearPanic()
             bridge.startWorld()
         } catch {
             lastError = error.localizedDescription
+            AppLog.error("Enter Dimension \(world.worldID) failed: \(error.localizedDescription)")
         }
     }
 
     /// Leaves the current World with a fade-out.
-    func leaveWorld() { bridge.stopWorld() }
+    func leaveWorld() {
+        AppLog.info("Leave Dimension \(worldStatus.worldID)")
+        bridge.stopWorld()
+    }
+
+    // MARK: 3D / spatial canvas
+
+    /// Binaural 3D for Dimension stems (headphones). On by default.
+    var dimension3D: Bool = UserDefaults.standard.object(forKey: "dimension3D") as? Bool ?? true {
+        didSet {
+            bridge.setDimensionSpatialEnabled(dimension3D)
+            UserDefaults.standard.set(dimension3D, forKey: "dimension3D")
+            AppLog.info("3D audio \(dimension3D ? "on" : "off")")
+        }
+    }
+    var binauralHRTF: Bool { bridge.binauralHRTF }
+
+    /// Moves a stem on the spatial canvas and remembers it for this Dimension.
+    func moveStem(_ index: Int, azimuth: Float, distance: Float) {
+        guard worldStatus.loaded, index < worldStatus.stems.count else { return }
+        let elevation = worldStatus.stems[index].elevation
+        bridge.moveStem(index, azimuth: azimuth, elevation: elevation, distance: distance)
+        var saved = savedPositions(worldStatus.worldID)
+        saved[String(index)] = [Double(azimuth), Double(elevation), Double(distance)]
+        UserDefaults.standard.set(saved, forKey: "positions." + worldStatus.worldID)
+    }
+
+    /// Forgets canvas moves for a Dimension (back to the authored layout on next entry).
+    func resetPositions(_ worldID: String) {
+        UserDefaults.standard.removeObject(forKey: "positions." + worldID)
+        AppLog.info("Reset 3D layout for \(worldID)")
+        if worldStatus.loaded && worldStatus.worldID == worldID {
+            if let w = worlds.first(where: { $0.worldID == worldID }) {
+                let wasPlaying = worldStatus.playing
+                bridge.unloadWorld()
+                if wasPlaying { enterWorld(w) } else { try? bridge.loadWorld(worldID) }
+            }
+        }
+    }
+
+    private func savedPositions(_ worldID: String) -> [String: [Double]] {
+        UserDefaults.standard.dictionary(forKey: "positions." + worldID) as? [String: [Double]] ?? [:]
+    }
+
+    private func applySavedPositions(_ worldID: String) {
+        for (key, v) in savedPositions(worldID) {
+            guard let i = Int(key), v.count == 3 else { continue }
+            bridge.moveStem(i, azimuth: Float(v[0]), elevation: Float(v[1]), distance: Float(v[2]))
+        }
+    }
 
     private func bridgeStateDidChange(_ reason: String) {
+        AppLog.info("\(reason) (output: \(bridge.route.outputName))")
         statusMessage = reason
         route = bridge.route
         audioRunning = bridge.audioRunning

@@ -16,6 +16,10 @@ struct WorldStem {
     std::string file;          // relative to the World folder
     std::string title;
     float baseGainDb = 0.0f;   // authored mix level (used when no rule applies)
+    // Default position in 3D (headphone) mode. Azimuth: 0 front, +90 right;
+    // elevation: +90 above; distance in metres; width: angle between the stem's
+    // left and right channels.
+    float azimuthDeg = 0.0f, elevationDeg = 0.0f, distanceM = 1.5f, widthDeg = 60.0f;
 };
 
 struct WorldRule {

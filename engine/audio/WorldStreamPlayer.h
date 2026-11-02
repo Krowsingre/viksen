@@ -17,6 +17,9 @@
 
 #include "engine/audio/AudioBuffer.h"
 #include "engine/audio/Parameter.h"
+#include "engine/spatial/SpatialRenderer.h"
+
+#include <memory>
 
 namespace atmos {
 
@@ -25,7 +28,7 @@ public:
     static constexpr int kMaxStems = 8;
 
     // Control thread, with the audio callback stopped or the player inactive.
-    void prepare(double sampleRate, int ringFrames = 1 << 17); // ~2.7 s at 48 kHz (1 MB per stem)
+    void prepare(double sampleRate, int maxBlockSize, int ringFrames = 1 << 17); // ~2.7 s at 48 kHz (1 MB per stem)
     void setStemCount(int n) noexcept { stemCount_.store(n < 0 ? 0 : (n > kMaxStems ? kMaxStems : n)); }
     int stemCount() const noexcept { return stemCount_.load(); }
 
@@ -34,6 +37,15 @@ public:
     bool active() const noexcept { return active_.load(std::memory_order_relaxed); }
     void setStemGain(int stem, float linear) noexcept;
     float stemPeak(int stem) const noexcept;
+
+    // ---- 3D (headphone) rendering: each stem's left and right become two
+    // sources around its position; head tracking rotates the whole scene.
+    void setSpatialEnabled(bool on) noexcept { spatialMix_.set(on ? 1.0f : 0.0f); spatialOn_.store(on); }
+    bool spatialEnabled() const noexcept { return spatialOn_.load(); }
+    void setStemPosition(int stem, float azimuthDeg, float elevationDeg, float distanceM, float widthDeg) noexcept;
+    void setListenerYaw(float degrees) noexcept { listenerYaw_.store(degrees, std::memory_order_relaxed); }
+    bool hrtfActive() const noexcept { return hrtf_; }
+    int spatialLatencySamples() const noexcept { return spatialLatency_; }
     uint64_t underruns() const noexcept { return underruns_.load(std::memory_order_relaxed); }
     uint64_t framesPlayed() const noexcept { return played_.load(std::memory_order_relaxed); } // since last flush
 
@@ -54,6 +66,8 @@ private:
         std::atomic<uint64_t> flushTo{0};      // read position to jump to on flush
         SmoothedParameter gain{1.0f};
         std::atomic<float> peak{0.0f};
+        std::atomic<float> az{0.0f}, el{0.0f}, dist{1.5f}, width{60.0f};
+        std::unique_ptr<SpatialRenderer> left, right;
     };
 
     std::array<Stem, kMaxStems> stems_;
@@ -65,6 +79,14 @@ private:
     uint32_t flushesSeen_ = 0;                 // audio thread
     std::atomic<uint64_t> underruns_{0};
     std::atomic<uint64_t> played_{0};
+
+    std::atomic<bool> spatialOn_{false};
+    SmoothedParameter spatialMix_{0.0f};
+    std::atomic<float> listenerYaw_{0.0f};
+    bool hrtf_ = false;
+    int spatialLatency_ = 0;
+    std::vector<float> scratchL_, scratchR_, mixL_; // mixL_ holds per-frame 3D weights
+    AudioBuffer spatialOut_;
 };
 
 } // namespace atmos

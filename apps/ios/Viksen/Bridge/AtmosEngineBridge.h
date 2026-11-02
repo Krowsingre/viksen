@@ -55,6 +55,10 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 
 @interface AtmosWorldStemStatus : NSObject
 @property (nonatomic, copy) NSString *title;
+@property (nonatomic) float azimuth;      // degrees, 0 front, +90 right
+@property (nonatomic) float elevation;    // degrees
+@property (nonatomic) float distance;     // metres
+@property (nonatomic) float width;        // degrees
 @property (nonatomic) float gainDb;
 @property (nonatomic) float peak;
 @property (nonatomic, copy) NSArray<NSString *> *reasons;
@@ -69,6 +73,8 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic) double lengthSeconds;
 @property (nonatomic) float master;
 @property (nonatomic) uint64_t underruns;
+@property (nonatomic) BOOL spatial;       // 3D headphone mode
+@property (nonatomic) BOOL hrtf;          // Steam Audio HRTF (NO = simplified panner, e.g. Simulator)
 @property (nonatomic, copy) NSArray<AtmosWorldStemStatus *> *stems;
 @end
 
@@ -144,6 +150,11 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 - (void)stopWorld;
 - (void)unloadWorld;
 - (AtmosWorldStatus *)worldStatus;
+// 3D (binaural) rendering of Dimension stems and the spatial canvas.
+- (void)setDimensionSpatialEnabled:(BOOL)enabled;
+- (void)moveStem:(NSInteger)index azimuth:(float)azimuth elevation:(float)elevation distance:(float)distance
+    NS_SWIFT_NAME(moveStem(_:azimuth:elevation:distance:));
+@property (nonatomic, readonly) BOOL binauralHRTF;   // Steam Audio active in this build/device
 // Exercise intensity 0...1 from Health / Apple Watch; negative = unknown.
 - (void)setExerciseIntensity:(double)intensity;
 @end

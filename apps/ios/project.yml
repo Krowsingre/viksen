@@ -21,6 +21,8 @@ settings:
     HEADER_SEARCH_PATHS:
       - "$(SRCROOT)/../.."
       - "$(SRCROOT)/../../third_party"
+      - "$(SRCROOT)/../../third_party/pffft"
+      - "$(SRCROOT)/../../third_party/steamaudio/include"
     SWIFT_VERSION: "5.0"
 
 targets:
@@ -36,9 +38,16 @@ targets:
         excludes: ["**/CMakeLists.txt", "**/*.md"]
       - path: ../../platform/ios
         excludes: ["**/*.md"]
+      # Support code Steam Audio's iOS static library expects the app to provide.
+      - path: ../../third_party/pffft
+        excludes: ["**/*.md", "LICENSE.txt", "VERSION"]
+      - path: ../../third_party/mysofa_stub
     settings:
       base:
         SKIP_INSTALL: YES
+        # Steam Audio ships an arm64 *device* library only: HRTF binaural on iPhone,
+        # interim panner in the Simulator.
+        "GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*]": ["$(inherited)", "ATMOS_WITH_STEAM_AUDIO=1"]
 
   Viksen:
     type: application
@@ -82,6 +91,7 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ENABLE_PREVIEWS: YES
         OTHER_LDFLAGS: ["-lc++"]
+        "OTHER_LDFLAGS[sdk=iphoneos*]": ["-lc++", "$(SRCROOT)/../../third_party/steamaudio/lib/ios/libphonon.a"]
 
   # Apple Watch companion: runs workouts and streams live heart rate to the iPhone.
   ViksenWatch:

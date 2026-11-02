@@ -5,26 +5,213 @@
   "name": "The Hinds of Morrow",
   "artist": "Krowsingre",
   "tier": "free",
-  "music": { "tempo": 110, "key": "G minor", "loop": { "fromSeconds": 0, "toSeconds": null } },
+  "music": {
+    "tempo": 110,
+    "key": "G minor",
+    "loop": {
+      "fromSeconds": 0,
+      "toSeconds": null
+    }
+  },
   "fadeSeconds": 4,
   "stems": [
-    { "id": "keyboard",   "file": "keyboard.m4a",   "title": "Keyboard" },
-    { "id": "strings",    "file": "strings.m4a",    "title": "Strings" },
-    { "id": "woodwinds",  "file": "woodwinds.m4a",  "title": "Woodwinds" },
-    { "id": "synth",      "file": "synth.m4a",      "title": "Synth" },
-    { "id": "guitar",     "file": "guitar.m4a",     "title": "Guitar" },
-    { "id": "bass",       "file": "bass.m4a",       "title": "Bass" },
-    { "id": "percussion", "file": "percussion.m4a", "title": "Percussion" }
+    {
+      "id": "keyboard",
+      "file": "keyboard.m4a",
+      "title": "Keyboard",
+      "spatial": {
+        "azimuth": 0,
+        "elevation": 0,
+        "distance": 1.8,
+        "width": 70
+      }
+    },
+    {
+      "id": "strings",
+      "file": "strings.m4a",
+      "title": "Strings",
+      "spatial": {
+        "azimuth": 0,
+        "elevation": 15,
+        "distance": 2.5,
+        "width": 140
+      }
+    },
+    {
+      "id": "woodwinds",
+      "file": "woodwinds.m4a",
+      "title": "Woodwinds",
+      "spatial": {
+        "azimuth": -55,
+        "elevation": 10,
+        "distance": 2.0,
+        "width": 30
+      }
+    },
+    {
+      "id": "synth",
+      "file": "synth.m4a",
+      "title": "Synth",
+      "spatial": {
+        "azimuth": 180,
+        "elevation": 25,
+        "distance": 3.0,
+        "width": 90
+      }
+    },
+    {
+      "id": "guitar",
+      "file": "guitar.m4a",
+      "title": "Guitar",
+      "spatial": {
+        "azimuth": 60,
+        "elevation": 0,
+        "distance": 1.6,
+        "width": 30
+      }
+    },
+    {
+      "id": "bass",
+      "file": "bass.m4a",
+      "title": "Bass",
+      "spatial": {
+        "azimuth": 0,
+        "elevation": -10,
+        "distance": 1.4,
+        "width": 20
+      }
+    },
+    {
+      "id": "percussion",
+      "file": "percussion.m4a",
+      "title": "Percussion",
+      "spatial": {
+        "azimuth": -25,
+        "elevation": 0,
+        "distance": 1.5,
+        "width": 50
+      }
+    }
   ],
   "rules": [
-    { "stem": "strings",    "when": { "all": [ { "type": "quiet" } ] },  "gainDb": 0,  "otherwiseDb": -8,  "label": "Strings bloom when it is quiet" },
-    { "stem": "woodwinds",  "when": { "all": [ { "type": "quiet" } ] },  "gainDb": 0,  "otherwiseDb": -60, "label": "Woodwinds drift in when it is quiet" },
-    { "stem": "woodwinds",  "when": { "all": [ { "type": "still" } ] },  "gainDb": 0,  "otherwiseDb": -60, "label": "Woodwinds drift in when you are still" },
-    { "stem": "synth",      "when": { "all": [ { "type": "loud" } ] },   "gainDb": 0,  "otherwiseDb": -10, "label": "Synth rises with loud surroundings" },
-    { "stem": "guitar",     "when": { "all": [ { "type": "moving" } ] }, "gainDb": 0,  "otherwiseDb": -14, "label": "Guitar joins when you move" },
-    { "stem": "bass",       "when": { "all": [ { "type": "moving" } ] }, "gainDb": 0,  "otherwiseDb": -10, "label": "Bass follows your movement" },
-    { "stem": "bass",       "when": { "all": [ { "type": "intensityAtLeast", "value": 0.35 } ] }, "gainDb": 2, "otherwiseDb": -10, "label": "Bass drives harder as you work out" },
-    { "stem": "percussion", "when": { "all": [ { "type": "moving" } ] }, "gainDb": 0,  "otherwiseDb": -60, "label": "Percussion starts when you move" },
-    { "stem": "percussion", "when": { "all": [ { "type": "intensityAtLeast", "value": 0.5 } ] },  "gainDb": 2, "otherwiseDb": -60, "label": "Percussion pushes with your heart rate" }
+    {
+      "stem": "strings",
+      "when": {
+        "all": [
+          {
+            "type": "quiet"
+          }
+        ]
+      },
+      "gainDb": 0,
+      "otherwiseDb": -8,
+      "label": "Strings bloom when it is quiet"
+    },
+    {
+      "stem": "woodwinds",
+      "when": {
+        "all": [
+          {
+            "type": "quiet"
+          }
+        ]
+      },
+      "gainDb": 0,
+      "otherwiseDb": -60,
+      "label": "Woodwinds drift in when it is quiet"
+    },
+    {
+      "stem": "woodwinds",
+      "when": {
+        "all": [
+          {
+            "type": "still"
+          }
+        ]
+      },
+      "gainDb": 0,
+      "otherwiseDb": -60,
+      "label": "Woodwinds drift in when you are still"
+    },
+    {
+      "stem": "synth",
+      "when": {
+        "all": [
+          {
+            "type": "loud"
+          }
+        ]
+      },
+      "gainDb": 0,
+      "otherwiseDb": -10,
+      "label": "Synth rises with loud surroundings"
+    },
+    {
+      "stem": "guitar",
+      "when": {
+        "all": [
+          {
+            "type": "moving"
+          }
+        ]
+      },
+      "gainDb": 0,
+      "otherwiseDb": -14,
+      "label": "Guitar joins when you move"
+    },
+    {
+      "stem": "bass",
+      "when": {
+        "all": [
+          {
+            "type": "moving"
+          }
+        ]
+      },
+      "gainDb": 0,
+      "otherwiseDb": -10,
+      "label": "Bass follows your movement"
+    },
+    {
+      "stem": "bass",
+      "when": {
+        "all": [
+          {
+            "type": "intensityAtLeast",
+            "value": 0.35
+          }
+        ]
+      },
+      "gainDb": 2,
+      "otherwiseDb": -10,
+      "label": "Bass drives harder as you work out"
+    },
+    {
+      "stem": "percussion",
+      "when": {
+        "all": [
+          {
+            "type": "moving"
+          }
+        ]
+      },
+      "gainDb": 0,
+      "otherwiseDb": -60,
+      "label": "Percussion starts when you move"
+    },
+    {
+      "stem": "percussion",
+      "when": {
+        "all": [
+          {
+            "type": "intensityAtLeast",
+            "value": 0.5
+          }
+        ]
+      },
+      "gainDb": 2,
+      "otherwiseDb": -60,
+      "label": "Percussion pushes with your heart rate"
+    }
   ]
 }

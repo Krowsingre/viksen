@@ -1,3 +1,4 @@
+import UIKit
 import SwiftUI
 
 @main
@@ -7,6 +8,12 @@ struct ViksenApp: App {
     @State private var store = Store()
     @AppStorage("appearance") private var appearance: Appearance = .dark
     @State private var showSplash = true
+
+    init() {
+        AppLog.info(AppLog.launchBanner())
+        NotificationCenter.default.addObserver(forName: UIApplication.didReceiveMemoryWarningNotification,
+                                               object: nil, queue: .main) { _ in AppLog.warning("Memory warning") }
+    }
 
     var body: some Scene {
         WindowGroup {
