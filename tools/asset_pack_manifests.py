@@ -3,14 +3,15 @@
 Usage: asset_pack_manifests.py world.json PACK_ROOT
 Prints the pack ids, one per line; writes PACK_ROOT/<pack>.manifest.json for each.
 Single-song Dimensions: one pack named after the Dimension. Multi-song Dimensions:
-one pack per song, named "<dimension>.<song>". Files live under Dimensions/<dimension>/."""
+one pack per song, named "<dimension>--<song>" (App Store Connect allows only
+letters, digits and hyphens). Files live under Dimensions/<dimension>/."""
 import json, os, sys
 
 world = json.load(open(sys.argv[1]))
 root = sys.argv[2]
 dim = world["id"]
 songs = world.get("songs")
-packs = [(dim, world["stems"])] if not songs else [(f"{dim}.{s['id']}", s["stems"]) for s in songs]
+packs = [(dim, world["stems"])] if not songs else [(f"{dim}--{s['id']}", s["stems"]) for s in songs]
 for pack, stems in packs:
     files = [f"Dimensions/{dim}/{st['file']}" for st in stems]
     missing = [f for f in files if not os.path.exists(os.path.join(root, f))]

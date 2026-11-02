@@ -98,7 +98,7 @@ How the Dimension moves between its songs:
 ## Shipping a Dimension (downloads)
 
 The app contains only each Dimension's `world.json`; the audio is an Apple-hosted,
-one on-demand asset pack per track (`<id>`, or `<id>.<song>` in multi-song Dimensions),
+one on-demand asset pack per track (`<id>`, or `<id>--<song>` in multi-song Dimensions),
 holding that track's files under `Dimensions/<id>/`.
 
 1. Put the audio in the private assets repo: `worlds/<id>/*.m4a`.

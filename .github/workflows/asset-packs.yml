@@ -47,7 +47,7 @@ jobs:
             mkdir -p "$root/Dimensions/$id"
             cp "$dir"*.m4a "$root/Dimensions/$id/"
             # One on-demand pack per track: "<dimension>" for single-song Dimensions,
-            # "<dimension>.<song>" for each song of a multi-song Dimension.
+            # "<dimension>--<song>" for each song of a multi-song Dimension.
             python3 tools/asset_pack_manifests.py "$manifest" "$root" > "$RUNNER_TEMP/$id.packs"
             while read -r pack; do
               (cd "$root" && xcrun ba-package "$pack.manifest.json" -o "$out/$pack.aar")

@@ -9,7 +9,7 @@ import System
 /// removed the same way to save space. Each track (song) is its own Apple-hosted,
 /// on-demand asset pack holding "Dimensions/<dimension id>/<its stem files>".
 /// Pack ids: a single-song Dimension uses the Dimension id; songs of multi-song
-/// Dimensions use "<dimension id>.<song id>". A build with the audio inside the app
+/// Dimensions use "<dimension id>--<song id>". A build with the audio inside the app
 /// (development) treats those tracks as installed and never removes them.
 @MainActor
 @Observable
@@ -26,7 +26,7 @@ final class DimensionDownloads {
         let dimensionID: String
         let title: String
         let files: [String]
-        var packID: String { id.replacingOccurrences(of: "/", with: ".") }
+        var packID: String { id.replacingOccurrences(of: "/", with: "--") }   // letters, digits, hyphens only
     }
 
     private(set) var states: [String: State] = [:]   // by track id
