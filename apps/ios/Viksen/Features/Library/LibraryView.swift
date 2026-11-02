@@ -1,0 +1,32 @@
+import SwiftUI
+
+struct LibraryView: View {
+    @Environment(MediaLibrary.self) private var library
+    @Environment(EngineController.self) private var engine
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if library.items.isEmpty {
+                    ContentUnavailableView("No audio yet", systemImage: "music.note",
+                                           description: Text("Songs you import from Experience are copied here. Originals are never changed."))
+                }
+                ForEach(library.items) { item in
+                    Button {
+                        engine.loadTrack(url: item.url)
+                    } label: {
+                        VStack(alignment: .leading) {
+                            Text(item.name).lineLimit(1)
+                            Text(ByteCountFormatter.string(fromByteCount: item.byteSize, countStyle: .file))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .accessibilityHint("Loads this file into Experience")
+                }
+                .onDelete { idx in idx.map { library.items[$0] }.forEach(library.delete) }
+            }
+            .navigationTitle("Library")
+            .refreshable { library.refresh() }
+        }
+    }
+}
