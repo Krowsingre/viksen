@@ -28,6 +28,18 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic) float environmentLevelDb;
 @property (nonatomic) BOOL environmentSilent;
 @property (nonatomic) uint32_t transientCount;
+// Debounced environment states (see engine/reactive/EnvironmentStates).
+@property (nonatomic) BOOL quiet;
+@property (nonatomic) BOOL loud;
+@property (nonatomic) BOOL still;
+@property (nonatomic) BOOL moving;
+@property (nonatomic) BOOL motionAvailable;
+@property (nonatomic) NSInteger loudness;   // 0..4
+@property (nonatomic) NSInteger activity;   // 0..4
+@property (nonatomic) NSInteger roomMemoryVoices;
+// Lunar calendar (computed on-device).
+@property (nonatomic, copy) NSString *moonPhaseId;   // "new", "waxingCrescent", ... "full" ...
+@property (nonatomic) NSInteger lunarDay;            // 1..30
 @end
 
 @protocol AtmosEngineBridgeDelegate <NSObject>
@@ -74,6 +86,18 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 - (void)setMicEchoSeconds:(float)seconds;
 - (void)setMicFeedback:(float)feedback;
 - (void)setMicWet:(float)wet;
+- (void)setMicShiftHz:(float)hz;
+- (void)setMicShiftMix:(float)mix;
+
+// Room memory: replays recent seconds of the room (RAM only; wiped when the mic stops).
+- (void)setRoomMemoryEnabled:(BOOL)enabled;
+- (void)setRoomMemoryLevel:(float)level;
+- (void)setRoomMemoryPitch:(float)semitones;
+
+// Motion sensing from the accelerometer (drives the still/moving states).
+@property (nonatomic, readonly) BOOL motionSensingAvailable;
+@property (nonatomic, readonly) BOOL motionSensingEnabled;
+- (void)setMotionSensingEnabled:(BOOL)enabled;
 
 - (void)panic;        // immediate silence
 - (void)clearPanic;

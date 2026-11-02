@@ -118,10 +118,40 @@ private struct StatusSection: View {
                       systemImage: "info.circle")
                     .font(.footnote).foregroundStyle(.secondary)
             }
+            Label("\(Lunar.phaseName(engine.meters.moonPhaseId)) · lunar day \(engine.meters.lunarDay)",
+                  systemImage: Lunar.symbol(engine.meters.moonPhaseId))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
             if let status = engine.statusMessage {
                 Text(status).font(.footnote).foregroundStyle(.secondary)
             }
         }
+    }
+}
+
+/// Live, debounced states of the surroundings. Display only.
+private struct EnvironmentStateChips: View {
+    let meters: AtmosMeterSnapshot
+
+    var body: some View {
+        HStack(spacing: 6) {
+            chip("Quiet", on: meters.quiet)
+            chip("Loud", on: meters.loud)
+            if meters.motionAvailable {
+                chip("Still", on: meters.still)
+                chip("Moving", on: meters.moving)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func chip(_ title: String, on: Bool) -> some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 10).padding(.vertical, 4)
+            .background(on ? Theme.accent : Color.secondary.opacity(0.15), in: Capsule())
+            .foregroundStyle(on ? Color.white : Color.secondary)
+            .accessibilityLabel("\(title) \(on ? "yes" : "no")")
     }
 }
 
@@ -183,6 +213,12 @@ private struct EnvironmentSection: View {
             Text("Microphone access is off for this app. You can turn it on in iOS Settings.")
                 .font(.footnote).foregroundStyle(.secondary)
         }
+        if engine.motionSensingAvailable {
+            Toggle("Motion sensing", isOn: $engine.motionSensing)
+        }
+        if engine.micEnabled || engine.motionSensing {
+            EnvironmentStateChips(meters: engine.meters)
+        }
         if engine.micEnabled {
             HStack {
                 Text("Surroundings")
@@ -196,6 +232,19 @@ private struct EnvironmentSection: View {
             LabeledSlider(title: "Echo time", value: $engine.micEchoSeconds, range: 0.05...1.5, format: "%.2f s")
             LabeledSlider(title: "Echo feedback", value: $engine.micFeedback, range: 0...0.9, format: "%.2f")
             LabeledSlider(title: "Effect mix", value: $engine.micWet, range: 0...1, format: "%.2f")
+            LabeledSlider(title: "Frequency shift", value: $engine.micShiftHz, range: -600...600, format: "%.0f Hz")
+            LabeledSlider(title: "Shift amount", value: $engine.micShiftMix, range: 0...1, format: "%.2f")
+            Toggle("Room memory", isOn: $engine.roomMemoryEnabled)
+            if engine.roomMemoryEnabled {
+                Text("Replays the last few seconds of your surroundings, slowed and faded, as a drifting texture. Held in memory only and erased when the microphone turns off.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                LabeledSlider(title: "Memory level", value: $engine.roomMemoryLevel, range: 0...1, format: "%.2f")
+                LabeledSlider(title: "Memory pitch", value: $engine.roomMemoryPitch, range: -12...12, format: "%.0f st")
+                if engine.meters.roomMemoryVoices > 0 {
+                    Text("Replaying \(engine.meters.roomMemoryVoices) memor\(engine.meters.roomMemoryVoices == 1 ? "y" : "ies")")
+                        .font(.caption).foregroundStyle(Theme.micTransformed)
+                }
+            }
         }
     }
 }

@@ -11,6 +11,8 @@
 #include <memory>
 
 #include "engine/audio/AudioEngine.h"
+#include "engine/environment/MotionAnalyzer.h"
+#include "engine/reactive/EnvironmentStates.h"
 
 namespace atmos::core {
 
@@ -27,6 +29,11 @@ struct LiveSettings {
     float micEchoSeconds = 0.38f;
     float micFeedback = 0.45f;
     float micWet = 0.6f;
+    float micShiftHz = -180.0f;
+    float micShiftMix = 0.0f;
+    bool roomMemoryEnabled = false;
+    float roomMemoryLevel = 0.6f;
+    float roomMemoryPitch = -12.0f;
     bool micEnabled = false;
     bool looping = false;
 };
@@ -69,6 +76,19 @@ public:
     void setMicWet(float wet);
     void setMicEnabled(bool enabled);
     void setLooping(bool looping);
+    void setMicShiftHz(float hz);
+    void setMicShiftMix(float mix);
+    void setRoomMemoryEnabled(bool enabled);
+    void setRoomMemoryLevel(float level);
+    void setRoomMemoryPitch(float semitones);
+
+    // Environment states (control thread). Call regularly, e.g. from the UI's meter timer.
+    void updateEnvironment(double dtSeconds);
+    // Accelerometer samples in g from the platform (e.g. Core Motion on iPhone).
+    void addMotionSample(double ax, double ay, double az, double dtSeconds);
+    void setMotionAvailable(bool available);
+    EnvironmentStateSnapshot environmentStates() const { return states_.snapshot(); }
+    unsigned freeFallEvents() const { return motion_.freeFallEvents(); }
 
 private:
     void applySettings();
@@ -76,6 +96,8 @@ private:
     std::unique_ptr<AudioEngine> engine_;
     LiveSettings settings_;
     std::shared_ptr<const AudioClip> original_;
+    EnvironmentStates states_;
+    MotionAnalyzer motion_;
 };
 
 } // namespace atmos::core

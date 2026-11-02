@@ -44,6 +44,13 @@ final class EngineController {
     var micFeedback: Float = 0.45 { didSet { bridge.setMicFeedback(micFeedback) } }
     var micWet: Float = 0.6 { didSet { bridge.setMicWet(micWet) } }
     var limiterCeilingDb: Float = -1 { didSet { bridge.setLimiterCeilingDb(limiterCeilingDb) } }
+    var micShiftHz: Float = -180 { didSet { bridge.setMicShiftHz(micShiftHz) } }
+    var micShiftMix: Float = 0 { didSet { bridge.setMicShiftMix(micShiftMix) } }
+    var roomMemoryEnabled = false { didSet { bridge.setRoomMemoryEnabled(roomMemoryEnabled) } }
+    var roomMemoryLevel: Float = 0.6 { didSet { bridge.setRoomMemoryLevel(roomMemoryLevel) } }
+    var roomMemoryPitch: Float = -12 { didSet { bridge.setRoomMemoryPitch(roomMemoryPitch) } }
+    var motionSensing = false { didSet { bridge.setMotionSensingEnabled(motionSensing) } }
+    var motionSensingAvailable: Bool { bridge.motionSensingAvailable }
 
     init() {
         delegateProxy.onChange = { [weak self] reason in self?.bridgeStateDidChange(reason) }

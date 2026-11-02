@@ -30,6 +30,7 @@ void AudioEngine::prepare(const EngineConfig& config) {
     bed_.setSeed(0xA7305u);
     features_.prepare(sr);
     micTransform_.prepare(sr, config_.maxBlockSize);
+    roomMemory_.prepare(sr);
     prepared_ = true;
 }
 
@@ -166,7 +167,12 @@ void AudioEngine::renderLayers(int numFrames, int64_t position) noexcept {
 void AudioEngine::renderMic(const float* const* inputs, int numInputs, int numFrames) noexcept {
     const bool active = micEnabled_.load(std::memory_order_relaxed) && inputs && numInputs > 0;
     micActive_.store(active, std::memory_order_relaxed);
-    if (!active) return;
+    if (!active) {
+        if (micWasActive_) roomMemory_.forget(); // privacy: no room audio outlives the mic
+        micWasActive_ = false;
+        return;
+    }
+    micWasActive_ = true;
 
     float* mono = micMono_.data();
     std::fill(mono, mono + numFrames, 0.0f);
@@ -189,6 +195,9 @@ void AudioEngine::renderMic(const float* const* inputs, int numInputs, int numFr
     micTransform_.process(mono, micWet_.data(), numFrames);
     AudioBuffer& wet = busBuffers_[static_cast<int>(Bus::MicTransformed)];
     for (int i = 0; i < numFrames; ++i) { wet.channel(0)[i] += micWet_[i]; wet.channel(1)[i] += micWet_[i]; }
+
+    roomMemory_.capture(mono, numFrames);
+    roomMemory_.renderAdd(wet, numFrames);
 }
 
 void AudioEngine::sumToMaster(int numFrames) noexcept {

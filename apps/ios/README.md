@@ -30,7 +30,7 @@ Command-line simulator build (what CI runs):
 cd apps/ios && xcodegen generate && xcodebuild -project Viksen.xcodeproj -scheme Viksen -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 ```
 
-To run on a device, set your development team in Xcode (Signing & Capabilities).
+Bundle ID: `com.krowsingre.viksen`. To run on a device, choose your team in Xcode (Signing & Capabilities) or add `DEVELOPMENT_TEAM` to `project.yml`.
 Microphone input and real latency can only be evaluated on a physical iPhone.
 
 ## What works in this milestone
@@ -39,8 +39,14 @@ Microphone input and real latency can only be evaluated on a physical iPhone.
 - Import a song from Files (copied into the app library; the original is untouched),
   decode via AVFoundation (WAV/AIFF/FLAC/MP3/AAC/ALAC), resample to the hardware rate, play/pause/seek/loop.
 - Atmosphere bed (synthesized), independent of music and mic.
+- Opening screen (wordmark, violet light wave, Get Started, About).
 - Microphone with explicit permission, red MIC LIVE indicator, raw monitor (off by default),
-  transformed path (tone + echo), live loudness/transient readout.
+  three live transformations (tone filter, frequency shift, echo), live loudness/transient readout.
+- Room memory: replays the last seconds of the surroundings, slowed and faded (RAM only,
+  erased when the mic turns off).
+- Environment states (Quiet / Loud, plus Still / Moving with optional motion sensing via
+  Core Motion; no permission prompt needed for the accelerometer).
+- Lunar calendar: current moon phase and lunar day shown in Experience.
 - Independent levels for music / atmosphere / raw mic / transformed mic / master,
   safety limiter ceiling, "Stop all sound" panic button.
 - Interruptions, headphone unplug (pauses and silences raw monitoring),

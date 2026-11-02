@@ -8,6 +8,9 @@ add_library(atmos_engine STATIC
   atmosphere/NoiseBed.cpp
   spatial/InterimStereoPanner.cpp
   rendering/OfflineRenderer.cpp
+  dsp/FrequencyShifter.cpp
+  environment/RoomMemory.cpp
+  reactive/EnvironmentStates.cpp
 )
 target_include_directories(atmos_engine PUBLIC ${PROJECT_SOURCE_DIR})
 target_compile_features(atmos_engine PUBLIC cxx_std_20)

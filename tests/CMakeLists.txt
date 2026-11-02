@@ -4,12 +4,13 @@ add_executable(atmos_tests
   unit/EngineTests.cpp
   unit/ProjectTests.cpp
   unit/LiveSessionTests.cpp
+  unit/ReactiveTests.cpp
   integration/RoundTripTests.cpp
 )
 target_link_libraries(atmos_tests PRIVATE atmos_core)
 atmos_set_warnings(atmos_tests)
 
-foreach(suite dsp spatial engine wav clip project session integration)
+foreach(suite dsp spatial engine environment reactive automation worlds wav clip project session integration)
   add_test(NAME ${suite} COMMAND atmos_tests ${suite})
 endforeach()
 

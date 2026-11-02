@@ -41,3 +41,35 @@
 ## Next milestone (Phase 2: Atmospheric Studio)
 Multitrack layers in the UI, project save/open in both apps, basic effects per layer,
 timeline, stereo export, SQLite library.
+
+---
+
+# Milestone 1b: reactive foundations and iPhone polish
+
+Design input: the study of a reference app in `docs/research/REFERENCE_STUDY.md`.
+Nothing from that app is used; every item below is original code.
+
+## Implemented
+- `FrequencyShifter` (FIR Hilbert, about 2.6 ms latency), added to the mic chain. That makes
+  **three live transformations**: tone filter, frequency shift and echo.
+- `RoomMemory`: rolling RAM capture of the room and replays slowed or pitched with long fades and
+  alternating pan, wiped whenever the mic stops.
+- `ConditionGate` + `EnvironmentStates` (quiet, loud, still, moving, coarse loudness and
+  activity levels), `MotionAnalyzer` (motion energy, free fall).
+- `TickClock` (sample-accurate musical grid for future World cues).
+- `WorldLifecycle` (fade in → active → ducked countdown → fade out; stay-forever override).
+- `WorldConditions` with the **lunar calendar** (eight moon phases, lunar day), time of
+  day, environment states, listening time, consecutive Worlds; unknown condition types
+  are preserved but never satisfied.
+- iPhone: opening screen from the chosen concept, violet theme, Core Motion adapter,
+  environment state chips, moon phase and lunar day, frequency-shift and room-memory
+  controls. Bundle id `com.krowsingre.viksen`; export-compliance key set.
+
+## Tests (Linux)
+45 tests pass (GCC Debug with warnings as errors; ASan+UBSan; engine suite under TSan; Clang
+syntax check clean). Moon phases were checked against published new, first-quarter and
+full-moon times. Desktop app rebuilt successfully against the changed engine.
+
+## Not tested here
+iPhone code (Swift/ObjC++) is still uncompiled in this environment. It is built by CI on
+macOS, and audio, motion and microphone behaviour need a real iPhone.

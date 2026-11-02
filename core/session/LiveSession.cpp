@@ -56,6 +56,11 @@ void LiveSession::applySettings() {
     e.micTransform().echoSeconds.set(settings_.micEchoSeconds);
     e.micTransform().feedback.set(settings_.micFeedback);
     e.micTransform().wet.set(settings_.micWet);
+    e.micTransform().shiftHz.set(settings_.micShiftHz);
+    e.micTransform().shiftMix.set(settings_.micShiftMix);
+    e.roomMemory().setEnabled(settings_.roomMemoryEnabled);
+    e.roomMemory().level.set(settings_.roomMemoryLevel);
+    e.roomMemory().pitchSemitones.store(settings_.roomMemoryPitch);
     e.setMicInputEnabled(settings_.micEnabled);
     e.setLooping(settings_.looping);
 }
@@ -81,5 +86,19 @@ void LiveSession::setMicFeedback(float v) { settings_.micFeedback = v; engine_->
 void LiveSession::setMicWet(float v) { settings_.micWet = v; engine_->micTransform().wet.set(v); }
 void LiveSession::setMicEnabled(bool e) { settings_.micEnabled = e; engine_->setMicInputEnabled(e); }
 void LiveSession::setLooping(bool l) { settings_.looping = l; engine_->setLooping(l); }
+void LiveSession::setMicShiftHz(float v) { settings_.micShiftHz = v; engine_->micTransform().shiftHz.set(v); }
+void LiveSession::setMicShiftMix(float v) { settings_.micShiftMix = v; engine_->micTransform().shiftMix.set(v); }
+void LiveSession::setRoomMemoryEnabled(bool e) { settings_.roomMemoryEnabled = e; engine_->roomMemory().setEnabled(e); }
+void LiveSession::setRoomMemoryLevel(float v) { settings_.roomMemoryLevel = v; engine_->roomMemory().level.set(v); }
+void LiveSession::setRoomMemoryPitch(float v) { settings_.roomMemoryPitch = v; engine_->roomMemory().pitchSemitones.store(v); }
+
+void LiveSession::updateEnvironment(double dt) {
+    states_.update(engine_->environmentFeatures(), engine_->meters().micActive, dt);
+}
+void LiveSession::addMotionSample(double ax, double ay, double az, double dt) {
+    motion_.addSample(ax, ay, az, dt);
+    states_.updateMotion(motion_.energy(), dt);
+}
+void LiveSession::setMotionAvailable(bool available) { states_.setMotionAvailable(available); }
 
 } // namespace atmos::core

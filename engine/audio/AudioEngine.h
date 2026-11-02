@@ -23,6 +23,7 @@
 #include "engine/dsp/Limiter.h"
 #include "engine/environment/FeatureExtractor.h"
 #include "engine/environment/MicTransform.h"
+#include "engine/environment/RoomMemory.h"
 #include "engine/routing/Bus.h"
 
 namespace atmos {
@@ -89,6 +90,9 @@ public:
     bool micInputEnabled() const noexcept { return micEnabled_.load(std::memory_order_relaxed); }
     EnvironmentFeatures environmentFeatures() const noexcept { return features_.snapshot(); }
     MicTransform& micTransform() noexcept { return micTransform_; }
+    // Replays recent seconds of the room (RAM only) into the transformed-mic bus.
+    // Wiped automatically whenever the mic stops being consumed.
+    RoomMemory& roomMemory() noexcept { return roomMemory_; }
 
     // ---- Atmosphere generator (any thread) ----
     void setAtmosphereBedEnabled(bool enabled) noexcept { bedEnabled_.store(enabled, std::memory_order_relaxed); }
@@ -152,6 +156,8 @@ private:
     NoiseBed bed_;
     FeatureExtractor features_;
     MicTransform micTransform_;
+    RoomMemory roomMemory_;
+    bool micWasActive_ = false;
 
     std::array<AudioBuffer, kNumBuses> busBuffers_;
     AudioBuffer mix_;

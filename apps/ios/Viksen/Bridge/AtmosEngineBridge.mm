@@ -1,6 +1,9 @@
 #import "AtmosEngineBridge.h"
 
 #import <AVFoundation/AVFoundation.h>
+#import <QuartzCore/QuartzCore.h>
+
+#include <algorithm>
 
 #include <memory>
 #include <string>
@@ -9,11 +12,24 @@
 #include "core/session/LiveSession.h"
 #include "platform/ios/IOSAudioIO.h"
 #include "platform/ios/IOSMediaDecoder.h"
+#include "core/worlds/WorldConditions.h"
+#import "platform/ios/IOSMotion.h"
 
 using atmos::Bus;
 using atmos::core::LiveSession;
 
 @implementation AtmosMeterSnapshot
+- (instancetype)init {
+    if ((self = [super init])) {
+        _busPeaks = @[@0, @0, @0, @0];
+        _limiterGain = 1.0f;
+        _environmentLevelDb = -144.0f;
+        _environmentSilent = YES;
+        _moonPhaseId = @"new";
+        _lunarDay = 1;
+    }
+    return self;
+}
 @end
 
 namespace {
@@ -29,6 +45,8 @@ NSError* makeError(const std::string& msg) {
     AtmosAudioSession *_audioSession;
     BOOL _wasRunningBeforeInterruption;
     NSString *_loadedTrackName;
+    AtmosMotionSource *_motion;
+    CFTimeInterval _lastMeterTime;
 }
 
 - (instancetype)init {
@@ -37,6 +55,7 @@ NSError* makeError(const std::string& msg) {
         _audioSession.delegate = self;
         _session = std::make_unique<LiveSession>(48000.0, atmos::ios::IOSAudioIO::kMaxFramesPerSlice);
         _io = std::make_unique<atmos::ios::IOSAudioIO>(_session->engine());
+        _motion = [AtmosMotionSource new];
     }
     return self;
 }
@@ -186,6 +205,31 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 - (void)setMicEchoSeconds:(float)v { _session->setMicEchoSeconds(v); }
 - (void)setMicFeedback:(float)v { _session->setMicFeedback(v); }
 - (void)setMicWet:(float)v { _session->setMicWet(v); }
+- (void)setMicShiftHz:(float)v { _session->setMicShiftHz(v); }
+- (void)setMicShiftMix:(float)v { _session->setMicShiftMix(v); }
+
+- (void)setRoomMemoryEnabled:(BOOL)e { _session->setRoomMemoryEnabled(e); }
+- (void)setRoomMemoryLevel:(float)v { _session->setRoomMemoryLevel(v); }
+- (void)setRoomMemoryPitch:(float)v { _session->setRoomMemoryPitch(v); }
+
+// ------------------------------------------------------------------ motion
+
+- (BOOL)motionSensingAvailable { return _motion.available; }
+- (BOOL)motionSensingEnabled { return _motion.running; }
+
+- (void)setMotionSensingEnabled:(BOOL)enabled {
+    if (!enabled || !_motion.available) {
+        [_motion stop];
+        _session->setMotionAvailable(false);
+        return;
+    }
+    _session->setMotionAvailable(true);
+    __weak AtmosEngineBridge *weakSelf = self;
+    [_motion startWithRateHz:30.0 handler:^(double ax, double ay, double az, double dt) {
+        AtmosEngineBridge *s = weakSelf;
+        if (s) s->_session->addMotionSample(ax, ay, az, dt);
+    }];
+}
 
 // ------------------------------------------------------------------ safety
 
@@ -200,6 +244,11 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 - (AtmosMeterSnapshot *)meters {
     atmos::AudioEngine &engine = _session->engine();
     engine.collectGarbage();
+    const CFTimeInterval now = CACurrentMediaTime();
+    const double dt = _lastMeterTime > 0 ? std::min(0.5, now - _lastMeterTime) : 0.0;
+    _lastMeterTime = now;
+    _session->updateEnvironment(dt);
+    const atmos::EnvironmentStateSnapshot st = _session->environmentStates();
     const atmos::EngineMeters m = engine.meters();
     const atmos::EnvironmentFeatures f = engine.environmentFeatures();
     const double rate = _session->sampleRate();
@@ -217,6 +266,17 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     s.environmentLevelDb = f.levelDb;
     s.environmentSilent = f.silent;
     s.transientCount = f.transientCount;
+    s.quiet = st.quiet;
+    s.loud = st.loud;
+    s.still = st.still;
+    s.moving = st.moving;
+    s.motionAvailable = st.motionAvailable;
+    s.loudness = st.loudness;
+    s.activity = st.activity;
+    s.roomMemoryVoices = engine.roomMemory().activeVoices();
+    const double days = [NSDate date].timeIntervalSince1970 / 86400.0;
+    s.moonPhaseId = @(atmos::core::moonPhaseId(atmos::core::moonPhaseName(days)));
+    s.lunarDay = atmos::core::lunarDay(days);
     return s;
 }
 
