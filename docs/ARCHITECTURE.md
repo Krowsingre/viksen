@@ -1,17 +1,26 @@
 # Architecture
 
 ```
-apps/ios (SwiftUI) ──► AtmosEngineBridge (ObjC++) ─┐
-apps/desktop (JUCE UI) ──► AudioHost ──────────────┤
+apps/ios  (SwiftUI, iPhone)  ──► AtmosEngineBridge (ObjC++) ── IOSAudioIO (RemoteIO) ─┐
+apps/ios  (SwiftUI, Mac)     ──► AtmosEngineBridge (ObjC++) ── MiniaudioHost ─────────┤
+apps/windows (WinUI 3, C#)   ──► viksen_engine.dll (platform/capi, C ABI) ── MiniaudioHost ┤
+apps/desktop (JUCE, legacy until the WinUI/Mac apps reach parity) ──► AudioHost ──────┤
                                                    ▼
-                     core/session/LiveSession (settings, track, rebuilds)
-                     core/projects, core/assets, core/serialization
+                     core/session/LiveSession (settings, track, Dimensions, recording)
+                     core/projects, core/worlds, core/assets, core/serialization
                                                    ▼
-                     engine/  (real-time C++20, no platform/UI/product deps)
-platform/ios       AVAudioSession, RemoteIO, AVFoundation decode
-platform/windows   WASAPI policy          platform/macos   Core Audio policy
-platform/desktop   JUCE decode + input toggling (shared Win/macOS), Linux dev fallback
+                     engine/  (real-time C++20, no platform/UI/product deps;
+                               Steam Audio HRTF when compiled in)
+platform/ios       AVAudioSession, RemoteIO, Core Motion, AVFoundation decode (decode also on Mac)
+platform/desktop   MiniaudioHost: Core Audio / WASAPI device I/O and stem decoding
+platform/capi      C interface for non-C++ apps (Windows)
 ```
+
+One SwiftUI code base serves iPhone and Mac (`ViksenMac` target in `apps/ios/project.yml`,
+same bundle id for universal purchase). iPhone-only pieces (AVAudioSession, RemoteIO,
+accelerometer, Activity, Apple Watch link) are behind `TARGET_OS_IOS` / `#if os(iOS)`;
+`Shared/Platform.swift` maps toolbar slots and title styles. The Windows app mirrors the
+same sections and palette in WinUI 3.
 
 Dependency rule: `engine` ← `core` ← `platform` ← `apps`. Nothing in `engine/` or `core/`
 includes JUCE, Apple frameworks or Windows headers, or mentions the product name

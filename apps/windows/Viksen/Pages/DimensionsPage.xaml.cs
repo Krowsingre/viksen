@@ -30,7 +30,7 @@ public sealed partial class DimensionsPage : Page
         Detail.Visibility = _selected == null ? Visibility.Collapsed : Visibility.Visible;
         if (_selected == null) return;
         NameText.Text = _selected.Name;
-        Subtitle.Text = _selected.Subtitle;
+        SubtitleText.Text = _selected.Subtitle;
         Refresh();
     }
 
