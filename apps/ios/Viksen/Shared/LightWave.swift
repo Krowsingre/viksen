@@ -2,8 +2,11 @@ import SwiftUI
 
 /// Layered, slowly drifting sine ribbons with a soft glow.
 struct LightWave: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+        // With Reduce Motion the wave is drawn once and stays still.
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
             Canvas { ctx, size in
                 for layer in 0..<4 {

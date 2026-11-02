@@ -2,6 +2,10 @@ import SwiftUI
 
 /// Saved projects (.viksen packages in Documents/Projects): open or delete.
 struct ProjectsSection: View {
+    var query: String = ""
+    private var visible: [URL] {
+        projects.filter { query.isEmpty || $0.deletingPathExtension().lastPathComponent.localizedCaseInsensitiveContains(query) }
+    }
     @Environment(EngineController.self) private var engine
     @State private var projects: [URL] = []
     @State private var confirmOpen: URL?
@@ -12,7 +16,7 @@ struct ProjectsSection: View {
                 Text("Save a project from Experience (\u{2026} menu) to keep your song, levels, atmosphere and Dimension together.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
-            ForEach(projects, id: \.self) { url in
+            ForEach(visible, id: \.self) { url in
                 Button { confirmOpen = url } label: {
                     VStack(alignment: .leading) {
                         Text(url.deletingPathExtension().lastPathComponent)
@@ -23,7 +27,7 @@ struct ProjectsSection: View {
                 }
             }
             .onDelete { idx in
-                for i in idx { try? FileManager.default.removeItem(at: projects[i]) }
+                for i in idx { try? FileManager.default.removeItem(at: visible[i]) }
                 AppLog.info("Project deleted")
                 refresh()
             }

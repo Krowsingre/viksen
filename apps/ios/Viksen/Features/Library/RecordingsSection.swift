@@ -3,6 +3,10 @@ import SwiftUI
 
 /// Session recordings stored on this iPhone: play, share, delete.
 struct RecordingsSection: View {
+    var query: String = ""
+    private var visible: [URL] {
+        files.filter { query.isEmpty || $0.deletingPathExtension().lastPathComponent.localizedCaseInsensitiveContains(query) }
+    }
     @State private var files: [URL] = []
     @State private var player: AVAudioPlayer?
     @State private var playing: URL?
@@ -14,7 +18,7 @@ struct RecordingsSection: View {
                 Text("Recordings you make with Record Session appear here.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
-            ForEach(files, id: \.self) { url in
+            ForEach(visible, id: \.self) { url in
                 HStack {
                     Button {
                         toggle(url)
@@ -34,8 +38,8 @@ struct RecordingsSection: View {
             }
             .onDelete { idx in
                 for i in idx {
-                    if playing == files[i] { stop() }
-                    try? FileManager.default.removeItem(at: files[i])
+                    if playing == visible[i] { stop() }
+                    try? FileManager.default.removeItem(at: visible[i])
                     AppLog.info("Recording deleted")
                 }
                 refresh()
