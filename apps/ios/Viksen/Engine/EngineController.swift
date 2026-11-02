@@ -312,7 +312,7 @@ final class EngineController {
 
     func openProject(_ url: URL) {
         do {
-            guard let info = try bridge.openProject(at: url) else { return }
+            let info = try bridge.openProject(at: url)   // throws when the package cannot be read
             syncSettingsFromEngine()
             if let song = info["song"] as? URL { loadTrack(url: song) } else if trackName != nil { unloadTrack() }
             if let dim = info["dimension"] as? String, let world = worlds.first(where: { $0.worldID == dim }) {
