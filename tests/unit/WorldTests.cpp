@@ -193,6 +193,8 @@ TEST_CASE("session/World fades in, reacts, survives a sample-rate change and fad
     st = s.worldStatus();
     CHECK_NEAR(st.stems[0].azimuthDeg, 90.0, 1e-4);
     CHECK_NEAR(st.stems[0].distanceM, 20.0, 1e-4);
+    s.resetWorldStemPositions();
+    CHECK_NEAR(s.worldStatus().stems[0].distanceM, 1.5, 1e-4); // authored default restored
     CHECK(st.spatial);
     CHECK(st.hrtf == binauralHrtfCompiledIn());
 

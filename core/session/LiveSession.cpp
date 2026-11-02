@@ -150,6 +150,7 @@ bool LiveSession::startFeeder(int64_t fromFrame, std::string* error) {
 bool LiveSession::loadWorld(const WorldManifest& world, StemDecoderFactory factory, std::string* error) {
     unloadWorld();
     world_ = world;
+    worldAuthored_ = world;
     worldFactory_ = std::move(factory);
     director_ = std::make_unique<WorldDirector>(world);
     resumeFrame_ = 0;
@@ -168,6 +169,7 @@ void LiveSession::unloadWorld() {
     stopFeeder();
     for (int i = 0; i < WorldStreamPlayer::kMaxStems; ++i) engine_->worldPlayer().setStemGain(i, 0.0f);
     world_.reset();
+    worldAuthored_.reset();
     worldFactory_ = nullptr;
     director_.reset();
     lifecycle_.reset();
@@ -227,6 +229,14 @@ void LiveSession::setWorldStemPosition(int stem, float az, float el, float dist)
     s.elevationDeg = std::clamp(el, -90.0f, 90.0f);
     s.distanceM = std::clamp(dist, 0.25f, 20.0f);
     engine_->worldPlayer().setStemPosition(stem, s.azimuthDeg, s.elevationDeg, s.distanceM, s.widthDeg);
+}
+
+void LiveSession::resetWorldStemPositions() {
+    if (!world_ || !worldAuthored_) return;
+    for (size_t i = 0; i < world_->stems.size(); ++i) {
+        const auto& a = worldAuthored_->stems[i];
+        setWorldStemPosition(static_cast<int>(i), a.azimuthDeg, a.elevationDeg, a.distanceM);
+    }
 }
 
 WorldStatus LiveSession::worldStatus() const {

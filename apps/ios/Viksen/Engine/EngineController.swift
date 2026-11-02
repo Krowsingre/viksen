@@ -308,17 +308,12 @@ final class EngineController {
         UserDefaults.standard.set(saved, forKey: "positions." + worldStatus.worldID)
     }
 
-    /// Forgets canvas moves for a Dimension (back to the authored layout on next entry).
+    /// Forgets canvas moves for a Dimension and restores its authored layout
+    /// immediately, without interrupting the music.
     func resetPositions(_ worldID: String) {
         UserDefaults.standard.removeObject(forKey: "positions." + worldID)
         AppLog.info("Reset 3D layout for \(worldID)")
-        if worldStatus.loaded && worldStatus.worldID == worldID {
-            if let w = worlds.first(where: { $0.worldID == worldID }) {
-                let wasPlaying = worldStatus.playing
-                bridge.unloadWorld()
-                if wasPlaying { enterWorld(w) } else { try? bridge.loadWorld(worldID) }
-            }
-        }
+        if worldStatus.loaded && worldStatus.worldID == worldID { bridge.resetStemPositions() }
     }
 
     private func savedPositions(_ worldID: String) -> [String: [Double]] {

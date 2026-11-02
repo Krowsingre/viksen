@@ -42,7 +42,7 @@ struct SpatialCanvasView: View {
                     }
                     .position(p)
                     .gesture(
-                        DragGesture(minimumDistance: 0)
+                        DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.space))
                             .onChanged { g in
                                 dragging = index
                                 let (az, dist) = polar(g.location, centre: centre, radius: radius)
@@ -59,9 +59,13 @@ struct SpatialCanvasView: View {
                     }
                 }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .coordinateSpace(name: Self.space)   // drag locations relative to the canvas, not the dot
         }
         .frame(height: 300)
     }
+
+    private static let space = "spatialCanvas"
 
     private func point(azimuth: Float, distance: Float, centre: CGPoint, radius: CGFloat) -> CGPoint {
         let r = CGFloat(min(distance, maxDistance) / maxDistance) * radius

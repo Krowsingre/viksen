@@ -154,6 +154,7 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 - (void)setDimensionSpatialEnabled:(BOOL)enabled;
 - (void)moveStem:(NSInteger)index azimuth:(float)azimuth elevation:(float)elevation distance:(float)distance
     NS_SWIFT_NAME(moveStem(_:azimuth:elevation:distance:));
+- (void)resetStemPositions;   // back to the Dimension's authored layout
 @property (nonatomic, readonly) BOOL binauralHRTF;   // Steam Audio active in this build/device
 // Exercise intensity 0...1 from Health / Apple Watch; negative = unknown.
 - (void)setExerciseIntensity:(double)intensity;

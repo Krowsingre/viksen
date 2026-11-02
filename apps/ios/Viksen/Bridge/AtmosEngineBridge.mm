@@ -383,6 +383,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 - (void)moveStem:(NSInteger)index azimuth:(float)az elevation:(float)el distance:(float)d {
     _session->setWorldStemPosition(static_cast<int>(index), az, el, d);
 }
+- (void)resetStemPositions { _session->resetWorldStemPositions(); }
 - (BOOL)binauralHRTF { return _session->engine().worldPlayer().hrtfActive(); }
 
 - (AtmosWorldStatus *)worldStatus {

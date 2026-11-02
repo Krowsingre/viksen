@@ -137,6 +137,8 @@ public:
     bool worldSpatialEnabled() const { return worldSpatial_; }
     // Moves a stem (spatial canvas). Kept until the World is unloaded.
     void setWorldStemPosition(int stem, float azimuthDeg, float elevationDeg, float distanceM);
+    // Restores every stem to the position authored in world.json (no interruption).
+    void resetWorldStemPositions();
     ~LiveSession();
 
 private:
@@ -152,6 +154,7 @@ private:
     float listenerYaw_ = 0.0f;
 
     std::optional<WorldManifest> world_;
+    std::optional<WorldManifest> worldAuthored_;   // as loaded, for "reset layout"
     StemDecoderFactory worldFactory_;
     std::unique_ptr<WorldFeeder> feeder_;
     std::unique_ptr<WorldDirector> director_;
