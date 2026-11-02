@@ -22,6 +22,7 @@ final class EngineController {
     private let bridge = AtmosEngineBridge()
     let headTracker = HeadTracker()
     let activity = ActivityMonitor()
+    let health = HealthService()
     private let delegateProxy = BridgeDelegateProxy()
     private var meterTimer: Timer?
 
@@ -65,6 +66,13 @@ final class EngineController {
     var echoFollowsSteps = false { didSet { applyCadence(activity.cadenceStepsPerMinute) } }
     private var echoBeforeStepSync: Float?
 
+    var healthEnabled = false {
+        didSet { healthEnabled ? health.start() : health.stop(); if !healthEnabled { applyIntensity(nil) } }
+    }
+    /// Exercise intensity brightens and thickens the atmosphere bed.
+    var intensityShapesAtmosphere = false { didSet { applyIntensity(intensityShapesAtmosphere ? health.intensity : nil) } }
+    private var bedBeforeIntensity: (level: Float, colour: Float)?
+
     init() {
         delegateProxy.onChange = { [weak self] reason in self?.bridgeStateDidChange(reason) }
         bridge.delegate = delegateProxy
@@ -72,6 +80,10 @@ final class EngineController {
         route = bridge.route
         headTracker.onYaw = { [weak self] yaw in self?.bridge.setListenerYawDegrees(Float(yaw)) }
         activity.onCadence = { [weak self] spm in self?.applyCadence(spm) }
+        health.onIntensity = { [weak self] i in
+            guard let self, self.intensityShapesAtmosphere else { return }
+            self.applyIntensity(i)
+        }
         meterTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshMeters() }
         }
@@ -161,6 +173,7 @@ final class EngineController {
         if tier < Feature.frequencyShift.requiredTier { micShiftMix = 0 }
         if tier < Feature.headTracking.requiredTier { headTrackingEnabled = false }
         if tier < Feature.activity.requiredTier { echoFollowsSteps = false; activityEnabled = false }
+        if tier < Feature.health.requiredTier { intensityShapesAtmosphere = false; healthEnabled = false }
         if tier < Feature.musicImport.requiredTier, trackName != nil { unloadTrack() }
     }
 
@@ -175,6 +188,22 @@ final class EngineController {
         let seconds = Float(min(1.5, max(0.2, 60.0 / spm)))
         // Ignore tiny cadence wobbles so the echo does not constantly re-tune.
         if abs(seconds - micEchoSeconds) / micEchoSeconds > 0.03 { micEchoSeconds = seconds }
+    }
+
+    private func applyIntensity(_ intensity: Double?) {
+        guard let intensity, intensityShapesAtmosphere else {
+            if let saved = bedBeforeIntensity {
+                bedLevel = saved.level
+                bedColourHz = saved.colour
+                bedBeforeIntensity = nil
+            }
+            return
+        }
+        if bedBeforeIntensity == nil { bedBeforeIntensity = (bedLevel, bedColourHz) }
+        let base = bedBeforeIntensity!
+        let i = Float(intensity)
+        bedLevel = min(0.6, base.level + 0.15 * i)
+        bedColourHz = min(6000, base.colour + 3000 * i)
     }
 
     // MARK: Meters / delegate

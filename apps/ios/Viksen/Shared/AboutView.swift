@@ -16,6 +16,10 @@ struct AboutView: View {
                     Text("Immersive audio can hide important sounds around you. Keep volume moderate and stay aware of your surroundings.")
                 }
                 Section {
+                    Link("Privacy Policy", destination: SiteLinks.privacy)
+                    Link("Support", destination: SiteLinks.support)
+                }
+                Section {
                     LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")
                 }
             }
@@ -23,4 +27,9 @@ struct AboutView: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }
+}
+
+enum SiteLinks {
+    static let privacy = URL(string: "https://krowsingre.github.io/viksen/privacy.html")!
+    static let support = URL(string: "https://krowsingre.github.io/viksen/support.html")!
 }

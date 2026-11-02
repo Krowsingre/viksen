@@ -24,6 +24,7 @@ struct PaywallView: View {
                              "Advanced effects and automation", "Export"])
                 Section {
                     Button("Restore Purchases") { Task { await store.restore() } }
+                    Link("Privacy Policy", destination: SiteLinks.privacy)
                 } footer: {
                     Text("One-time purchases. They also unlock Viksen on Mac when it is available. Payment is charged to your Apple Account.")
                 }

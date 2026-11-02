@@ -50,6 +50,14 @@ targets:
       - sdk: AudioToolbox.framework
       - sdk: CoreMotion.framework
       - sdk: QuartzCore.framework
+      - sdk: HealthKit.framework
+      - sdk: StoreKit.framework
+    entitlements:
+      path: Viksen/Resources/Viksen.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+        com.apple.developer.weatherkit: true
     settings:
       base:
         PRODUCT_NAME: Viksen

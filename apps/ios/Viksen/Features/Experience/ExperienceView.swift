@@ -335,5 +335,28 @@ private struct BodyMotionSection: View {
                 }
             }
         }
+
+        let health = engine.health
+        if health.isAvailable {
+            Gated(feature: .health, title: "Workout intensity") {
+                Toggle("Workout intensity (Health)", isOn: $engine.healthEnabled)
+            }
+            if engine.healthEnabled {
+                HStack {
+                    Text(health.heartRate.map { String(format: "%.0f bpm", $0) } ?? "No recent heart rate")
+                    Spacer()
+                    if let i = health.intensity {
+                        Text(String(format: "Intensity %.0f%%", i * 100))
+                            .font(.footnote.monospacedDigit()).foregroundStyle(.secondary)
+                    }
+                }
+                Toggle("Intensity shapes the atmosphere", isOn: $engine.intensityShapesAtmosphere)
+                Text("Live heart rate comes from the Viksen app on Apple Watch during a workout. Without it, Health readings may arrive minutes late.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                if let error = health.lastError {
+                    Text(error).font(.footnote).foregroundStyle(Theme.danger)
+                }
+            }
+        }
     }
 }

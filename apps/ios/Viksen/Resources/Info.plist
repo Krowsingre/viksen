@@ -24,6 +24,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Viksen reads your heart rate, resting heart rate, workouts and age so the soundscape can respond to how hard you are exercising. Health data stays on your devices and is never shared.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Motion and fitness data lets Viksen follow your head with compatible headphones and respond to walking, running and your step rhythm. It is used on this device only.</string>
 	<key>NSMicrophoneUsageDescription</key>
