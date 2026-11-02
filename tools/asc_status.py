@@ -56,3 +56,12 @@ for g in groups:
     testers = get(f"/v1/betaGroups/{g['id']}/betaTesters", {"limit": "20"})["data"]
     print(f"  {ga['name']} ({'internal' if ga.get('isInternalGroup') else 'external'}): "
           f"{len(testers)} tester(s), builds: {[x['attributes']['version'] for x in gb] or 'none'}")
+
+# Signing certificates (read-only). Each CI run on a fresh runner may create an
+# "Apple Development" certificate; Apple caps how many a team can have.
+certs = get("/v1/certificates", {"limit": "50", "fields[certificates]": "name,certificateType,displayName,expirationDate,platform"})["data"]
+print(f"\nSigning certificates ({len(certs)}):")
+for c in sorted(certs, key=lambda c: c["attributes"].get("certificateType", "")):
+    ca = c["attributes"]
+    print(f"  {ca.get('certificateType', '?'):<24} {ca.get('displayName') or ca.get('name', '?'):<40} "
+          f"expires {str(ca.get('expirationDate', ''))[:10]}")
