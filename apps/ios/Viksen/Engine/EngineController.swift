@@ -128,6 +128,12 @@ final class EngineController {
     var sampleRate: Double { bridge.sampleRate }
     var micPermission: AtmosMicPermission { bridge.micPermission }
     var isOnSpeaker: Bool { route.kind == .speaker }
+    /// Headphones (wired, USB or Bluetooth) carry the augmented layer: the microphone and
+    /// the room are only offered with them, since a speaker would feed back into the mic.
+    var onHeadphones: Bool { route.kind == .wired || route.kind == .bluetooth }
+
+    /// What was on when headphones were removed, so plugging them back in returns to it.
+    private var augmentedResume: (dimension: String?, mic: Bool)?
     var isOnBluetooth: Bool { route.kind == .bluetooth }
 
     // MARK: Transport
@@ -207,6 +213,10 @@ final class EngineController {
     // MARK: Microphone
 
     func setMicEnabled(_ enabled: Bool) {
+        if enabled && !onHeadphones {
+            statusMessage = "Connect headphones to let the room in."
+            return
+        }
         bridge.setMicEnabled(enabled) { [weak self] ok, error in
             MainActor.assumeIsolated {
                 guard let self else { return }
@@ -811,10 +821,39 @@ final class EngineController {
 
     private func bridgeStateDidChange(_ reason: String) {
         AppLog.info("\(reason) (output: \(bridge.route.outputName))")
-        statusMessage = reason
+        let wasOnHeadphones = onHeadphones
         route = bridge.route
         audioRunning = bridge.audioRunning
-        busGains[BusLevel.micRaw.rawValue] = bridge.gain(for: .micRaw)
+        statusMessage = reason
+        if wasOnHeadphones && !onHeadphones { leaveAugmentedReality() }
+        else if !wasOnHeadphones && onHeadphones { returnToAugmentedReality() }
+    }
+
+    /// Headphones out: a gentle step back to regular reality. The microphone paths were
+    /// silenced at once by the bridge; the mic turns off and the Dimension fades out.
+    private func leaveAugmentedReality() {
+        let playingDimension = worldStatus.playing && worldStatus.worldID != "studio" ? worldStatus.worldID : nil
+        augmentedResume = (playingDimension, micEnabled)
+        if micEnabled { setMicEnabled(false) }
+        if playingDimension != nil { bridge.stopWorld() }   // fades out
+        applyRoomBlend()                                    // restore the user's mic levels for later
+        statusMessage = "Headphones disconnected: back to regular reality"
+        AppLog.info("Left augmented reality (Dimension \(playingDimension ?? "none"), mic \(augmentedResume?.mic == true))")
+    }
+
+    /// Headphones in: fade back into where the listener was.
+    private func returnToAugmentedReality() {
+        guard let resume = augmentedResume else {
+            statusMessage = "Headphones connected"
+            return
+        }
+        augmentedResume = nil
+        if let id = resume.dimension, let world = worlds.first(where: { $0.worldID == id }) {
+            enterWorld(world)
+        }
+        if resume.mic && micPermission == .granted { setMicEnabled(true) }
+        statusMessage = "Headphones connected: back in augmented reality"
+        AppLog.info("Returned to augmented reality")
     }
 }
 

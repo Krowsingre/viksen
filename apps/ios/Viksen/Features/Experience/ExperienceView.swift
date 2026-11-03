@@ -206,8 +206,11 @@ private struct SensesSection: View {
             }
         }
         Toggle(isOn: Binding(get: { engine.micEnabled }, set: { engine.setMicEnabled($0) })) {
-            senseLabel("Listen to the room", "Quiet and loud surroundings choose different parts. The room is only analysed, not played to you.")
+            senseLabel("Listen to the room", engine.onHeadphones
+                       ? "Quiet and loud surroundings choose different parts. The room is only analysed, not played to you."
+                       : "Connect headphones to let the room in. Through a speaker the microphone would hear the music.")
         }
+        .disabled(!engine.onHeadphones)
         if engine.micPermission == .denied {
             Text("Microphone access is off for this app. You can turn it on in Settings.")
                 .font(.footnote).foregroundStyle(.secondary)
@@ -231,12 +234,17 @@ private struct BlendSection: View {
 
     var body: some View {
         @Bindable var engine = engine
+        if !engine.onHeadphones {
+            Label("Connect headphones to blend the room into the music.", systemImage: "headphones")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
         Toggle("Hear the room", isOn: $engine.hearRoom)
+            .disabled(!engine.onHeadphones)
         if engine.hearRoom && !engine.micEnabled {
             Text("Turn on \u{201C}Listen to the room\u{201D} above to hear it.")
                 .font(.footnote).foregroundStyle(.secondary)
         }
-        if engine.hearRoom && engine.micEnabled {
+        if engine.hearRoom && engine.micEnabled && engine.onHeadphones {
             LabeledSlider(title: "Tone", value: $engine.micToneHz, range: 200...12000, format: "%.0f Hz")
             LabeledSlider(title: "Echo time", value: $engine.micEchoSeconds, range: 0.05...1.5, format: "%.2f s")
             LabeledSlider(title: "Echo feedback", value: $engine.micFeedback, range: 0...0.9, format: "%.2f")

@@ -787,16 +787,18 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 
 - (void)audioSessionRouteChanged:(AtmosRouteInfo *)route oldDeviceUnavailable:(BOOL)oldDeviceUnavailable {
     if (oldDeviceUnavailable) {
-        // Headphones removed: pause playback and silence raw monitoring so audio does
-        // not suddenly play from the speaker and the mic cannot feed back.
-        _session->engine().pause();
-        _session->setBusGain(Bus::MicRaw, 0.0f);
+        // Headphones removed: silence the microphone paths at once (no feedback through
+        // the speaker). The app then fades the Dimension out and turns the mic off, so the
+        // step back to regular reality is gentle rather than a cut.
+        _session->engine().setBusGain(Bus::MicRaw, 0.0f);
+        _session->engine().setBusGain(Bus::MicTransformed, 0.0f);
+        _session->engine().pause();   // a song track (Studio) still stops, per Apple's guidance
     }
     if (self.audioRunning && route.sampleRate > 0 && route.sampleRate != _session->sampleRate()) {
         [self rebuildAtRate:route.sampleRate];
         [self startAudioWithError:nil];
     }
-    [self.delegate engineBridgeStateDidChange:oldDeviceUnavailable ? @"Headphones disconnected: paused" : @"Audio route changed"];
+    [self.delegate engineBridgeStateDidChange:oldDeviceUnavailable ? @"Headphones disconnected" : @"Audio route changed"];
 }
 
 - (void)audioSessionMediaServicesWereReset {

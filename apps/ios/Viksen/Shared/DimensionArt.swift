@@ -173,7 +173,19 @@ struct HomeBackground: View {
     var body: some View {
         let name = wide ? "HomeBackgroundWide" : "HomeBackground"
         if let image = UIImageCompat.named(name) ?? (wide ? UIImageCompat.named("HomeBackground") : nil) {
-            image.resizable().scaledToFill()
+            GeometryReader { geo in
+                image.resizable().scaledToFill()
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+                    .overlay {
+                        // Keeps the wordmark, cards and lunar line readable over the art.
+                        LinearGradient(stops: [.init(color: .black.opacity(0.35), location: 0),
+                                               .init(color: .clear, location: 0.22),
+                                               .init(color: .clear, location: 0.55),
+                                               .init(color: .black.opacity(0.65), location: 1)],
+                                       startPoint: .top, endPoint: .bottom)
+                    }
+            }
         } else {
             DimensionArt(pillars: wide, horizon: wide ? 0.50 : 0.56)
         }
