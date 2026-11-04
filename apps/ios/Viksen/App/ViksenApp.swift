@@ -47,6 +47,11 @@ struct ViksenApp: App {
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
                 engine.appDidEnterBackground()
             }
+            #else
+            // Closing the app (swiping it away) silences the music at once, without a fade.
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
+                engine.shutdownNow()
+            }
             #endif
             .onChange(of: scenePhase) { _, phase in
                 switch phase {

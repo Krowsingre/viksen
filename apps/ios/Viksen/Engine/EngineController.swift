@@ -29,6 +29,7 @@ final class EngineController {
     let albums = AlbumLinks()
     let progress = ProgressStore()
     let nightClock = NightClock()
+    private let nowPlaying = NowPlaying()
     private var lastProgressTick = Date.distantPast
     private let delegateProxy = BridgeDelegateProxy()
     private var meterTimer: Timer?
@@ -41,6 +42,11 @@ final class EngineController {
     private(set) var isLoadingTrack = false
     private(set) var meters = AtmosMeterSnapshot()
     private(set) var worldStatus = AtmosWorldStatus()
+    // Slow-changing values, set only when they change, so views that need just these do
+    // not redraw with every 30 Hz meter update.
+    private(set) var activeDimensionID: String?   // the Dimension playing now (not Studio)
+    private(set) var moonPhaseID = ""
+    private(set) var lunarDay = 0
     private(set) var worlds: [AtmosWorldInfo] = []
     private(set) var route = AtmosRouteInfo()
     private(set) var statusMessage: String?
@@ -123,6 +129,8 @@ final class EngineController {
         }
         worlds = bridge.availableWorlds()
         weather.onMood = { [weak self] _, _ in self?.applyBed() }
+        nowPlaying.onPlay = { [weak self] in self?.resumeLastDimension() }
+        nowPlaying.onPause = { [weak self] in self?.leaveWorld() }
         meterTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshMeters() }
         }
@@ -289,6 +297,10 @@ final class EngineController {
         meters = bridge.meters()
         let previousSong = worldStatus.songTitle
         worldStatus = bridge.worldStatus()
+        let active = worldStatus.loaded && worldStatus.playing && worldStatus.worldID != "studio" ? worldStatus.worldID : nil
+        if active != activeDimensionID { activeDimensionID = active }
+        if meters.moonPhaseId != moonPhaseID { moonPhaseID = meters.moonPhaseId }
+        if meters.lunarDay != lunarDay { lunarDay = meters.lunarDay }
         if worldStatus.loaded && worldStatus.songCount > 1 && worldStatus.songTitle != previousSong && !previousSong.isEmpty {
             AppLog.info("Dimension \(worldStatus.worldID): now \(worldStatus.songTitle)")
             applySavedPositions(worldStatus.worldID)   // the new song has its own stems
@@ -305,6 +317,7 @@ final class EngineController {
             let songPhase = testing ? progress.currentPhaseID
                 : (nightClock.isNight ? worldStatus.songLunarPhaseId : "")
             progress.tick(dimensionID: currentDimensionID, songPhaseID: songPhase, audible: audible)
+            updateNowPlaying()
         }
         // Dropouts: log the increase at most once a minute.
         let total = meters.underruns + worldStatus.underruns
@@ -627,6 +640,30 @@ final class EngineController {
     func appDidEnterBackground() {
         autosave()
         try? FileManager.default.removeItem(at: Self.runningFlag)
+    }
+    /// Lock screen / Control Center: play starts the last Dimension again.
+    func resumeLastDimension() {
+        let playable = worlds.filter(isPlayable)
+        if let w = playable.first(where: { $0.worldID == lastDimensionID }) ?? playable.first { enterWorld(w) }
+    }
+
+    private func updateNowPlaying() {
+        let st = worldStatus
+        let loaded = st.loaded && st.worldID != "studio"
+        let id = loaded ? st.worldID : lastDimensionID
+        guard let info = worlds.first(where: { $0.worldID == id }) else {
+            nowPlaying.update(dimension: nil, song: "", artist: "", playing: false, position: 0, length: 0)
+            return
+        }
+        nowPlaying.update(dimension: info.name, song: loaded ? st.songTitle : "", artist: info.artist,
+                          playing: loaded && st.playing, position: loaded ? st.positionSeconds : 0,
+                          length: loaded ? st.lengthSeconds : 0)
+    }
+
+    /// The app is being closed: stop the sound immediately (no fade), then save.
+    func shutdownNow() {
+        bridge.stopAudio()
+        appDidEnterBackground()
     }
     func appWillEnterForeground() {
         FileManager.default.createFile(atPath: Self.runningFlag.path, contents: nil)

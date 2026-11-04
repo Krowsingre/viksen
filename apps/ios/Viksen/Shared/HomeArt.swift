@@ -19,8 +19,9 @@ struct HomeSkyBackground: View {
     }
 }
 
-/// A soft glow over tonight's moon in the owner's moon ring artwork. The eight moons sit
-/// clockwise from New Moon at the top; positions are measured from MoonRing (1312 × 1199).
+/// A glow behind tonight's moon in the owner's moon ring artwork (drawn under the ring,
+/// so it seems to come from behind the moon). The eight moons sit clockwise from New Moon
+/// at the top; positions are measured from MoonRing (1312 × 1199).
 struct MoonRingPulse: View {
     var phaseID: String
     var ringWidth: CGFloat
@@ -38,24 +39,22 @@ struct MoonRingPulse: View {
         if let c = Self.centres[phaseID] {
             let sx = ringWidth / 1312, sy = ringHeight / 1199
             let d = c.r * 2 * sx
-            ZStack {
-                Circle().fill(RadialGradient(colors: [Color.white.opacity(0.45), Color(red: 0.8, green: 0.65, blue: 1).opacity(0.35), .clear],
-                                             center: .center, startRadius: 0, endRadius: d * 0.75))
-                    .frame(width: d * 1.5, height: d * 1.5)
-                Circle().stroke(Color(red: 0.95, green: 0.88, blue: 1).opacity(0.9), lineWidth: 1.5)
-                    .frame(width: d * 1.04, height: d * 1.04)
-                    .shadow(color: Color(red: 0.8, green: 0.6, blue: 1), radius: 8)
-            }
-            .blendMode(.plusLighter)
-            .opacity(reduceMotion ? 0.6 : (bright ? 0.95 : 0.3))
-            .scaleEffect(reduceMotion ? 1 : (bright ? 1.06 : 0.98))
-            .position(x: c.x * sx, y: c.y * sy)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-            .onAppear {
-                guard !reduceMotion else { return }
-                withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) { bright = true }
-            }
+            Circle()
+                .fill(RadialGradient(stops: [.init(color: Color(red: 0.98, green: 0.92, blue: 1).opacity(0.95), location: 0.45),
+                                            .init(color: Color(red: 0.78, green: 0.58, blue: 1).opacity(0.55), location: 0.62),
+                                            .init(color: Color(red: 0.55, green: 0.35, blue: 1).opacity(0.18), location: 0.8),
+                                            .init(color: .clear, location: 1)],
+                                     center: .center, startRadius: 0, endRadius: d * 0.95))
+                .frame(width: d * 1.9, height: d * 1.9)
+                .opacity(reduceMotion ? 0.8 : (bright ? 1 : 0.35))
+                .scaleEffect(reduceMotion ? 1 : (bright ? 1.08 : 0.94))
+                .position(x: c.x * sx, y: c.y * sy)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .onAppear {
+                    guard !reduceMotion else { return }
+                    withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) { bright = true }
+                }
         }
     }
 }

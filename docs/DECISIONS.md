@@ -75,3 +75,8 @@
 | 71 | **New Home** after the owner's concept: night-sky background (HomeSky; replaces #66), fox play button inside the owner's moon ring, tonight's phase pulsing, a live waveform in the fox's button while playing, serif type, menu button for Settings. | Owner |
 | 72 | **No tab bar.** From Home: swipe left → Dimensions, right → Moon Chart, up → Settings; swipe down returns Home. The play fox starts the music, the waveform fox stops it. No menu button. Home shows one Continue Listening card. | Owner |
 | 73 | Dimension banners (Home Continue Listening card) **hidden for now**; `HomeView.showDimensionBanners` brings them back. | Owner |
+| 74 | **No swiping** (it felt unresponsive): a menu button opens a side menu with Home, Dimensions, Moon Chart and Settings (replaces #72's swipes). | Owner |
+| 75 | Home lunar line shows **only "Lunar Day N"**, centred; tonight's moon **glows from behind** in the ring. Under it a **Now Playing card**: Dimension, song, progress bar, and tonight's discovery progress (suggested extra). | Owner |
+| 76 | **Moon Chart** restyled after the owner's concept (night-sky background, real moon images cut from the ring art, serif type, glass cards). | Owner |
+| 77 | **Stop fades out in 1 s** (song and part transitions keep their longer crossfades); **closing the app silences it at once**. | Owner |
+| 78 | **Lock screen and Control Center controls**: Dimension, song, progress, play/pause (no skip or scrub). | Owner |

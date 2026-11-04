@@ -69,6 +69,7 @@ struct ExperienceView: View {
             }
             .navigationTitle("Dimensions")
             .toolbar {
+                ToolbarItem(placement: .primaryAction) { MenuButton(compact: true) }
                 if store.tier >= .studio {
                     ToolbarItem(placement: .barLeading) {
                         Menu {

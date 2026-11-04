@@ -365,12 +365,12 @@ void LiveSession::stopWorld(bool quick) {
     if (!lifecycle_) return;
     switchTo_ = -1;            // the listener is leaving: no next song
     candidate_ = -1;
-    if (quick) {
-        LifecycleTiming t;
-        t.fadeInSeconds = 0.15;
-        t.fadeOutSeconds = 0.15;
-        lifecycle_->setTiming(t);
-    }
+    // Stopping fades out quicker than a song change (owner, 2026-11-04); transitions
+    // between parts and songs keep their own, longer crossfades.
+    LifecycleTiming t;
+    t.fadeInSeconds = quick ? 0.15 : 3.0;
+    t.fadeOutSeconds = quick ? 0.15 : kStopFadeSeconds;
+    lifecycle_->setTiming(t);
     lifecycle_->requestExit();
 }
 

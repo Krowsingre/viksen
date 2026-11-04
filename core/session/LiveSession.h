@@ -82,6 +82,7 @@ struct WorldStatus {
 
 class LiveSession {
 public:
+    static constexpr double kStopFadeSeconds = 1.0;   // the listener pressed stop
     static constexpr int kTrackSlot = 0;
 
     explicit LiveSession(double sampleRate = 48000.0, int maxBlockSize = 4096);
