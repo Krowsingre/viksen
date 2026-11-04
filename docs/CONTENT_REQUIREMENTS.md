@@ -1,5 +1,25 @@
 # Content requirements (working draft for the owner)
 
+**Owner answers (2026-11-04):**
+- Q1: option **B**.
+- Q2: every Dimension has the **same base Moods** (weather, time of day, activity, noise
+  level); secrets are separate per Dimension.
+- Q3: artwork by another LLM or a hired artist.
+- Q4: **under 1 GB**.
+- Q5: **3–6 minutes**.
+- Q6: launch album after the Core is finished.
+- Q7: **up to 12 stems**.
+
+**Size check for the Core under option B** (4 lunar tracks + 2 hidden = 6 tracks):
+- AAC 256 kb/s stereo is ~1.9 MB per stem-minute;
+- 12 stems × 5 minutes × 6 tracks ≈ 690 MB;
+- plus beds, ambience, clips and one-shots, ≈ 750–850 MB.
+
+That's under 1 GB. If every track runs the full 6 minutes it's ≈ 900 MB+. The easy
+margin is the approved delivery spec itself: **dry mono instrument stems** encode at
+half the stereo rate, so a typical song (8 mono objects + 4 stereo beds) is ~35%
+smaller.
+
 What a Dimension needs, as audio and as data, for the approved progression (eight lunar
 Phases, five secrets, at least two hidden songs) and the adaptive engine. **Draft:**
 numbered questions (Q#) need the owner's answer.

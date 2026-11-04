@@ -64,3 +64,6 @@
 | 60 | In-Dimension contextual states are called **Moods**; **Phase** means only the eight lunar phases. | Owner |
 | 61 | Launch line-up: Core + **one** album Dimension (could change with how much content each Dimension holds). Not all achievements are free; weather stays subscription-only for now. | Owner |
 | 62 | Approved: Moon Chart song plays through and returns to tonight's song (free); **3 minutes** of audible listening discovers a Phase; accurate astronomical lunar calculation (UTC); badge set (Lunar Journey, secrets, all five, global, a few milestones); "heard in" strip; user-initiated share cards with no private data; event log + iCloud union sync; obfuscated secret definitions. **Progression plan P-1…P-6 approved.** | Owner |
+| 63 | Lunar songs: **option B** (about 4 tracks per Dimension, each heard in lunar treatments, plus 2 hidden songs). | Owner |
+| 64 | **Every Dimension shares the same base Moods**: weather, time of day, activity, noise level (Normal, Rain, Morning, Afternoon, Night, Loud, Quiet, Active, Still). **Secrets are separate and authored per Dimension.** | Owner |
+| 65 | Artwork by another LLM or a hired artist. Core Dimension target **under 1 GB**; Core songs **3–6 minutes**; **up to 12 stems** per song. Launch album Dimension chosen after the Core is finished. | Owner |
