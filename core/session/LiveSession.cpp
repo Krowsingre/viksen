@@ -174,7 +174,9 @@ bool LiveSession::startFeeder(int64_t fromFrame, std::string* error) {
         planner_ = std::make_shared<SectionPlanner>(std::move(frames), static_cast<int64_t>(std::llround(bar * world_->jumpEveryBars * rate)),
                                                     std::max(loopStart, gridStart), end,
                                                     static_cast<int64_t>(std::llround(bar * world_->minStayBars * rate)));
-        crossfade = static_cast<int64_t>(std::llround(beat * world_->crossfadeBeats * rate));
+        // At most 6 s: blends are written in chunks (any length is safe), but their
+        // scratch memory grows with length x stems.
+        crossfade = static_cast<int64_t>(std::llround(std::min(6.0, beat * world_->crossfadeBeats) * rate));
         planner_->setChoice(lastChoice_);
         planner_->setStopAtSongEnd(dimension_ && dimension_->songs.size() > 1);
     }

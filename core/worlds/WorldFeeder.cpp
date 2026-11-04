@@ -86,7 +86,9 @@ void WorldFeeder::run() {
     std::vector<float> buf(static_cast<size_t>(kChunk) * 2);
     // Crossfade scratch: the outgoing tail of every stem.
     std::vector<std::vector<float>> tail(stems, std::vector<float>(static_cast<size_t>(std::max<int64_t>(crossfade_, 1)) * 2));
-    std::vector<float> incoming(static_cast<size_t>(std::max<int64_t>(crossfade_, 1)) * 2);
+    // The crossfaded audio of every stem, written to the player in chunks so a crossfade
+    // longer than the stream buffer cannot stall (it is never written in one piece).
+    std::vector<std::vector<float>> mixed(stems, std::vector<float>(static_cast<size_t>(std::max<int64_t>(crossfade_, 1)) * 2));
     // Transition wash still ringing (interleaved stereo), shared out over all stems.
     std::vector<float> wash, washIn;
     size_t washPos = 0;
@@ -140,7 +142,7 @@ void WorldFeeder::run() {
         }
         const int64_t target = std::clamp<int64_t>(to, loopStart_, loopEnd_ - 1);
         const int64_t xf = planner_ ? std::min<int64_t>(crossfade_, loopEnd_ - target) : 0;
-        if (xf > 0 && waitForRoom(static_cast<int>(xf))) {
+        if (xf > 0) {
             // Equal-power crossfade: the outgoing part keeps playing past the boundary
             // (its natural tail) while the new part fades in.
             for (size_t s = 0; s < stems; ++s) {
@@ -168,6 +170,7 @@ void WorldFeeder::run() {
                 washPos = 0;
             }
             for (size_t s = 0; s < stems; ++s) {
+                std::vector<float>& incoming = mixed[s];
                 decoders_[s]->seek(target);
                 const int got2 = decoders_[s]->read(incoming.data(), static_cast<int>(xf));
                 std::fill(incoming.begin() + 2 * std::max(0, got2), incoming.begin() + 2 * xf, 0.0f);
@@ -183,7 +186,11 @@ void WorldFeeder::run() {
                                                                        incoming[static_cast<size_t>(2 * i + c)] * gIn;
                     }
                 }
-                player_.write(static_cast<int>(s), incoming.data(), static_cast<int>(xf));
+            }
+            for (int64_t off = 0; off < xf; off += kChunk) {
+                const int part = static_cast<int>(std::min<int64_t>(kChunk, xf - off));
+                if (!waitForRoom(part)) break;            // stopping
+                for (size_t s = 0; s < stems; ++s) player_.write(static_cast<int>(s), mixed[s].data() + 2 * off, part);
             }
             if (fxOn_) washPos += static_cast<size_t>(xf);
             noteSegment(written, target);          // heard from here on: the new part

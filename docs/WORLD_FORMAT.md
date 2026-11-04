@@ -28,7 +28,7 @@ committed to this public repository.
 }
 ```
 
-- **Stems**: up to 8, same length and start, streamed from storage in lockstep
+- **Stems**: up to 16 per song (Studio imports: 8), same length and start, streamed from storage in lockstep
   (`WorldStreamPlayer` + `WorldFeeder`), so long songs need little memory.
 - **Rules**: for a stem, every rule whose inputs are available yields `gainDb` when its
   conditions hold and `otherwiseDb` when not; the stem's target is the loudest of those.

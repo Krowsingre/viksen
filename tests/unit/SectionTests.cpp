@@ -322,3 +322,49 @@ TEST_CASE("worlds/transition wash rings on, fades to silence, stays bounded; the
     submergeCrossfade(out.data(), inc.data(), n, rate);
     CHECK(std::fabs(inc[static_cast<size_t>(2 * (n - 1))] - 0.25f) < 0.02f);
 }
+
+TEST_CASE("session/a crossfade longer than the stream buffer never stalls the stream") {
+    // 60 BPM, 4-beat crossfade = 4 s at 48 kHz, longer than the ~2.7 s stream ring.
+    Json j = sectionWorld();
+    j["music"]["tempo"] = 60;
+    j["adaptive"] = {{"jumpEveryBars", 1}, {"minStayBars", 1}, {"crossfadeBeats", 4}};
+    j["sections"][0]["toBar"] = 3;
+    j["sections"][1]["fromBar"] = 3;
+    j["sections"][1]["toBar"] = 6;
+    j["sections"][2]["fromBar"] = 6;
+    j["sections"][2]["toBar"] = 9;
+    auto w = parseWorld(j);
+    REQUIRE(w.has_value());
+    const double rate = 48000;
+    auto clip = std::make_shared<const AudioClip>(test::makeSine(rate, static_cast<int>(rate * 40), 220, 0.3f));
+    StemDecoderFactory factory = [&](double, std::string&) {
+        std::vector<std::unique_ptr<StemDecoder>> v;
+        v.push_back(std::make_unique<ClipStemDecoder>(clip));
+        return v;
+    };
+    LiveSession s(rate, 256);
+    s.setWorldSpatialEnabled(false);
+    REQUIRE(s.loadWorld(*w, factory));
+    ConditionContext ctx;
+    ctx.env.motionAvailable = true;
+    ctx.env.still = true;
+    s.updateWorld(0, ctx);
+    s.startWorld(true);
+    std::vector<float> l(256), r(256);
+    float* outs[2] = {l.data(), r.data()};
+    uint64_t starved = 0;
+    for (int i = 0; i < static_cast<int>(30 * rate / 256); ++i) {
+        if (i == static_cast<int>(2 * rate / 256)) { ctx.env.still = false; ctx.env.moving = true; }   // force a jump
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
+        while (s.engine().worldPlayer().readableFrames() < 256 && std::chrono::steady_clock::now() < deadline)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if (s.engine().worldPlayer().readableFrames() < 256) ++starved;
+        s.updateWorld(256.0 / rate, ctx);
+        s.engine().process(nullptr, 0, outs, 2, 256);
+    }
+    const auto st = s.worldStatus();
+    CHECK(st.sectionJumps >= 1);
+    CHECK(starved == 0);                       // the stream kept flowing through the long crossfade
+    CHECK(st.sectionTitle == "Drive");
+    s.unloadWorld();
+}
