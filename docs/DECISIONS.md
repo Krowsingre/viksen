@@ -42,3 +42,8 @@
 | 38 | **Headphones are the gateway to augmented reality.** Without headphones the microphone options are disabled. Unplugging silences the mic paths at once, turns the mic off and fades the Dimension out; plugging back in fades the same Dimension back in and restores the mic if the listener had it on (their own choice moments earlier). | Owner directive |
 | 39 | Home background artwork supplied by the owner (portrait and wide); drawn scene remains the fallback. | Owner asset |
 | 40 | **Launch content:** one default Dimension ("Lunar Fox Spirit") built into the app. The five current album Dimensions become **future purchases**. Context switches Experiences and songs **inside** the user-selected Dimension, never the Dimension itself. | Owner directive |
+| 41 | Approved: content model **Dimension → Phase → Song → adaptive composition**, with declarative rules (no patch language). In-Dimension states are called **Phases**. | Owner, 2026-11-04 |
+| 42 | The default Dimension (Lunar Fox Spirit) **sits inside the app** (no download). | Owner |
+| 43 | Audio delivery spec (dry mono objects, stereo beds, 48 kHz/24-bit masters, −18 LUFS staging): **tentatively approved**. Owner supplies **reference full mixes** for every song (kept only in the private assets repo). | Owner |
+| 44 | **Beat maps** approved (songs with drifting tempo still switch and trigger on the beat). | Owner |
+| 45 | Android: **not yet, but planned**. Pricing after the launch-content change: **under discussion**. | Owner |
