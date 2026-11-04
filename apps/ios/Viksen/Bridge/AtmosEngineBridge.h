@@ -95,6 +95,7 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic, copy) NSString *sectionLabel;   // why ("You are moving")
 @property (nonatomic, copy) NSString *songTitle;      // song being heard (a Dimension can hold several)
 @property (nonatomic) NSInteger songCount;
+@property (nonatomic, copy) NSString *songLunarPhaseId;   // lunar phase the playing song belongs to ("" if none)
 @property (nonatomic, copy) NSArray<AtmosWorldStemStatus *> *stems;
 @end
 

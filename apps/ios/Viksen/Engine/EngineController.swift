@@ -27,6 +27,8 @@ final class EngineController {
     let watch = WatchLink()
     let downloads = DimensionDownloads()
     let albums = AlbumLinks()
+    let progress = ProgressStore()
+    private var lastProgressTick = Date.distantPast
     private let delegateProxy = BridgeDelegateProxy()
     private var meterTimer: Timer?
 
@@ -289,6 +291,12 @@ final class EngineController {
         if worldStatus.loaded && worldStatus.songCount > 1 && worldStatus.songTitle != previousSong && !previousSong.isEmpty {
             AppLog.info("Dimension \(worldStatus.worldID): now \(worldStatus.songTitle)")
             applySavedPositions(worldStatus.worldID)   // the new song has its own stems
+        }
+        // Phase discovery: once a second, credit audible listening to the Dimension heard.
+        if Date().timeIntervalSince(lastProgressTick) >= 1 {
+            lastProgressTick = Date()
+            let audible = worldStatus.playing && masterGain > 0.001 && busGains[BusLevel.music.rawValue] > 0.001
+            progress.tick(dimensionID: currentDimensionID, songPhaseID: worldStatus.songLunarPhaseId, audible: audible)
         }
         // Dropouts: log the increase at most once a minute.
         let total = meters.underruns + worldStatus.underruns

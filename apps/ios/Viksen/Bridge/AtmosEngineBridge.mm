@@ -47,7 +47,7 @@ constexpr int kMaxBlock = 8192;   // MiniaudioHost's largest period
 @end
 @implementation AtmosWorldStatus
 - (instancetype)init {
-    if ((self = [super init])) { _worldID = @""; _name = @""; _stems = @[]; _sectionTitle = @""; _sectionLabel = @""; _songTitle = @""; _songCount = 1; _composed = YES; }
+    if ((self = [super init])) { _worldID = @""; _name = @""; _stems = @[]; _sectionTitle = @""; _sectionLabel = @""; _songTitle = @""; _songCount = 1; _songLunarPhaseId = @""; _composed = YES; }
     return self;
 }
 @end
@@ -751,6 +751,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     s.sectionLabel = @(st.sectionLabel.c_str());
     s.songTitle = @(st.songTitle.c_str());
     s.songCount = st.songCount;
+    s.songLunarPhaseId = @(st.songLunarPhase.c_str());
     NSMutableArray *stems = [NSMutableArray array];
     for (const auto &x : st.stems) {
         AtmosWorldStemStatus *t = [AtmosWorldStemStatus new];

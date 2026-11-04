@@ -79,6 +79,7 @@ targets:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
         com.apple.developer.weatherkit: true
+        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)$(CFBundleIdentifier)
         com.apple.security.application-groups: [group.com.krowsingre.viksen]
     settings:
       base:
@@ -203,6 +204,7 @@ targets:
         com.apple.security.network.client: true
         com.apple.security.personal-information.location: true
         com.apple.developer.weatherkit: true
+        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)$(CFBundleIdentifier)
     settings:
       base:
         PRODUCT_NAME: Viksen
