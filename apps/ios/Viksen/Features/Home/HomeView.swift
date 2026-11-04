@@ -72,8 +72,10 @@ struct HomeView: View {
                     .transition(.opacity)
             }
             Text("IMMERSIVE AUDITORY REALITY")
-                .font(.system(size: 11, weight: .regular, design: .serif))
-                .tracking(3.5)
+                .font(.system(size: 10, weight: .regular, design: .serif))
+                .tracking(2.6)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .foregroundStyle(Self.lavender.opacity(0.8))
             HStack(spacing: 8) {
                 Rectangle().fill(Self.lavender.opacity(0.35)).frame(width: 56, height: 0.6)
@@ -93,13 +95,19 @@ struct HomeView: View {
     /// button, and while a Dimension plays, a live waveform. Tonight's phase pulses.
     private func foxRing(width: CGFloat) -> some View {
         let height = width * 1199 / 1312   // the ring artwork's aspect
-        return ZStack {
-            Image("MoonRing").resizable().scaledToFit()
-            MoonRingPulse(phaseID: engine.meters.moonPhaseId, ringWidth: width, ringHeight: height)
-            foxButton(size: width * 1.08)
-                .offset(y: height * (0.495 - 0.5))
-        }
-        .frame(width: width, height: height)
+        // The pulse and the fox are overlays on the ring artwork, so the pulse lines up
+        // with the ring's moons and the (larger) fox can spill past it without moving it.
+        return Image("MoonRing").resizable()
+            .frame(width: width, height: height)
+            .overlay {
+                MoonRingPulse(phaseID: engine.meters.moonPhaseId, ringWidth: width, ringHeight: height)
+                    .frame(width: width, height: height)
+            }
+            .overlay {
+                foxButton(size: width * 1.08)
+                    .offset(y: height * (0.495 - 0.5))
+            }
+            .accessibilityElement(children: .contain)
     }
 
     private func foxButton(size: CGFloat) -> some View {

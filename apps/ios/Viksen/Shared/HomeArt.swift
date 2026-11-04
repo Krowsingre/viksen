@@ -39,7 +39,7 @@ struct MoonRingPulse: View {
             let sx = ringWidth / 1312, sy = ringHeight / 1199
             let d = c.r * 2 * sx
             ZStack {
-                Circle().fill(RadialGradient(colors: [Color.white.opacity(0.55), Color(red: 0.8, green: 0.65, blue: 1).opacity(0.25), .clear],
+                Circle().fill(RadialGradient(colors: [Color.white.opacity(0.45), Color(red: 0.8, green: 0.65, blue: 1).opacity(0.35), .clear],
                                              center: .center, startRadius: 0, endRadius: d * 0.75))
                     .frame(width: d * 1.5, height: d * 1.5)
                 Circle().stroke(Color(red: 0.95, green: 0.88, blue: 1).opacity(0.9), lineWidth: 1.5)
