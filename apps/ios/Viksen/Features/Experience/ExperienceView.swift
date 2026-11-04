@@ -528,6 +528,7 @@ struct DimensionTracksView: View {
     @Environment(EngineController.self) private var engine
     @Environment(Store.self) private var store
     @State private var confirmRemoveAll = false
+    @State private var showMoonChart = false
 
     private var tracks: [DimensionDownloads.Track] { engine.downloads.tracks(world.worldID) }
     private var bundled: Bool { world.audioAvailable || world.userMade }
@@ -547,6 +548,15 @@ struct DimensionTracksView: View {
                         Link(destination: url) {
                             Label("Listen to the full album on Apple Music", systemImage: "music.note")
                         }
+                    }
+                }
+            }
+            Section {
+                Button { showMoonChart = true } label: {
+                    LabeledContent {
+                        Text("\(engine.progress.discoveredPhases(world.worldID).count) of 8")
+                    } label: {
+                        Label("Moon Chart", systemImage: "moonphase.waxing.gibbous")
                     }
                 }
             }
@@ -595,6 +605,7 @@ struct DimensionTracksView: View {
             }
         }
         .navigationTitle(world.name)
+        .sheet(isPresented: $showMoonChart) { MoonChartView(initialDimensionID: world.worldID) }
         .inlineNavigationTitle()
         .onAppear { engine.refreshWorlds() }
         .confirmationDialog("Remove every track of \(world.name) from this \(Platform.deviceNoun)?",

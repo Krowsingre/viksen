@@ -68,3 +68,4 @@
 | 64 | **Every Dimension shares the same base Moods**: weather, time of day, activity, noise level (Normal, Rain, Morning, Afternoon, Night, Loud, Quiet, Active, Still). **Secrets are separate and authored per Dimension.** | Owner |
 | 65 | Artwork by another LLM or a hired artist. Core Dimension target **under 1 GB**; Core songs **3–6 minutes**; **up to 12 stems** per song. Launch album Dimension chosen after the Core is finished. | Owner |
 | 66 | **No background wallpaper** in the app: Home sits on a plain dark background; the owner art image sets are removed. | Owner |
+| 67 | **Moon Chart layout approved "for now"**: per-Dimension ring of the eight phases, undiscovered phases named with their next dates, Secrets "n of 5", Global Secrets as a count only; opens from the Home moon and each Dimension. No on-demand phase playback. | Owner |

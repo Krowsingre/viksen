@@ -12,6 +12,8 @@ enum Theme {
     static let micRaw = Color(red: 1.0, green: 0.72, blue: 0.30)
     static let micTransformed = Color(red: 0.74, green: 0.55, blue: 1.0)
     static let danger = Color(red: 1.0, green: 0.30, blue: 0.30)
+    static let gold = Color(red: 0.91, green: 0.78, blue: 0.48)          // secrets, lunar journey
+    static let secondaryText = Color(red: 0.66, green: 0.64, blue: 0.78)
 
     static func color(for bus: EngineController.BusLevel) -> Color {
         switch bus {

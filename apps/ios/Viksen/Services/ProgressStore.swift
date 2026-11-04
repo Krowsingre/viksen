@@ -64,6 +64,9 @@ final class ProgressStore {
     var globalSecretsFound: Int { _ = revision; return progress.globalSecretsFound() }
     func phaseProgress(_ dimensionID: String) -> Double { min(1, progress.phaseProgressSeconds(dimensionID) / 180) }
     var currentPhaseID: String { AtmosProgress.currentPhaseId() }
+    func discoveryDates(_ dimensionID: String) -> [String: Date] { _ = revision; return progress.discoveryDates(dimensionID) }
+    func journeyCompletedAt(_ dimensionID: String) -> Date? { _ = revision; return progress.lunarJourneyCompletedAt(dimensionID) }
+    func nextWindow(_ phaseID: String) -> DateInterval? { AtmosProgress.nextWindow(forPhase: phaseID) }
 
     // MARK: Persistence
 

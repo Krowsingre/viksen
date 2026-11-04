@@ -2,6 +2,10 @@ import Foundation
 
 /// Display names for the engine's lunar-calendar phase ids.
 enum Lunar {
+    /// The eight named phases in order through a lunar cycle.
+    static let order = ["new", "waxingCrescent", "firstQuarter", "waxingGibbous",
+                        "full", "waningGibbous", "lastQuarter", "waningCrescent"]
+
     static func phaseName(_ id: String) -> String {
         switch id {
         case "new": "New Moon"

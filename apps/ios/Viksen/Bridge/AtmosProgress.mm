@@ -68,6 +68,38 @@ static double nowDaysUtc() { return [[NSDate date] timeIntervalSince1970] / 8640
     return _tracker.progressSeconds(std::string(dimensionID.UTF8String ?: ""), nowDaysUtc());
 }
 
+- (NSDictionary<NSString *, NSDate *> *)discoveryDates:(NSString *)dimensionID {
+    const std::string dim(dimensionID.UTF8String ?: "");
+    NSMutableDictionary *out = [NSMutableDictionary dictionary];
+    for (const auto &e : _log.events())
+        if (e.kind == ProgressKind::PhaseDiscovered && e.dimensionId == dim)
+            out[@(e.subject.c_str())] = [NSDate dateWithTimeIntervalSince1970:e.atDaysUtc * 86400.0];
+    return out;
+}
+
+- (NSDate *)lunarJourneyCompletedAt:(NSString *)dimensionID {
+    const auto at = _log.lunarJourneyCompletedAt(std::string(dimensionID.UTF8String ?: ""));
+    return at ? [NSDate dateWithTimeIntervalSince1970:*at * 86400.0] : nil;
+}
+
++ (NSDateInterval *)nextWindowForPhase:(NSString *)phaseId {
+    const auto want = moonPhaseFromId(std::string(phaseId.UTF8String ?: ""));
+    if (!want) return nil;
+    const double step = 1.0 / 96.0;   // 15 minutes
+    double t = nowDaysUtc();
+    const double limit = t + 31;
+    if (moonPhaseName(t) == *want) {   // in the sky now: find where this window began
+        while (moonPhaseName(t - step) == *want && t > nowDaysUtc() - 5) t -= step;
+    } else {
+        while (moonPhaseName(t) != *want && t < limit) t += step;
+        if (t >= limit) return nil;
+    }
+    double end = t;
+    while (moonPhaseName(end) == *want && end < t + 6) end += step;
+    return [[NSDateInterval alloc] initWithStartDate:[NSDate dateWithTimeIntervalSince1970:t * 86400.0]
+                                             endDate:[NSDate dateWithTimeIntervalSince1970:end * 86400.0]];
+}
+
 + (NSString *)currentPhaseId { return @(moonPhaseId(moonPhaseName(nowDaysUtc()))); }
 
 @end

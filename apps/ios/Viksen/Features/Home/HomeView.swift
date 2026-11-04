@@ -9,6 +9,7 @@ struct HomeView: View {
     @Environment(EngineController.self) private var engine
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var showSettings = false
+    @State private var showMoonChart = false
     @State private var page = 0
 
     private var wide: Bool { sizeClass == .regular }
@@ -53,6 +54,7 @@ struct HomeView: View {
             .accessibilityLabel("Settings")
         }
         .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(isPresented: $showMoonChart) { MoonChartView() }
         .preferredColorScheme(.dark)
         .onAppear { engine.refreshWorlds() }
     }
@@ -213,6 +215,12 @@ struct HomeView: View {
     // MARK: Moon
 
     private var moon: some View {
+        Button { showMoonChart = true } label: { moonLine }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the Moon Chart")
+    }
+
+    private var moonLine: some View {
         HStack(spacing: 14) {
             if wide { Rectangle().fill(Color.white.opacity(0.3)).frame(width: 90, height: 0.6) }
             Image(systemName: Lunar.symbol(engine.meters.moonPhaseId)).font(wide ? .title2 : .title3)
@@ -222,8 +230,8 @@ struct HomeView: View {
         }
         .foregroundStyle(.white.opacity(0.85))
         .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityHint("The moon shapes the music; see Settings")
     }
 
     // MARK: Restore
