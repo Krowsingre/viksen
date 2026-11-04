@@ -4,7 +4,6 @@ import UniformTypeIdentifiers
 /// The everyday listening & augmented-reality surface (spec §5 "Experience").
 struct ExperienceView: View {
     @Environment(EngineController.self) private var engine
-    @State private var showRecorder = false
     @State private var showSaveProject = false
     @State private var projectName = ""
     @Environment(Store.self) private var store
@@ -57,7 +56,7 @@ struct ExperienceView: View {
                                   peak: max(engine.meters.outputPeakLeft, engine.meters.outputPeakRight))
                     }
                 } footer: {
-                    Text("Optional: hear your surroundings, transformed, under the music. Off by default; the microphone is never recorded or uploaded.")
+                    Text("Optional: hear your surroundings, transformed, under the music. Off by default. Nothing is ever recorded, saved or uploaded.")
                 }
 
                 StatusSection()
@@ -79,15 +78,6 @@ struct ExperienceView: View {
                     }
                 }
                 ToolbarItem(placement: .barTrailing) {
-                    Button {
-                        if store.allows(.sessionRecording) { showRecorder = true } else { showPaywall = true }
-                    } label: {
-                        Image(systemName: engine.isRecording ? "record.circle.fill" : "record.circle")
-                            .foregroundStyle(engine.isRecording ? Theme.danger : Color.accentColor)
-                    }
-                    .accessibilityLabel(engine.isRecording ? "Recording" : "Record session")
-                }
-                ToolbarItem(placement: .barTrailing) {
                     Button(role: .destructive) { engine.panic() } label: {
                         Label("Stop all sound", systemImage: "speaker.slash.fill")
                     }
@@ -95,7 +85,6 @@ struct ExperienceView: View {
                     .accessibilityHint("Immediately silences all output")
                 }
             }
-            .sheet(isPresented: $showRecorder) { RecordSessionView() }
             .alert("Save as Project", isPresented: $showSaveProject) {
                 TextField("Name", text: $projectName)
                 Button("Save") { engine.saveProject(named: projectName) }
@@ -149,13 +138,6 @@ private struct StatusSection: View {
                 Label("Bluetooth adds noticeable delay to live monitoring. Wired headphones give the lowest latency.",
                       systemImage: "info.circle")
                     .font(.footnote).foregroundStyle(.secondary)
-            }
-            if engine.isRecording {
-                Label(String(format: "REC %ld:%02ld", Int(engine.recordingSeconds) / 60, Int(engine.recordingSeconds) % 60),
-                      systemImage: "record.circle.fill")
-                    .font(.caption.weight(.bold).monospacedDigit())
-                    .foregroundStyle(Theme.danger)
-                    .accessibilityLabel("Recording in progress")
             }
             Label("\(Lunar.phaseName(engine.meters.moonPhaseId)) · lunar day \(engine.meters.lunarDay)",
                   systemImage: Lunar.symbol(engine.meters.moonPhaseId))

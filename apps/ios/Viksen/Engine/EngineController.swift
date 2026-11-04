@@ -239,7 +239,6 @@ final class EngineController {
         if tier < Feature.activity.requiredTier { echoFollowsSteps = false; activityEnabled = false }
         if tier < Feature.health.requiredTier { intensityShapesAtmosphere = false; healthEnabled = false }
         if tier < Feature.weather.requiredTier { weatherShapesAtmosphere = false; weatherEnabled = false }
-        if tier < Feature.sessionRecording.requiredTier, isRecording { stopRecording() }
         if tier < Feature.musicImport.requiredTier, trackName != nil { unloadTrack() }
     }
 
@@ -291,15 +290,6 @@ final class EngineController {
             AppLog.info("Dimension \(worldStatus.worldID): now \(worldStatus.songTitle)")
             applySavedPositions(worldStatus.worldID)   // the new song has its own stems
         }
-        if isRecording {
-            recordingSeconds = bridge.recordingSeconds
-            if !bridge.recording {   // ended by the system (device change or storage limit)
-                isRecording = false
-                statusMessage = "Recording saved (audio device changed)"
-                AppLog.warning("Recording ended by a device change; file kept")
-            }
-        }
-        _ = bridge.takeRecordingInterrupted()
         // Dropouts: log the increase at most once a minute.
         let total = meters.underruns + worldStatus.underruns
         if total > loggedUnderruns, Date().timeIntervalSince(lastUnderrunLog) > 60 {
@@ -675,59 +665,6 @@ final class EngineController {
         roomMemoryLevel = Float(truncating: s["roomMemoryLevel"] ?? 0.6)
         roomMemoryPitch = Float(truncating: s["roomMemoryPitch"] ?? -12)
         looping = (s["looping"]?.boolValue) ?? false
-    }
-
-    // MARK: Recording
-
-    enum RecordMode: Int, CaseIterable, Identifiable {
-        case fullMix = 1, withoutMic, atmosphereOnly, environmentOnly
-        var id: Int { rawValue }
-        var title: String {
-            switch self {
-            case .fullMix: "Full mix (what you hear)"
-            case .withoutMic: "Music + atmosphere (no microphone)"
-            case .atmosphereOnly: "Atmosphere only"
-            case .environmentOnly: "Environment only (microphone)"
-            }
-        }
-        var fileTag: String {
-            switch self {
-            case .fullMix: "mix"
-            case .withoutMic: "no-mic"
-            case .atmosphereOnly: "atmosphere"
-            case .environmentOnly: "environment"
-            }
-        }
-    }
-
-    private(set) var isRecording = false
-    private(set) var recordingSeconds: Double = 0
-    private(set) var lastRecording: URL?
-
-    static var recordingsFolder: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Recordings", isDirectory: true)
-    }
-
-    func startRecording(_ mode: RecordMode) {
-        if !audioRunning { startAudio() }
-        let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
-        let url = Self.recordingsFolder.appendingPathComponent("Viksen \(stamp) \(mode.fileTag).wav")
-        do {
-            try FileManager.default.createDirectory(at: Self.recordingsFolder, withIntermediateDirectories: true)
-            try bridge.startRecording(mode: AtmosRecordMode(rawValue: mode.rawValue)!, to: url)
-            isRecording = true
-            lastRecording = url
-            AppLog.info("Recording started (\(mode.fileTag))")
-        } catch {
-            lastError = error.localizedDescription
-        }
-    }
-
-    func stopRecording() {
-        let secs = bridge.stopRecording()
-        isRecording = false
-        AppLog.info(String(format: "Recording stopped: %.1f s, %llu dropped blocks", secs, bridge.recordingDroppedBlocks))
     }
 
     // MARK: Worlds

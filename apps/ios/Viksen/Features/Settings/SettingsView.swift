@@ -52,7 +52,7 @@ struct SettingsView: View {
 
                 Section("Privacy") {
                     LabeledContent("Microphone permission", value: permissionText)
-                    Text("All processing happens on this \(Platform.deviceNoun). Nothing is recorded unless you explicitly start a recording, and nothing is uploaded. No account is required.")
+                    Text("All processing happens on this \(Platform.deviceNoun). Nothing is ever recorded or saved, and nothing is uploaded. No account is required.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
 

@@ -20,7 +20,6 @@ public partial class App : Application
         Window = new MainWindow();
         Window.Closed += (_, _) =>
         {
-            if (EngineService.Shared.Recording) EngineService.Shared.StopRecording();
             EngineService.Shared.Dispose();
             AppLog.Info("Closed");
         };

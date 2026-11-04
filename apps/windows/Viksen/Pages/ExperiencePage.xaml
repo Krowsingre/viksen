@@ -8,12 +8,6 @@
             <Grid>
                 <TextBlock Text="Experience" FontSize="32" FontWeight="Light" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                    <Button x:Name="RecordButton" Click="OnRecord" ToolTipService.ToolTip="Record what you hear">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xE7C8;" Foreground="{StaticResource VkDangerBrush}" />
-                            <TextBlock x:Name="RecordText" Text="Record" />
-                        </StackPanel>
-                    </Button>
                     <Button Content="Silence" Click="OnPanic" ToolTipService.ToolTip="Stop all sound immediately" />
                 </StackPanel>
             </Grid>

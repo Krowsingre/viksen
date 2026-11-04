@@ -21,7 +21,7 @@ enum Feature: CaseIterable {
     // Free: basic augmented audio
     case atmosphereBed, liveMicBasic, motionSensing
     // Experience: full listening experience, environmental transformations
-    case frequencyShift, roomMemory, headTracking, activity, health, weather, expandedWorlds, spatialCanvas, sessionRecording
+    case frequencyShift, roomMemory, headTracking, activity, health, weather, expandedWorlds, spatialCanvas
     // Studio: music and stem imports, spatial composition, advanced effects, automation, export
     case musicImport, stemImport, spatialComposition, advancedEffects, automation, export
 
@@ -29,7 +29,7 @@ enum Feature: CaseIterable {
         switch self {
         case .atmosphereBed, .liveMicBasic, .motionSensing: .free
         // Free keeps 3D audio itself ("limited spatial controls"); arranging it is Experience.
-        case .frequencyShift, .roomMemory, .headTracking, .activity, .health, .weather, .expandedWorlds, .spatialCanvas, .sessionRecording: .experience
+        case .frequencyShift, .roomMemory, .headTracking, .activity, .health, .weather, .expandedWorlds, .spatialCanvas: .experience
         case .musicImport, .stemImport, .spatialComposition, .advancedEffects, .automation, .export: .studio
         }
     }

@@ -23,7 +23,7 @@
 
             <TextBlock Text="PRIVACY" Style="{StaticResource VkSectionHeader}" />
             <Border Style="{StaticResource VkCardStyle}">
-                <TextBlock TextWrapping="Wrap" Text="All processing happens on this PC. Nothing is recorded unless you explicitly start a recording, and nothing is uploaded. No account is required." />
+                <TextBlock TextWrapping="Wrap" Text="All processing happens on this PC. Nothing is ever recorded or saved, and nothing is uploaded. No account is required." />
             </Border>
 
             <TextBlock Text="DIAGNOSTICS" Style="{StaticResource VkSectionHeader}" />

@@ -52,7 +52,6 @@ public sealed partial class ExperiencePage : Page
             ? $"{(m.Quiet != 0 ? "Quiet" : m.Loud != 0 ? "Loud" : "Moderate")} · {m.EnvironmentLevelDb:0} dB" +
               (m.RoomMemoryVoices > 0 ? $" · {m.RoomMemoryVoices} memories" : "")
             : "";
-        RecordText.Text = _engine.Recording ? $"Stop {TimeSpan.FromSeconds(_engine.RecordingSeconds):m\\:ss}" : "Record";
         if (AudioSwitch.IsOn != _engine.AudioRunning) { _loading = true; AudioSwitch.IsOn = _engine.AudioRunning; _loading = false; }
     }
 
@@ -81,13 +80,6 @@ public sealed partial class ExperiencePage : Page
             await Say("Microphone unavailable",
                 $"{_engine.LastError}\n\nCheck Settings > Privacy & security > Microphone and that a microphone is connected.");
         }
-    }
-
-    private async void OnRecord(object sender, RoutedEventArgs e)
-    {
-        if (_engine.Recording) { _engine.StopRecording(); return; }
-        // Records what you hear; the microphone is included only if it is already on.
-        if (_engine.StartRecording(Native.RecordMode.FullMix) == null) await Say("Recording could not start", _engine.LastError ?? "");
     }
 
     private void OnPanic(object sender, RoutedEventArgs e)

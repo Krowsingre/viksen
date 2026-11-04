@@ -41,7 +41,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>If you turn on weather-aware atmospheres, Viksen uses your approximate location to get the current weather from Apple. Your location is not stored.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>The microphone lets you transform the sounds around you into a live, evolving experience. Audio is processed on this device and is never recorded or uploaded unless you choose to record.</string>
+	<string>The microphone lets the music respond to the sounds around you. Audio is analysed live on this device and is never recorded, saved or uploaded.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Motion and fitness data lets Viksen follow your head with compatible headphones and respond to walking, running and your step rhythm. It is used on this device only.</string>
 	<key>UIApplicationSceneManifest</key>

@@ -38,10 +38,9 @@ struct LibraryView: View {
                 }
                 ProjectsSection(query: query)
                 }
-                RecordingsSection(query: query)
             }
             .navigationTitle("Library")
-            .searchable(text: $query, prompt: store.tier >= .studio ? "Songs, projects, recordings" : "Recordings")
+            .searchable(text: $query, prompt: "Songs and projects")
             .refreshable { library.refresh() }
             .sheet(isPresented: $showPaywall) { PaywallView(highlight: .studio) }
         }

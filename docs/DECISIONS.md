@@ -56,3 +56,6 @@
 | 52 | Pricing: **blend** — free core; a subscription including features and album Dimensions; album packs sold to own forever. Some **special Dimensions may be excluded** from the subscription (sold only). | Owner |
 | 53 | **Stay here** keeps the current track; the track still reacts to context inside itself. | Owner |
 | 54 | Free tier includes time of day, moon phase, collecting Phases, basic senses (final free list pending). Recording is a Studio feature (pending confirmation). | Owner, pending |
+| 55 | **No recording in the Viksen listener app** (protects the owner's music and any other copyrighted music playing in the room when the room is blended in). Removed from iPhone, Mac and Windows; privacy texts updated. | Owner |
+| 56 | Free/subscription split approved: free = time of day, moon phase, Moon Chart and collecting, hidden Phases, basic senses, 3D sound, simple room blend; subscription = head tracking, weather, heart rate, stay here, 3D arranging, room memory and frequency shift, album Dimensions. Subscribed users see album packs as "Included" (no buy button). | Owner |
+| 57 | Reuvo repository renamed **Krowsingre/viksen-studio**. Launch plan: Lunar Fox Spirit + two album Dimensions, then about one Dimension pack every two months. | Owner |
