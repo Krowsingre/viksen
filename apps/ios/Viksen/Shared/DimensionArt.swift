@@ -164,34 +164,6 @@ struct SeededRandom {
     }
 }
 
-/// Home background: the owner's artwork when it is in the asset catalog
-/// ("HomeBackground" for phones, "HomeBackgroundWide" for wide layouts), otherwise
-/// the scene drawn in code.
-struct HomeBackground: View {
-    var wide: Bool
-
-    var body: some View {
-        let name = wide ? "HomeBackgroundWide" : "HomeBackground"
-        if let image = UIImageCompat.named(name) ?? (wide ? UIImageCompat.named("HomeBackground") : nil) {
-            GeometryReader { geo in
-                image.resizable().scaledToFill()
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .clipped()
-                    .overlay {
-                        // Keeps the wordmark, cards and lunar line readable over the art.
-                        LinearGradient(stops: [.init(color: .black.opacity(0.35), location: 0),
-                                               .init(color: .clear, location: 0.22),
-                                               .init(color: .clear, location: 0.55),
-                                               .init(color: .black.opacity(0.65), location: 1)],
-                                       startPoint: .top, endPoint: .bottom)
-                    }
-            }
-        } else {
-            DimensionArt(pillars: wide, horizon: wide ? 0.50 : 0.56)
-        }
-    }
-}
-
 /// A Dimension's artwork: "art.jpg"/"art.png" in its folder (shipped with the app),
 /// otherwise the drawn scene.
 struct DimensionThumbnail: View {

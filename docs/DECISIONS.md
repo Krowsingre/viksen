@@ -67,3 +67,4 @@
 | 63 | Lunar songs: **option B** (about 4 tracks per Dimension, each heard in lunar treatments, plus 2 hidden songs). | Owner |
 | 64 | **Every Dimension shares the same base Moods**: weather, time of day, activity, noise level (Normal, Rain, Morning, Afternoon, Night, Loud, Quiet, Active, Still). **Secrets are separate and authored per Dimension.** | Owner |
 | 65 | Artwork by another LLM or a hired artist. Core Dimension target **under 1 GB**; Core songs **3–6 minutes**; **up to 12 stems** per song. Launch album Dimension chosen after the Core is finished. | Owner |
+| 66 | **No background wallpaper** in the app: Home sits on a plain dark background; the owner art image sets are removed. | Owner |

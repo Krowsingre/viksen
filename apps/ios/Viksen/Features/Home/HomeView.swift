@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Home, after the owner's concept: an eclipse over a still lake, the wordmark,
+/// Home: on a plain dark background, the wordmark,
 /// one glowing "Enter Dimension" button, Continue Listening cards (one per
 /// Dimension on this device) and the lunar day. Compact iPhones show it full
 /// screen; wide (unfolded) layouts put the card and the moon side by side.
@@ -16,8 +16,7 @@ struct HomeView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .top) {
-                HomeBackground(wide: wide)
-                    .ignoresSafeArea()
+                Color.black.ignoresSafeArea()   // no wallpaper (owner, 2026-11-04)
                 VStack(spacing: 0) {
                     Spacer(minLength: geo.size.height * (wide ? 0.13 : 0.20))
                     wordmark
