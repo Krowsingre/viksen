@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 /// The everyday listening & augmented-reality surface (spec §5 "Experience").
 struct ExperienceView: View {
     @Environment(EngineController.self) private var engine
+    @Environment(AppNavigator.self) private var nav
     @State private var showSaveProject = false
     @State private var projectName = ""
     @Environment(Store.self) private var store
@@ -26,10 +27,10 @@ struct ExperienceView: View {
                     Text("Senses steer the music: each part of a Dimension belongs to a moment (still, moving, quiet, loud, working out), and the song moves to the part that fits you. With every sense off it plays as composed. The time of day and the moon always shape it a little. Everything stays on this \(Platform.deviceNoun).")
                 }
 
-                if engine.worldStatus.loaded && engine.worldStatus.worldID != "studio" {
+                if let loadedID = engine.loadedDimensionID {
                     Section("Space") {
                         Toggle("3D for headphones", isOn: $engine.dimension3D)
-                        if let current = engine.worlds.first(where: { $0.worldID == engine.worldStatus.worldID }) {
+                        if let current = engine.worlds.first(where: { $0.worldID == loadedID }) {
                             NavigationLink("Arrange the instruments") { WorldDetailView(world: current) }
                         }
                     }
@@ -44,16 +45,7 @@ struct ExperienceView: View {
                             LabeledSlider(title: "Colour", value: $engine.bedColourHz, range: 150...6000, format: "%.0f Hz")
                         }
                         WeatherSection()
-                        ForEach(EngineController.BusLevel.allCases) { bus in
-                            BusSlider(title: bus.title,
-                                      color: Theme.color(for: bus),
-                                      value: Binding(get: { engine.busGains[bus.rawValue] },
-                                                     set: { engine.setGain($0, for: bus) }),
-                                      peak: engine.meters.busPeaks.indices.contains(bus.rawValue)
-                                          ? engine.meters.busPeaks[bus.rawValue].floatValue : 0)
-                        }
-                        BusSlider(title: "Master", color: .primary, value: $engine.masterGain,
-                                  peak: max(engine.meters.outputPeakLeft, engine.meters.outputPeakRight))
+                        BusSliders()
                     }
                 } footer: {
                     Text("Optional: hear your surroundings, transformed, under the music. Off by default. Nothing is ever recorded, saved or uploaded.")
@@ -69,7 +61,7 @@ struct ExperienceView: View {
             }
             .navigationTitle("Dimensions")
             .toolbar {
-                ToolbarItem(placement: .primaryAction) { MenuButton(compact: true) }
+                ToolbarItem(placement: .primaryAction) { CloseButton(compact: true) { nav.go(.home) } }
                 if store.tier >= .studio {
                     ToolbarItem(placement: .barLeading) {
                         Menu {
@@ -103,13 +95,32 @@ struct ExperienceView: View {
     }
 }
 
+/// The level sliders with live meters: their own view, so only they redraw with the meters.
+private struct BusSliders: View {
+    @Environment(EngineController.self) private var engine
+
+    var body: some View {
+        @Bindable var engine = engine
+        ForEach(EngineController.BusLevel.allCases) { bus in
+            BusSlider(title: bus.title,
+                      color: Theme.color(for: bus),
+                      value: Binding(get: { engine.busGains[bus.rawValue] },
+                                     set: { engine.setGain($0, for: bus) }),
+                      peak: engine.meters.busPeaks.indices.contains(bus.rawValue)
+                          ? engine.meters.busPeaks[bus.rawValue].floatValue : 0)
+        }
+        BusSlider(title: "Master", color: .primary, value: $engine.masterGain,
+                  peak: max(engine.meters.outputPeakLeft, engine.meters.outputPeakRight))
+    }
+}
+
 private struct StatusSection: View {
     @Environment(EngineController.self) private var engine
 
     var body: some View {
         Section {
             HStack(spacing: 12) {
-                if engine.meters.micActive {
+                if engine.micLive {
                     Label("MIC LIVE", systemImage: "mic.fill")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.white)
@@ -125,7 +136,7 @@ private struct StatusSection: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if engine.meters.limiterGain < 0.98 {
+                if engine.limiting {
                     Text("LIMIT").font(.caption2.weight(.bold)).foregroundStyle(Theme.micRaw)
                         .accessibilityLabel("Safety limiter active")
                 }
@@ -140,8 +151,8 @@ private struct StatusSection: View {
                       systemImage: "info.circle")
                     .font(.footnote).foregroundStyle(.secondary)
             }
-            Label("\(Lunar.phaseName(engine.meters.moonPhaseId)) · lunar day \(engine.meters.lunarDay)",
-                  systemImage: Lunar.symbol(engine.meters.moonPhaseId))
+            Label("\(Lunar.phaseName(engine.moonPhaseID)) · lunar day \(engine.lunarDay)",
+                  systemImage: Lunar.symbol(engine.moonPhaseID))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             if let status = engine.statusMessage {
@@ -153,9 +164,10 @@ private struct StatusSection: View {
 
 /// Live, debounced states of the surroundings. Display only.
 private struct EnvironmentStateChips: View {
-    let meters: AtmosMeterSnapshot
+    @Environment(EngineController.self) private var engine
 
     var body: some View {
+        let meters = engine.meters
         HStack(spacing: 6) {
             chip("Quiet", on: meters.quiet)
             chip("Loud", on: meters.loud)
@@ -199,7 +211,7 @@ private struct SensesSection: View {
                 .font(.footnote).foregroundStyle(.secondary)
         }
         if engine.micEnabled || engine.motionSensing {
-            EnvironmentStateChips(meters: engine.meters)
+            EnvironmentStateChips()
         }
     }
 
@@ -333,7 +345,7 @@ private struct DimensionPickerSection: View {
 
     @ViewBuilder private func row(_ world: AtmosWorldInfo) -> some View {
         let locked = requiredTier(world) > store.tier
-        let current = engine.worldStatus.playing && engine.worldStatus.worldID == world.worldID
+        let current = engine.activeDimensionID == world.worldID
         HStack(spacing: 12) {
             NavigationLink {
                 DimensionTracksView(world: world, showPaywall: $showPaywall)
@@ -539,7 +551,7 @@ struct DimensionTracksView: View {
     }
 
     var body: some View {
-        let current = engine.worldStatus.playing && engine.worldStatus.worldID == world.worldID
+        let current = engine.activeDimensionID == world.worldID
         List {
             if !world.album.isEmpty {
                 Section {

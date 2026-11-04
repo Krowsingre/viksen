@@ -32,8 +32,8 @@ struct SettingsView: View {
                 DownloadsSettingsSection()
 
                 Section {
-                    Label("\(Lunar.phaseName(engine.meters.moonPhaseId)) · lunar day \(engine.meters.lunarDay) of 30",
-                          systemImage: Lunar.symbol(engine.meters.moonPhaseId))
+                    Label("\(Lunar.phaseName(engine.moonPhaseID)) · lunar day \(engine.lunarDay) of 30",
+                          systemImage: Lunar.symbol(engine.moonPhaseID))
                     Text("Viksen follows the lunar calendar, worked out on this \(Platform.deviceNoun). The fuller the moon, the longer and wider the echoes and reverb wash that carry the music from one part to the next; near the new moon, changes are closer and drier. Each Dimension also has parts it favours under the full moon and at the new moon, and some favour the night.")
                         .font(.footnote).foregroundStyle(.secondary)
                     Picker("Night", selection: Bindable(engine.nightClock).rule) {
@@ -51,7 +51,7 @@ struct SettingsView: View {
                     LabeledContent("I/O buffer", value: String(format: "%.1f ms", engine.route.ioBufferDuration * 1000))
                     LabeledContent("Reported round trip",
                                    value: String(format: "%.1f ms", (engine.route.reportedInputLatency + engine.route.reportedOutputLatency + 2 * engine.route.ioBufferDuration) * 1000))
-                    LabeledContent("Underruns", value: "\(engine.meters.underruns)")
+                    UnderrunsRow()
                 }
                 Section {
                     Text("Latency above is what iOS reports for the current route, not a measurement. Bluetooth headphones add delay the system may not report accurately; wired headphones are best for live monitoring.")
@@ -86,7 +86,7 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .sheet(isPresented: $showPaywall) { PaywallView() }
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { CloseButton(compact: true) { dismiss() } } }
         }
     }
 
@@ -132,4 +132,10 @@ private struct DownloadsSettingsSection: View {
         }
         .onAppear { engine.refreshWorlds() }
     }
+}
+
+/// Reads the meters itself, so Settings does not redraw with every meter update.
+private struct UnderrunsRow: View {
+    @Environment(EngineController.self) private var engine
+    var body: some View { LabeledContent("Underruns", value: "\(engine.meters.underruns)") }
 }

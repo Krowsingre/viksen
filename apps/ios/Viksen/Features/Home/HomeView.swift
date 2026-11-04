@@ -156,34 +156,28 @@ private struct FoxWaveform: View {
 private struct LunarDayLine: View {
     var wide: Bool
     @Environment(EngineController.self) private var engine
-    @Environment(AppNavigator.self) private var nav
 
     var body: some View {
-        Button { nav.go(.moonChart) } label: {
-            VStack(spacing: 10) {
-                Text("Lunar Day \(engine.lunarDay)")
-                    .font(.system(size: wide ? 26 : 22, weight: .regular, design: .serif))
-                HStack(spacing: 10) {
-                    Rectangle().fill(HomeView.lavender.opacity(0.3)).frame(width: 110, height: 0.6)
-                    Image(systemName: "sparkle").font(.system(size: 11)).foregroundStyle(Theme.gold)
-                    Rectangle().fill(HomeView.lavender.opacity(0.3)).frame(width: 110, height: 0.6)
-                }
-                .accessibilityHidden(true)
+        VStack(spacing: 10) {
+            Text("Lunar Day \(engine.lunarDay)")
+                .font(.system(size: wide ? 26 : 22, weight: .regular, design: .serif))
+            HStack(spacing: 10) {
+                Rectangle().fill(HomeView.lavender.opacity(0.3)).frame(width: 110, height: 0.6)
+                Image(systemName: "sparkle").font(.system(size: 11)).foregroundStyle(Theme.gold)
+                Rectangle().fill(HomeView.lavender.opacity(0.3)).frame(width: 110, height: 0.6)
             }
-            .foregroundStyle(HomeView.lavender)
-            .frame(maxWidth: .infinity)
-            .multilineTextAlignment(.center)
-            .contentShape(Rectangle())
+            .accessibilityHidden(true)
         }
-        .buttonStyle(.plain)
-        .accessibilityHint("Opens the Moon Chart")
+        .foregroundStyle(HomeView.lavender)
+        .frame(maxWidth: .infinity)
+        .multilineTextAlignment(.center)
     }
 }
 
 // MARK: Now Playing
 
-/// The active Dimension, its song and progress, and (the suggested extra) tonight's
-/// lunar discovery progress. Tapping it opens Dimensions.
+/// The active Dimension (or the last one), its song and progress, centred. Tapping it
+/// opens Dimensions.
 private struct NowPlayingCard: View {
     @Environment(EngineController.self) private var engine
     @Environment(AppNavigator.self) private var nav
@@ -192,21 +186,15 @@ private struct NowPlayingCard: View {
     var body: some View {
         let st = engine.worldStatus
         let active = st.loaded && st.worldID != "studio"
-        let last = engine.worlds.first { $0.worldID == (active ? st.worldID : engine.lastDimensionID) }
+        let dimension = engine.worlds.first { $0.worldID == (active ? st.worldID : engine.lastDimensionID) }
         Button { nav.go(.experience) } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(active && st.playing ? "NOW PLAYING" : (last != nil ? "LAST PLAYED" : "BEGIN"))
-                    .font(.system(size: 11, design: .serif)).tracking(2.5)
-                    .foregroundStyle(lavender.opacity(0.75))
-                Text(last?.name ?? "Choose a Dimension")
+            VStack(spacing: 6) {
+                Text(dimension?.name ?? "Choose a Dimension")
                     .font(.system(size: 21, design: .serif)).foregroundStyle(.white)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 if active, !st.songTitle.isEmpty {
                     Text(st.songTitle).font(.system(size: 15, design: .serif)).foregroundStyle(lavender.opacity(0.85))
                         .lineLimit(1)
-                } else if last == nil {
-                    Text("Open Dimensions to download one").font(.system(size: 15, design: .serif))
-                        .foregroundStyle(lavender.opacity(0.75))
                 }
                 if active, st.lengthSeconds > 0 {
                     VStack(spacing: 4) {
@@ -229,10 +217,10 @@ private struct NowPlayingCard: View {
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("\(Self.clock(st.positionSeconds)) of \(Self.clock(st.lengthSeconds))")
                 }
-                if let last { TonightLine(dimensionID: last.worldID).padding(.top, 4) }
             }
+            .multilineTextAlignment(.center)
             .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity)
             .background(Color(red: 0.12, green: 0.07, blue: 0.20).opacity(0.55), in: RoundedRectangle(cornerRadius: 24))
             .background(.ultraThinMaterial.opacity(0.35), in: RoundedRectangle(cornerRadius: 24))
             .overlay(RoundedRectangle(cornerRadius: 24).stroke(lavender.opacity(0.2), lineWidth: 1))
@@ -244,33 +232,6 @@ private struct NowPlayingCard: View {
     static func clock(_ s: Double) -> String {
         let t = Int(max(0, s))
         return String(format: "%d:%02d", t / 60, t % 60)
-    }
-}
-
-/// Tonight's phase in this Dimension: discovered, how much of the 3 minutes is heard, or
-/// that the moon's song waits for dark.
-private struct TonightLine: View {
-    var dimensionID: String
-    @Environment(EngineController.self) private var engine
-
-    var body: some View {
-        let progress = engine.progress
-        let phase = engine.moonPhaseID
-        let name = Lunar.phaseName(phase)
-        let text: String
-        if progress.discoveredPhases(dimensionID).contains(phase) {
-            text = "\(name) discovered here"
-        } else if engine.nightClock.isNight {
-            let heard = Int(progress.phaseProgress(dimensionID) * 180)
-            text = "\(name) · \(heard / 60):\(String(format: "%02d", heard % 60)) of 3:00 heard"
-        } else {
-            text = "\(name)'s song plays after dark"
-        }
-        return HStack(spacing: 8) {
-            Image(systemName: Lunar.symbol(phase)).foregroundStyle(Theme.gold)
-            Text(text).font(.system(size: 13, design: .serif)).foregroundStyle(HomeView.lavender.opacity(0.85))
-        }
-        .accessibilityElement(children: .combine)
     }
 }
 

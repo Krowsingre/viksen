@@ -45,6 +45,9 @@ final class EngineController {
     // Slow-changing values, set only when they change, so views that need just these do
     // not redraw with every 30 Hz meter update.
     private(set) var activeDimensionID: String?   // the Dimension playing now (not Studio)
+    private(set) var loadedDimensionID: String?   // the Dimension loaded (playing or not)
+    private(set) var micLive = false
+    private(set) var limiting = false
     private(set) var moonPhaseID = ""
     private(set) var lunarDay = 0
     private(set) var worlds: [AtmosWorldInfo] = []
@@ -299,6 +302,11 @@ final class EngineController {
         worldStatus = bridge.worldStatus()
         let active = worldStatus.loaded && worldStatus.playing && worldStatus.worldID != "studio" ? worldStatus.worldID : nil
         if active != activeDimensionID { activeDimensionID = active }
+        let loadedID = worldStatus.loaded && worldStatus.worldID != "studio" ? worldStatus.worldID : nil
+        if loadedID != loadedDimensionID { loadedDimensionID = loadedID }
+        if meters.micActive != micLive { micLive = meters.micActive }
+        let limit = meters.limiterGain < 0.98
+        if limit != limiting { limiting = limit }
         if meters.moonPhaseId != moonPhaseID { moonPhaseID = meters.moonPhaseId }
         if meters.lunarDay != lunarDay { lunarDay = meters.lunarDay }
         if worldStatus.loaded && worldStatus.songCount > 1 && worldStatus.songTitle != previousSong && !previousSong.isEmpty {

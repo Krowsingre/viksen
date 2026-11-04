@@ -11,11 +11,10 @@ final class AppNavigator {
     var tab: AppTab = .home
     var menuOpen = false
 
+    /// Pages change instantly (owner: transitions felt slow); only the menu slides.
     func go(_ t: AppTab) {
-        withAnimation(.easeOut(duration: 0.22)) {
-            menuOpen = false
-            tab = t
-        }
+        withAnimation(.easeOut(duration: 0.18)) { menuOpen = false }
+        tab = t
     }
     func toggleMenu() { withAnimation(.easeOut(duration: 0.22)) { menuOpen.toggle() } }
 }
@@ -33,7 +32,6 @@ struct RootView: View {
                 default: HomeView()
                 }
             }
-            .transition(.opacity)
             SideMenu()
         }
         .environment(nav)
@@ -59,6 +57,26 @@ struct MenuButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Menu")
+    }
+}
+
+/// The close button every page but Home has (owner, 2026-11-04): an X with a generous
+/// touch area that acts on touch-down speed (a plain button, no delay).
+struct CloseButton: View {
+    var compact = false   // in a navigation bar
+    var action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark").font(.system(size: compact ? 15 : 17, weight: .medium))
+                .foregroundStyle(Color(red: 0.62, green: 0.48, blue: 1))
+                .frame(width: compact ? 34 : 44, height: compact ? 34 : 44)
+                .background(Color.white.opacity(0.06), in: Circle())
+                .overlay(Circle().stroke(Color(red: 0.90, green: 0.86, blue: 1).opacity(0.3), lineWidth: 1))
+                .padding(compact ? 5 : 6)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Close")
     }
 }
 

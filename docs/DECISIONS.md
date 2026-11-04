@@ -80,3 +80,4 @@
 | 76 | **Moon Chart** restyled after the owner's concept (night-sky background, real moon images cut from the ring art, serif type, glass cards). | Owner |
 | 77 | **Stop fades out in 1 s** (song and part transitions keep their longer crossfades); **closing the app silences it at once**. | Owner |
 | 78 | **Lock screen and Control Center controls**: Dimension, song, progress, play/pause (no skip or scrub). | Owner |
+| 79 | Home card: **no label, no extra line, centred** (Dimension, song, progress); extra item to be chosen from suggestions. Lunar Day is plain text. Only Home has the menu button; **every other screen has an X close**. Pages change instantly. | Owner |

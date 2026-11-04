@@ -62,16 +62,8 @@ struct MoonChartView: View {
             .scrollIndicators(.hidden)
         }
         .overlay(alignment: .topTrailing) {
-            Button { if let onClose { onClose() } else { dismiss() } } label: {
-                Image(systemName: "xmark").font(.title3.weight(.light))
-                    .foregroundStyle(Self.violet)
-                    .frame(width: 48, height: 48)
-                    .background(Color.white.opacity(0.06), in: Circle())
-                    .overlay(Circle().stroke(Self.lavender.opacity(0.3), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, 18).padding(.top, 6)
-            .accessibilityLabel("Close")
+            CloseButton { if let onClose { onClose() } else { dismiss() } }
+                .padding(.trailing, 12).padding(.top, 0)
         }
         .preferredColorScheme(.dark)
     }
