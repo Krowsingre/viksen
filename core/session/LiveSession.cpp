@@ -235,10 +235,35 @@ bool LiveSession::loadDimension(const DimensionManifest& d, StemFileDecoder deco
     if (d.songs.empty()) { if (error) *error = "the Dimension has no songs"; return false; }
     dimension_ = d;
     fileDecoder_ = std::move(decode);
-    song_ = 0;
-    if (!loadSong(d.songs[0], songFactory(0), error)) return false;
+    // Lunar Dimensions start on the song for now: the day track, or tonight's lunar song.
+    const int first = haveContext_ ? std::max(0, lunarTarget(lastContext_)) : 0;
+    song_ = first;
+    if (!loadSong(d.songs[static_cast<size_t>(first)], songFactory(first), error)) return false;
     dimension_ = d;            // loadSong's failure path clears it; success keeps it
     return true;
+}
+
+// Lunar Dimensions (owner, 2026-11-04): by day the Dimension plays its day track (its
+// first song without a lunar phase); after dark it plays the song for the moon's current
+// phase. Returns -1 when the Dimension has no lunar songs.
+int LiveSession::lunarTarget(const ConditionContext& c) const {
+    if (!dimension_) return -1;
+    const auto& songs = dimension_->songs;
+    int day = -1, lunar = -1;
+    bool anyLunar = false;
+    const MoonPhaseName now = moonPhaseName(c.daysSinceUnixEpochUtc);
+    for (size_t i = 0; i < songs.size(); ++i) {
+        const auto& lp = songs[i].lunarPhase;
+        if (lp) {
+            anyLunar = true;
+            if (*lp == now && lunar < 0) lunar = static_cast<int>(i);
+        } else if (day < 0) {
+            day = static_cast<int>(i);
+        }
+    }
+    if (!anyLunar) return -1;
+    if (c.night && lunar >= 0) return lunar;
+    return day >= 0 ? day : 0;
 }
 
 // Multi-song Dimensions: move to another song when the listener's state suits one of
@@ -247,6 +272,16 @@ bool LiveSession::loadDimension(const DimensionManifest& d, StemFileDecoder deco
 void LiveSession::updateSongChoice(double dt, const ConditionContext& context) {
     if (!dimension_ || dimension_->songs.size() < 2 || !lifecycle_ || switchTo_ >= 0) return;
     const int n = static_cast<int>(dimension_->songs.size());
+    if (const int target = lunarTarget(context); target >= 0) {
+        // Day track by day, tonight's lunar song after dark; a finished song plays again.
+        if (feeder_ && feeder_->finishedPlaying()) { beginSongSwitch(target, context, true); return; }
+        const int want = target == song_ ? -1 : target;
+        if (want != candidate_) { candidate_ = want; candidateFor_ = 0; return; }
+        if (candidate_ < 0) return;
+        candidateFor_ += dt;
+        if (candidateFor_ >= 4.0) beginSongSwitch(candidate_, context, false);   // dusk and dawn change it gracefully
+        return;
+    }
     if (feeder_ && feeder_->finishedPlaying()) {
         beginSongSwitch((song_ + 1) % n, context, true);
         return;
@@ -357,6 +392,8 @@ void LiveSession::setWorldStemLevel(int stem, float gainDb, bool muted) {
 }
 
 void LiveSession::updateWorld(double dt, const ConditionContext& context) {
+    lastContext_ = context;
+    haveContext_ = true;
     if (!world_ || !director_) return;
     if (!lifecycle_) {
         director_->snapToTargets(context);

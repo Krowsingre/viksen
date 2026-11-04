@@ -69,3 +69,7 @@
 | 65 | Artwork by another LLM or a hired artist. Core Dimension target **under 1 GB**; Core songs **3–6 minutes**; **up to 12 stems** per song. Launch album Dimension chosen after the Core is finished. | Owner |
 | 66 | **No background wallpaper** in the app: Home sits on a plain dark background; the owner art image sets are removed. | Owner |
 | 67 | **Moon Chart layout approved "for now"**: per-Dimension ring of the eight phases, undiscovered phases named with their next dates, Secrets "n of 5", Global Secrets as a count only; opens from the Home moon and each Dimension. No on-demand phase playback. | Owner |
+| 68 | **Day track by day, lunar songs after dark.** Each Dimension has a day track; after dark it plays the song for the moon's current phase, and only that (after dark) counts toward the Moon Chart. **4 lunar songs per Dimension, 2 versions each** (one version per phase), each also arranged by context. Supersedes the shape of #63. | Owner |
+| 69 | **Night is the listener's choice**: fixed hours **7 pm to 4 am** (default) or local **sunset to sunrise** (approximate location, memory only; falls back to the fixed hours without it). | Owner |
+| 70 | At night the Home wordmark reads **VIKSEN · AFTER DARK · Immersive Auditory Reality**. | Owner |
+| 71 | **New Home** after the owner's concept: night-sky background (HomeSky; replaces #66), fox play button inside the owner's moon ring, tonight's phase pulsing, a live waveform in the fox's button while playing, serif type, menu button for Settings. | Owner |

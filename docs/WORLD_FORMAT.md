@@ -111,3 +111,22 @@ holding that track's files under `Dimensions/<id>/`.
 
 Listeners download a Dimension by choosing it, and remove it from the Dimension list
 (swipe) or Settings › Downloaded Dimensions; removing frees the space immediately.
+
+## Day track and lunar songs (decision #68)
+
+A Dimension whose songs carry `lunarPhase` is a **lunar Dimension**. By day it plays its
+**day track** (its first song without a `lunarPhase`). After dark (the listener's rule:
+7 pm to 4 am, or sunset to sunrise) it plays the song whose `lunarPhase` is the moon's
+current phase, changing at dusk and dawn with the usual fade. A song that ends plays again.
+The plan is 4 lunar songs with 2 versions each, so 8 song entries, one per phase:
+
+```json
+"songs": [
+  {"id": "day", "title": "…", "stems": [ … ]},
+  {"id": "tide-new", "title": "Tide (New Moon)", "lunarPhase": "new", "stems": [ … ]},
+  {"id": "tide-crescent", "title": "Tide (Waxing Crescent)", "lunarPhase": "waxingCrescent", "stems": [ … ]}
+]
+```
+
+A Dimension holds up to 12 songs. Only listening to tonight's lunar song after dark counts
+toward discovering a phase.

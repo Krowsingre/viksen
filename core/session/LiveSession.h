@@ -192,6 +192,9 @@ private:
     std::optional<DimensionManifest> dimension_;
     StemFileDecoder fileDecoder_;
     int song_ = 0, switchTo_ = -1, candidate_ = -1;
+    ConditionContext lastContext_;     // the most recent conditions (to start a Dimension on the right song)
+    bool haveContext_ = false;
+    int lunarTarget(const ConditionContext& c) const;   // -1: the Dimension has no lunar songs
     double candidateFor_ = 0, switchFromSeconds_ = 0;
     uint64_t songSwitches_ = 0;
     bool loadSong(const WorldManifest& world, StemDecoderFactory factory, std::string* error);

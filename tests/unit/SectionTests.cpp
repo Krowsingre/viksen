@@ -370,3 +370,60 @@ TEST_CASE("session/a crossfade longer than the stream buffer never stalls the st
     CHECK(heardDrive);                         // the jump to the moving part was heard (when it ends depends on timing)
     s.unloadWorld();
 }
+
+TEST_CASE("session/lunar Dimension: day track by day, tonight's lunar song after dark") {
+    const double t = 20000.25;                                  // a fixed moment
+    const std::string tonight = moonPhaseId(moonPhaseName(t));
+    const std::string other = moonPhaseId(static_cast<MoonPhaseName>((static_cast<int>(moonPhaseName(t)) + 4) % 8));
+    Json j = twoSongDimension();
+    j["songs"][1]["lunarPhase"] = other;
+    Json third = j["songs"][1];
+    third["id"] = "c";
+    third["title"] = "Song C";
+    third["lunarPhase"] = tonight;
+    j["songs"].push_back(third);
+    auto d = parseDimension(j);
+    REQUIRE(d.has_value());
+    const double rate = 48000;
+    auto clip = std::make_shared<const AudioClip>(test::makeSine(rate, static_cast<int>(rate * 30), 330, 0.3f));
+    LiveSession::StemFileDecoder decode = [&](const std::string&, double, std::string&) -> std::unique_ptr<StemDecoder> {
+        return std::make_unique<ClipStemDecoder>(clip);
+    };
+    LiveSession s(rate, 256);
+    s.setWorldSpatialEnabled(false);
+    ConditionContext ctx;
+    ctx.daysSinceUnixEpochUtc = t;
+    std::vector<float> l(256), r(256);
+    float* outs[2] = {l.data(), r.data()};
+    auto run = [&](double seconds) {
+        for (int i = 0; i < static_cast<int>(seconds * rate / 256); ++i) {
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+            while (s.worldStatus().playing && s.engine().worldPlayer().readableFrames() < 256 &&
+                   std::chrono::steady_clock::now() < deadline)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            s.updateWorld(256.0 / rate, ctx);
+            s.engine().process(nullptr, 0, outs, 2, 256);
+        }
+    };
+    std::string err;
+    REQUIRE(s.loadDimension(*d, decode, &err));
+    s.updateWorld(0, ctx);
+    s.startWorld(true);
+    run(6.0);
+    CHECK(s.worldStatus().songTitle == "Song A");               // day: the day track stays
+    ctx.night = true;
+    run(10.0);
+    auto st = s.worldStatus();
+    CHECK(st.songTitle == "Song C");                             // dusk: tonight's lunar song
+    CHECK(st.songLunarPhase == tonight);
+    ctx.night = false;
+    run(10.0);
+    CHECK(s.worldStatus().songTitle == "Song A");               // dawn: back to the day track
+    s.unloadWorld();
+    // Entering at night starts straight on tonight's song.
+    ctx.night = true;
+    s.updateWorld(0, ctx);
+    REQUIRE(s.loadDimension(*d, decode, &err));
+    CHECK(s.worldStatus().songTitle == "Song C");
+    s.unloadWorld();
+}

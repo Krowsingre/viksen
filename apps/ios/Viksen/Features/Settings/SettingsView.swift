@@ -7,6 +7,16 @@ struct SettingsView: View {
     @Environment(Store.self) private var store
     @State private var showPaywall = false
 
+    private var nightFooter: String {
+        var t = "By day each Dimension plays its day track. After dark it plays the song for tonight's moon, and only that listening counts toward the Moon Chart."
+        if engine.nightClock.rule == .sunsetSunrise {
+            t += engine.nightClock.locationDenied
+                ? " Sunset and sunrise need your approximate location, which is off, so 7 pm to 4 am is used."
+                : " Uses your approximate location, kept on this \(Platform.deviceNoun) only for this."
+        }
+        return t
+    }
+
     var body: some View {
         @Bindable var engine = engine
         NavigationStack {
@@ -26,6 +36,10 @@ struct SettingsView: View {
                           systemImage: Lunar.symbol(engine.meters.moonPhaseId))
                     Text("Viksen follows the lunar calendar, worked out on this \(Platform.deviceNoun). The fuller the moon, the longer and wider the echoes and reverb wash that carry the music from one part to the next; near the new moon, changes are closer and drier. Each Dimension also has parts it favours under the full moon and at the new moon, and some favour the night.")
                         .font(.footnote).foregroundStyle(.secondary)
+                    Picker("Night", selection: Bindable(engine.nightClock).rule) {
+                        ForEach(NightClock.Rule.allCases) { Text($0.title).tag($0) }
+                    }
+                    Text(nightFooter).font(.footnote).foregroundStyle(.secondary)
                 } header: {
                     Text("The Moon")
                 }

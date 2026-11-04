@@ -1,7 +1,10 @@
 # Artwork
 
-Home has no wallpaper: a plain dark background (owner, 2026-11-04). Until artwork is
-supplied, the Dimension cards use a scene drawn in code (`Shared/DimensionArt.swift`).
+Home uses the owner's art (decision #71): `HomeSky` (night sky), `MoonRing` (the eight
+moons; tonight's is made to pulse in code), `FoxPlay` (fox with play button) and
+`FoxEmpty` (the same fox with the button's circle emptied, so the app draws a live
+waveform in it while playing). Until artwork is supplied, the Dimension cards use a
+scene drawn in code (`Shared/DimensionArt.swift`).
 Owner artwork replaces it automatically:
 
 | Image | Where it goes | Size | Used for |

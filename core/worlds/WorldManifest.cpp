@@ -169,7 +169,7 @@ std::optional<DimensionManifest> parseDimension(const Json& j, std::string* erro
         return d;
     }
     if (!j["songs"].is_array() || j["songs"].empty()) return fail("songs must be a non-empty list");
-    if (j["songs"].size() > 8) return fail("at most 8 songs in a Dimension");
+    if (j["songs"].size() > 12) return fail("at most 12 songs in a Dimension");
     if (j.contains("unlock")) {
         auto u = parseConditions(j["unlock"], error);
         if (!u) return std::nullopt;

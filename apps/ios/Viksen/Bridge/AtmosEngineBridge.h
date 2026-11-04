@@ -106,6 +106,8 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 
 @interface AtmosEngineBridge : NSObject
 
+/// After dark by the listener's chosen rule: lunar Dimensions play tonight's lunar song.
+@property (nonatomic) BOOL night;
 @property (nonatomic, weak, nullable) id<AtmosEngineBridgeDelegate> delegate;
 @property (nonatomic, readonly) BOOL audioRunning;
 @property (nonatomic, readonly) BOOL micEnabled;

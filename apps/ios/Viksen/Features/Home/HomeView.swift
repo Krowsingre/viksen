@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Home: on a plain dark background, the wordmark,
-/// one glowing "Enter Dimension" button, Continue Listening cards (one per
-/// Dimension on this device) and the lunar day. Compact iPhones show it full
-/// screen; wide (unfolded) layouts put the card and the moon side by side.
+/// Home, after the owner's concept (2026-11-04): the night sky, the wordmark (with
+/// "After Dark" at night), the fox in the owner's moon ring (tonight's phase pulses; the
+/// fox's button plays, then shows a live waveform), the lunar day (opens the Moon Chart)
+/// and Continue Listening cards, one per Dimension on this device.
 struct HomeView: View {
     @Binding var selectedTab: AppTab
     @Environment(EngineController.self) private var engine
@@ -16,42 +16,40 @@ struct HomeView: View {
 
     var body: some View {
         GeometryReader { geo in
+            let ringWidth = min(geo.size.width - 24, wide ? 460 : 420, geo.size.height * 0.46)
             ZStack(alignment: .top) {
-                Color.black.ignoresSafeArea()   // no wallpaper (owner, 2026-11-04)
+                HomeSkyBackground().ignoresSafeArea()
                 VStack(spacing: 0) {
-                    Spacer(minLength: geo.size.height * (wide ? 0.13 : 0.20))
+                    Spacer(minLength: wide ? 24 : 12)
                     wordmark
-                    Spacer(minLength: wide ? 24 : 36)
-                    enterButton
-                    Spacer(minLength: wide ? 20 : 28)
+                    Spacer(minLength: 10)
+                    foxRing(width: ringWidth)
+                    Spacer(minLength: 10)
+                    moon
+                    Spacer(minLength: 14)
                     if engine.previousRunEndedUnexpectedly { restoreCard.padding(.horizontal, 24).padding(.bottom, 12) }
-                    VStack(alignment: .leading, spacing: 12) {
-                        if wide && !continueItems.isEmpty {
-                            Text("Continue Listening").font(.title3.weight(.medium)).foregroundStyle(.white)
-                        }
-                        continueCards
-                    }
-                    .frame(maxWidth: wide ? 820 : .infinity)
-                    .padding(.horizontal, wide ? 48 : 24)
-                    if continueItems.count > 1 { pageDots.padding(.top, 14) }
-                    moon.padding(.top, wide ? 22 : 18)
-                    Spacer(minLength: wide ? 28 : 16)
+                    continueCards
+                        .frame(maxWidth: wide ? 640 : .infinity)
+                        .padding(.horizontal, wide ? 48 : 20)
+                    if continueItems.count > 1 { pageDots.padding(.top, 10) }
+                    Spacer(minLength: wide ? 24 : 12)
                 }
                 .frame(maxWidth: .infinity)
             }
         }
         .overlay(alignment: .topTrailing) {
             Button { showSettings = true } label: {
-                Image(systemName: "gearshape")
-                    .font(.title3)
-                    .foregroundStyle(Theme.accentGlow)
-                    .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial.opacity(0.6), in: Circle())
-                    .overlay(Circle().stroke(Theme.accent.opacity(0.4), lineWidth: 1))
+                Image(systemName: "line.3.horizontal")
+                    .font(.title3.weight(.light))
+                    .foregroundStyle(Color(red: 0.86, green: 0.80, blue: 1))
+                    .frame(width: 48, height: 48)
+                    .background(Color.black.opacity(0.25), in: Circle())
+                    .overlay(Circle().stroke(Color(red: 0.80, green: 0.70, blue: 1).opacity(0.5), lineWidth: 1))
+                    .shadow(color: Theme.accentGlow.opacity(0.5), radius: 8)
             }
-            .padding(.trailing, 20)
-            .padding(.top, 8)
-            .accessibilityLabel("Settings")
+            .padding(.trailing, 18)
+            .padding(.top, 4)
+            .accessibilityLabel("Menu")
         }
         .sheet(isPresented: $showSettings) { SettingsView() }
         .sheet(isPresented: $showMoonChart) { MoonChartView() }
@@ -61,26 +59,76 @@ struct HomeView: View {
 
     // MARK: Wordmark
 
+    private static let lavender = Color(red: 0.90, green: 0.86, blue: 1)
+
     private var wordmark: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 8) {
             Text("VIKSEN")
-                .font(.system(size: wide ? 46 : 40, weight: .ultraLight))
-                .tracking(wide ? 22 : 18)
-                .foregroundStyle(.white)
-                .shadow(color: Theme.accentGlow.opacity(0.6), radius: 10)
+                .font(.system(size: wide ? 44 : 38, weight: .light, design: .serif))
+                .tracking(wide ? 18 : 14)
+                .foregroundStyle(Self.lavender)
+                .shadow(color: Theme.accentGlow.opacity(0.55), radius: 10)
                 .accessibilityAddTraits(.isHeader)
-                .accessibilityLabel("Viksen")
-            Text("IMMERSIVE AUDITORY REALITY")
-                .font(.system(size: 11, weight: .regular))
-                .tracking(4)
-                .foregroundStyle(.white.opacity(0.75))
-            HStack(spacing: 10) {
-                Rectangle().fill(Color.white.opacity(0.35)).frame(width: 40, height: 0.6)
-                Image(systemName: "sparkle").font(.system(size: 11)).foregroundStyle(Theme.accentGlow)
-                Rectangle().fill(Color.white.opacity(0.35)).frame(width: 40, height: 0.6)
+                .accessibilityLabel(engine.nightClock.isNight ? "Viksen After Dark" : "Viksen")
+            if engine.nightClock.isNight {
+                Text("AFTER DARK")
+                    .font(.system(size: 13, weight: .regular, design: .serif))
+                    .tracking(7)
+                    .foregroundStyle(Theme.gold)
+                    .shadow(color: Theme.gold.opacity(0.5), radius: 6)
+                    .accessibilityHidden(true)
+                    .transition(.opacity)
             }
+            Text("IMMERSIVE AUDITORY REALITY")
+                .font(.system(size: 11, weight: .regular, design: .serif))
+                .tracking(3.5)
+                .foregroundStyle(Self.lavender.opacity(0.8))
+            HStack(spacing: 8) {
+                Rectangle().fill(Self.lavender.opacity(0.35)).frame(width: 56, height: 0.6)
+                ForEach(["moonphase.waxing.crescent", "moonphase.first.quarter", "moonphase.waning.crescent",
+                         "moonphase.last.quarter"], id: \.self) { Image(systemName: $0).font(.system(size: 9)) }
+                Rectangle().fill(Self.lavender.opacity(0.35)).frame(width: 56, height: 0.6)
+            }
+            .foregroundStyle(Self.lavender.opacity(0.8))
             .accessibilityHidden(true)
         }
+        .animation(.easeInOut(duration: 1.2), value: engine.nightClock.isNight)
+    }
+
+    // MARK: Fox and moon ring
+
+    /// The owner's moon ring (MoonRing) with the fox at its heart: the fox holds the play
+    /// button, and while a Dimension plays, a live waveform. Tonight's phase pulses.
+    private func foxRing(width: CGFloat) -> some View {
+        let height = width * 1199 / 1312   // the ring artwork's aspect
+        return ZStack {
+            Image("MoonRing").resizable().scaledToFit()
+            MoonRingPulse(phaseID: engine.meters.moonPhaseId, ringWidth: width, ringHeight: height)
+            foxButton(size: width * 1.08)
+                .offset(y: height * (0.495 - 0.5))
+        }
+        .frame(width: width, height: height)
+    }
+
+    private func foxButton(size: CGFloat) -> some View {
+        Button {
+            if inDimension { selectedTab = .experience }
+            else if let w = enterTarget { engine.enterWorld(w) }
+            else { selectedTab = .experience }   // nothing downloaded yet: choose one
+        } label: {
+            ZStack {
+                Image(inDimension ? "FoxEmpty" : "FoxPlay").resizable().scaledToFit()
+                if inDimension {
+                    LiveWaveform(level: Double(max(engine.meters.outputPeakLeft, engine.meters.outputPeakRight)))
+                        .frame(width: size * 0.088, height: size * 0.072)
+                        .position(x: size * 491 / 1024, y: size * 535 / 1024)
+                }
+            }
+            .frame(width: size, height: size)
+            .contentShape(Circle().scale(0.5))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(inDimension ? "Open \(engine.worldStatus.name)" : (enterTarget.map { "Enter \($0.name)" } ?? "Choose a Dimension"))
     }
 
     // MARK: Enter Dimension
@@ -93,45 +141,6 @@ struct HomeView: View {
 
     private var inDimension: Bool {
         engine.worldStatus.playing && engine.worldStatus.loaded && engine.worldStatus.worldID != "studio"
-    }
-
-    private var enterButton: some View {
-        VStack(spacing: 18) {
-            HStack(spacing: 22) {
-            if wide { Rectangle().fill(Color.white.opacity(0.35)).frame(width: 90, height: 0.6) }
-            Button {
-                if inDimension { selectedTab = .experience }
-                else if let w = enterTarget { engine.enterWorld(w) }
-                else { selectedTab = .experience }   // nothing downloaded yet: choose one
-            } label: {
-                ZStack {
-                    Circle().fill(Color.black.opacity(0.35))
-                    Circle().stroke(Theme.accentGlow, lineWidth: 2)
-                        .shadow(color: Theme.accentGlow.opacity(0.9), radius: 14)
-                    Image(systemName: inDimension ? "waveform" : "play.fill")
-                        .font(.system(size: 34, weight: .regular))
-                        .foregroundStyle(.white)
-                        .offset(x: inDimension ? 0 : 3)
-                        .symbolEffect(.variableColor.iterative, isActive: inDimension)
-                }
-                .frame(width: wide ? 112 : 104, height: wide ? 112 : 104)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(inDimension ? "Open \(engine.worldStatus.name)" : (enterTarget.map { "Enter \($0.name)" } ?? "Choose a Dimension"))
-            if wide { Rectangle().fill(Color.white.opacity(0.35)).frame(width: 90, height: 0.6) }
-            }
-            HStack(spacing: 16) {
-                if wide { Rectangle().fill(Color.white.opacity(0.3)).frame(width: 110, height: 0.6) }
-                Text(inDimension ? "IN \(engine.worldStatus.name.uppercased())" : "ENTER DIMENSION")
-                    .font(.system(size: 15, weight: .light))
-                    .tracking(5)
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                if wide { Rectangle().fill(Color.white.opacity(0.3)).frame(width: 110, height: 0.6) }
-            }
-            .accessibilityHidden(true)
-        }
     }
 
     // MARK: Continue Listening
@@ -160,7 +169,7 @@ struct HomeView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: wide ? 126 : 122)
+            .frame(height: 128)
         }
     }
 
@@ -170,37 +179,47 @@ struct HomeView: View {
         let progress = isCurrent && st.lengthSeconds > 0 ? st.positionSeconds / st.lengthSeconds : nil
         let title = isCurrent && st.songCount > 1 ? "\(w.name) · \(st.songTitle)" : w.name
         let time = isCurrent && st.lengthSeconds > 0 ? "\(clock(st.positionSeconds)) / \(clock(st.lengthSeconds))" : nil
-        return card(art: w.worldID, title: title, subtitle: isCurrent && st.playing ? (st.sectionTitle.isEmpty ? "Now playing" : st.sectionTitle) : "Continue Listening",
-                    progress: progress, wideTime: time)
+        return card(art: w.worldID, title: title,
+                    subtitle: isCurrent && st.playing ? (st.sectionTitle.isEmpty ? "Now playing" : st.sectionTitle) : (w.album.isEmpty ? w.artist : w.album),
+                    progress: progress, wideTime: isCurrent && st.playing ? nil : time)
     }
 
     private func card(art: String?, title: String, subtitle: String, progress: Double?, wideTime: String?) -> some View {
         HStack(spacing: 16) {
             DimensionThumbnail(dimensionID: art)
-                .frame(width: wide ? 150 : 104, height: wide ? 94 : 96)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            VStack(alignment: .leading, spacing: 6) {
-                if !wide { Text(subtitle).font(.footnote).foregroundStyle(.white.opacity(0.7)) }
-                Text(title).font(.title3.weight(.medium)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.7)
-                if wide, let wideTime { Text(wideTime).font(.subheadline.monospacedDigit()).foregroundStyle(.white.opacity(0.8)) }
-                else if wide { Text(subtitle).font(.subheadline).foregroundStyle(.white.opacity(0.7)) }
+                .frame(width: 92, height: 92)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Self.lavender.opacity(0.25), lineWidth: 1))
+            VStack(alignment: .leading, spacing: 5) {
+                Text("CONTINUE LISTENING").font(.system(size: 11, design: .serif)).tracking(2.5)
+                    .foregroundStyle(Self.lavender.opacity(0.75))
+                Text(title).font(.system(size: 21, weight: .regular, design: .serif)).foregroundStyle(.white)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                Text(wideTime ?? subtitle).font(.system(size: 14, design: .serif)).foregroundStyle(Self.lavender.opacity(0.75))
+                    .lineLimit(1)
                 if let progress {
                     GeometryReader { g in
                         ZStack(alignment: .leading) {
                             Capsule().fill(Color.white.opacity(0.15))
-                            Capsule().fill(Theme.accent).frame(width: g.size.width * min(1, max(0, progress)))
+                            Capsule().fill(LinearGradient(colors: [Self.lavender, Theme.accent], startPoint: .leading, endPoint: .trailing))
+                                .frame(width: g.size.width * min(1, max(0, progress)))
                         }
                     }
                     .frame(height: 4)
+                    .padding(.top, 4)
                 }
             }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.7))
+            Image(systemName: "chevron.right").font(.body.weight(.light))
+                .foregroundStyle(Self.lavender)
+                .frame(width: 40, height: 40)
+                .overlay(Circle().stroke(Self.lavender.opacity(0.5), lineWidth: 1))
         }
-        .padding(12)
-        .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.12), lineWidth: 1))
-        .contentShape(RoundedRectangle(cornerRadius: 20))
+        .padding(14)
+        .background(Color(red: 0.12, green: 0.07, blue: 0.20).opacity(0.55), in: RoundedRectangle(cornerRadius: 24))
+        .background(.ultraThinMaterial.opacity(0.35), in: RoundedRectangle(cornerRadius: 24))
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(Self.lavender.opacity(0.2), lineWidth: 1))
+        .contentShape(RoundedRectangle(cornerRadius: 24))
     }
 
     private var pageDots: some View {
@@ -221,14 +240,23 @@ struct HomeView: View {
     }
 
     private var moonLine: some View {
-        HStack(spacing: 14) {
-            if wide { Rectangle().fill(Color.white.opacity(0.3)).frame(width: 90, height: 0.6) }
-            Image(systemName: Lunar.symbol(engine.meters.moonPhaseId)).font(wide ? .title2 : .title3)
-            Text("\(Lunar.phaseName(engine.meters.moonPhaseId))  ·  Lunar day \(engine.meters.lunarDay)")
-                .font(wide ? .title3 : .subheadline)
-            if wide { Rectangle().fill(Color.white.opacity(0.3)).frame(width: 90, height: 0.6) }
+        VStack(spacing: 10) {
+            HStack(spacing: 18) {
+                Image(systemName: Lunar.symbol(engine.meters.moonPhaseId)).font(.title3)
+                Text(Lunar.phaseName(engine.meters.moonPhaseId))
+                    .font(.system(size: wide ? 26 : 22, weight: .regular, design: .serif))
+                Rectangle().fill(Self.lavender.opacity(0.5)).frame(width: 0.8, height: 26)
+                Text("Lunar Day \(engine.meters.lunarDay)")
+                    .font(.system(size: wide ? 19 : 16, weight: .regular, design: .serif))
+            }
+            HStack(spacing: 10) {
+                Rectangle().fill(Self.lavender.opacity(0.3)).frame(width: 110, height: 0.6)
+                Image(systemName: "sparkle").font(.system(size: 11)).foregroundStyle(Theme.gold)
+                Rectangle().fill(Self.lavender.opacity(0.3)).frame(width: 110, height: 0.6)
+            }
+            .accessibilityHidden(true)
         }
-        .foregroundStyle(.white.opacity(0.85))
+        .foregroundStyle(Self.lavender)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)

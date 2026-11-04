@@ -413,6 +413,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         if (_intensity >= 0) ctx.intensity = _intensity;
         ctx.localHour = static_cast<int>([[NSCalendar currentCalendar] component:NSCalendarUnitHour fromDate:[NSDate date]]);
         ctx.daysSinceUnixEpochUtc = [NSDate date].timeIntervalSince1970 / 86400.0;
+        ctx.night = self.night;
         _session->updateWorld(dt, ctx);
     }
     const atmos::EngineMeters m = engine.meters();

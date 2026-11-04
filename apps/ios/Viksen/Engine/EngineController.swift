@@ -28,6 +28,7 @@ final class EngineController {
     let downloads = DimensionDownloads()
     let albums = AlbumLinks()
     let progress = ProgressStore()
+    let nightClock = NightClock()
     private var lastProgressTick = Date.distantPast
     private let delegateProxy = BridgeDelegateProxy()
     private var meterTimer: Timer?
@@ -295,10 +296,14 @@ final class EngineController {
         // Phase discovery: once a second, credit audible listening to the Dimension heard.
         if Date().timeIntervalSince(lastProgressTick) >= 1 {
             lastProgressTick = Date()
+            nightClock.refresh()
+            if bridge.night != nightClock.isNight { bridge.night = nightClock.isNight }
             let audible = worldStatus.playing && masterGain > 0.001 && busGains[BusLevel.music.rawValue] > 0.001
-            // TestFlight-only check of the counter: any song counts as tonight's lunar song.
-            let songPhase = AppBuild.isTestFlight && UserDefaults.standard.bool(forKey: "test.anySongIsLunar")
-                ? progress.currentPhaseID : worldStatus.songLunarPhaseId
+            // Only tonight's lunar song, after dark, counts. TestFlight-only check of the
+            // counter: any song counts, at any hour.
+            let testing = AppBuild.isTestFlight && UserDefaults.standard.bool(forKey: "test.anySongIsLunar")
+            let songPhase = testing ? progress.currentPhaseID
+                : (nightClock.isNight ? worldStatus.songLunarPhaseId : "")
             progress.tick(dimensionID: currentDimensionID, songPhaseID: songPhase, audible: audible)
         }
         // Dropouts: log the increase at most once a minute.
