@@ -30,7 +30,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// When each discovered phase was found in this Dimension (phase id → date).
 - (NSDictionary<NSString *, NSDate *> *)discoveryDates:(NSString *)dimensionID;
 /// When the 8th phase was found, or nil.
-- (nullable NSDate *)lunarJourneyCompletedAt:(NSString *)dimensionID;
+- (nullable NSDate *)lunarJourneyCompletedAt:(NSString *)dimensionID NS_SWIFT_NAME(journeyCompletedAt(_:));
 /// The next (or current) window in which the named phase is in the sky, from now.
 + (nullable NSDateInterval *)nextWindowForPhase:(NSString *)phaseId;
 /// The current named lunar phase ("full", "waxingCrescent", ...).

@@ -90,7 +90,7 @@ struct MoonChartView: View {
                                                      lineWidth: id == selected ? 2 : 1))
                     }
                     .buttonStyle(.plain)
-                    .position(x: c.x + 128 * cos(a), y: c.y + 128 * sin(a))
+                    .position(x: c.x + 128 * CGFloat(Foundation.cos(a)), y: c.y + 128 * CGFloat(Foundation.sin(a)))
                     .accessibilityLabel("\(Lunar.phaseName(id)), \(found[id] != nil ? "discovered" : "not yet discovered")\(id == tonight ? ", tonight" : "")")
                 }
                 centre(found: found, tonight: tonight, dim: dim).frame(width: 200).position(c)
@@ -265,7 +265,7 @@ struct MoonPhaseShape: Shape {
         // The lit limb is a half circle (right while waxing, left while waning); the
         // terminator is half an ellipse whose width follows the phase.
         let waxing = f < 0.5
-        let rx = r * abs(cos(2 * .pi * f))
+        let rx = r * CGFloat(abs(Foundation.cos(2 * Double.pi * f)))
         let bulgesWithLimb = waxing ? f < 0.25 : f > 0.75   // crescent: terminator on the lit side
         p.move(to: CGPoint(x: c.x, y: c.y - r))
         p.addArc(center: c, radius: r, startAngle: .degrees(-90), endAngle: .degrees(90), clockwise: !waxing)
@@ -273,7 +273,7 @@ struct MoonPhaseShape: Shape {
         let steps = 24
         for k in 1...steps {
             let t = Double.pi / 2 - Double(k) / Double(steps) * .pi   // from bottom (+90°) to top (−90°)
-            p.addLine(to: CGPoint(x: c.x + side * rx * cos(t), y: c.y + r * sin(t)))
+            p.addLine(to: CGPoint(x: c.x + side * rx * CGFloat(Foundation.cos(t)), y: c.y + r * CGFloat(Foundation.sin(t))))
         }
         p.closeSubpath()
         return p
