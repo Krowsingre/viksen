@@ -25,9 +25,11 @@ struct HomeView: View {
                     moon
                     Spacer(minLength: 14)
                     if engine.previousRunEndedUnexpectedly { restoreCard.padding(.horizontal, 24).padding(.bottom, 12) }
-                    continueCards
-                        .frame(maxWidth: wide ? 640 : .infinity)
-                        .padding(.horizontal, wide ? 48 : 20)
+                    if Self.showDimensionBanners {
+                        continueCards
+                            .frame(maxWidth: wide ? 640 : .infinity)
+                            .padding(.horizontal, wide ? 48 : 20)
+                    }
                     Spacer(minLength: wide ? 24 : 12)
                 }
                 .frame(maxWidth: .infinity)
@@ -39,6 +41,9 @@ struct HomeView: View {
         .preferredColorScheme(.dark)
         .onAppear { engine.refreshWorlds() }
     }
+
+    /// The Continue Listening banner, hidden for now by owner request (2026-11-04).
+    static let showDimensionBanners = false
 
     private func go(_ t: AppTab) {
         withAnimation(.spring(response: 0.38, dampingFraction: 0.9)) { selectedTab = t }

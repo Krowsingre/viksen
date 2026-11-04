@@ -74,3 +74,4 @@
 | 70 | At night the Home wordmark reads **VIKSEN · AFTER DARK · Immersive Auditory Reality**. | Owner |
 | 71 | **New Home** after the owner's concept: night-sky background (HomeSky; replaces #66), fox play button inside the owner's moon ring, tonight's phase pulsing, a live waveform in the fox's button while playing, serif type, menu button for Settings. | Owner |
 | 72 | **No tab bar.** From Home: swipe left → Dimensions, right → Moon Chart, up → Settings; swipe down returns Home. The play fox starts the music, the waveform fox stops it. No menu button. Home shows one Continue Listening card. | Owner |
+| 73 | Dimension banners (Home Continue Listening card) **hidden for now**; `HomeView.showDimensionBanners` brings them back. | Owner |
