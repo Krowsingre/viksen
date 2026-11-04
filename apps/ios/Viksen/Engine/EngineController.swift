@@ -296,7 +296,10 @@ final class EngineController {
         if Date().timeIntervalSince(lastProgressTick) >= 1 {
             lastProgressTick = Date()
             let audible = worldStatus.playing && masterGain > 0.001 && busGains[BusLevel.music.rawValue] > 0.001
-            progress.tick(dimensionID: currentDimensionID, songPhaseID: worldStatus.songLunarPhaseId, audible: audible)
+            // TestFlight-only check of the counter: any song counts as tonight's lunar song.
+            let songPhase = AppBuild.isTestFlight && UserDefaults.standard.bool(forKey: "test.anySongIsLunar")
+                ? progress.currentPhaseID : worldStatus.songLunarPhaseId
+            progress.tick(dimensionID: currentDimensionID, songPhaseID: songPhase, audible: audible)
         }
         // Dropouts: log the increase at most once a minute.
         let total = meters.underruns + worldStatus.underruns

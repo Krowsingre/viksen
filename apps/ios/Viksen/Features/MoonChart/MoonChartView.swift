@@ -7,15 +7,25 @@ import SwiftUI
 struct MoonChartView: View {
     var initialDimensionID: String?
     @Environment(EngineController.self) private var engine
+    @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var dimensionID: String?
     @State private var selected: String?
 
     private var progress: ProgressStore { engine.progress }
-    private var dimensions: [AtmosWorldInfo] { engine.worlds.filter { $0.worldID != "studio" } }
+    /// Only the Dimensions this listener has access to.
+    private var dimensions: [AtmosWorldInfo] {
+        engine.worlds.filter { w in
+            guard w.worldID != "studio" else { return false }
+            let need: Tier = w.tier == "studio" ? .studio : w.tier == "experience" ? .experience : .free
+            return need <= store.tier
+        }
+    }
 
     var body: some View {
-        let dim = dimensionID ?? initialDimensionID ?? engine.lastDimensionID ?? dimensions.first?.worldID ?? ""
+        let ids = Set(dimensions.map(\.worldID))
+        let dim = [dimensionID, initialDimensionID, engine.lastDimensionID].compactMap { $0 }.first { ids.contains($0) }
+            ?? dimensions.first?.worldID ?? ""
         let found = progress.discoveryDates(dim)
         let tonight = progress.currentPhaseID
         let phase = selected ?? tonight
@@ -55,21 +65,25 @@ struct MoonChartView: View {
     // MARK: Parts
 
     private func dimensionPicker(_ current: String) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(dimensions, id: \.worldID) { d in
-                    let on = d.worldID == current
-                    Button(d.name) { dimensionID = d.worldID; selected = nil }
-                        .font(.subheadline.weight(on ? .semibold : .regular))
-                        .padding(.horizontal, 14).frame(minHeight: 36)
-                        .foregroundStyle(on ? .white : Color.white.opacity(0.8))
-                        .background(on ? Theme.accent : Color.white.opacity(0.06), in: Capsule())
-                        .overlay(Capsule().stroke(Theme.accent.opacity(on ? 1 : 0.35), lineWidth: 1))
-                        .accessibilityAddTraits(on ? .isSelected : [])
-                }
+        Menu {
+            Picker("Dimension", selection: Binding(get: { current },
+                                                   set: { dimensionID = $0; selected = nil })) {
+                ForEach(dimensions, id: \.worldID) { d in Text(d.name).tag(d.worldID) }
             }
-            .padding(.horizontal, 20)
+        } label: {
+            HStack(spacing: 8) {
+                Text(dimensions.first { $0.worldID == current }?.name ?? "Dimension")
+                    .font(.headline)
+                Image(systemName: "chevron.down").font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16).frame(minHeight: 44)
+            .background(Color.white.opacity(0.06), in: Capsule())
+            .overlay(Capsule().stroke(Theme.accent.opacity(0.5), lineWidth: 1))
         }
+        .accessibilityLabel("Dimension")
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
     }
 
     private func ring(found: [String: Date], tonight: String, selected: String, dim: String) -> some View {

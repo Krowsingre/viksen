@@ -81,3 +81,15 @@ enum AppLog {
         return "Launch v\(version) (\(build)) on \(model), \(Platform.deviceNoun) \(os)"
     }
 }
+
+/// How this copy of the app was installed.
+enum AppBuild {
+    /// A TestFlight (or development) install: its receipt is a sandbox receipt.
+    static let isTestFlight: Bool = {
+        #if DEBUG
+        return true
+        #else
+        return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        #endif
+    }()
+}
