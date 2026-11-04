@@ -73,6 +73,7 @@ struct WorldStatus {
     std::string sectionTitle;       // part of the song being heard now
     std::string sectionLabel;       // why it is playing ("You are moving")
     std::string songTitle;          // the song being heard (Dimensions can hold several)
+    std::string songLunarPhase;     // the lunar phase the playing song belongs to ("" if none)
     int songIndex = 0, songCount = 1;
     uint64_t songSwitches = 0;
     uint64_t sectionJumps = 0;

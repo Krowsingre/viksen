@@ -50,13 +50,15 @@ struct ConditionSet {
 std::optional<ConditionSet> parseConditions(const Json& j, std::string* error = nullptr);
 Json conditionsToJson(const ConditionSet& s);
 
-// ---- Lunar calendar (mean synodic month; the true phase can differ by up to
-// about half a day, which is ample for phase-of-the-night experiences).
+// ---- Lunar calendar (astronomical: Meeus; phase instants within a few minutes, UTC).
+// Each named phase is one eighth of the Moon-Sun elongation, centred on the principal
+// phases (New = 337.5..22.5 degrees, Full = 157.5..202.5 degrees).
 constexpr double kSynodicMonthDays = 29.530588853;
 
 enum class MoonPhaseName { New = 0, WaxingCrescent, FirstQuarter, WaxingGibbous, Full, WaningGibbous, LastQuarter, WaningCrescent };
 
-double moonPhase(double daysSinceUnixEpochUtc);          // [0,1): 0 new, 0.5 full
+double moonElongationDegrees(double daysSinceUnixEpochUtc); // Moon minus Sun longitude, [0,360)
+double moonPhase(double daysSinceUnixEpochUtc);          // [0,1): 0 new, 0.5 full (astronomical, UTC)
 double lunarAgeDays(double daysSinceUnixEpochUtc);       // [0, 29.53) days since new moon
 int lunarDay(double daysSinceUnixEpochUtc);              // 1..30 (day 1 starts at new moon)
 MoonPhaseName moonPhaseName(double daysSinceUnixEpochUtc); // eight named phases

@@ -433,6 +433,7 @@ WorldStatus LiveSession::worldStatus() const {
     st.hrtf = p.hrtfActive();
     st.underruns = p.underruns();
     st.adaptive = !world_->sections.empty();
+    if (world_->lunarPhase) st.songLunarPhase = moonPhaseId(*world_->lunarPhase);
     if (dimension_) {
         st.id = dimension_->id;
         st.name = dimension_->name;

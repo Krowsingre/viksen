@@ -45,6 +45,8 @@ struct WorldManifest {
     double minStayBars = 8;          // a part plays at least this long before the state can move it
     double crossfadeBeats = 1.0;     // length of the crossfade when jumping
     std::vector<WorldSection> sections;
+    // The lunar phase this song belongs to (a Dimension's eight lunar-phase songs), if any.
+    std::optional<MoonPhaseName> lunarPhase;
     std::vector<WorldStem> stems;
     std::vector<WorldRule> rules;
     ConditionSet unlock;                  // when this World becomes available (empty = always)

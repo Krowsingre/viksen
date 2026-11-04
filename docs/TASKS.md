@@ -15,7 +15,7 @@ detail: `docs/TECHNICAL_PROPOSAL.md`. Decisions: `docs/DECISIONS.md`.
 - [ ] M7 Product: lock-screen and Control Center controls; store for album Dimensions; pricing (under discussion)
 
 ## Progression (approved plan, DECISIONS #62)
-- [ ] P-1 Accurate lunar engine (UTC, phase octants) + 3-minute discovery tracker
+- [x] P-1 Accurate lunar engine (UTC, phase octants) + 3-minute discovery tracker (engine side; persistence is P-2)
 - [ ] P-2 Progress store (event log, per Dimension, union merge) + iCloud sync
 - [ ] P-3 Moon Chart (design approval first) + play discovered songs from the chart
 - [ ] P-4 Dimension Secrets (exactly 5, at least 2 hidden songs) + validator rules

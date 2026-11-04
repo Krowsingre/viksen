@@ -22,6 +22,11 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
         w.artist = j.value("artist", std::string{});
         w.tier = j.value("tier", std::string{"free"});
         w.fadeSeconds = j.value("fadeSeconds", 4.0f);
+        if (j.contains("lunarPhase")) {
+            const auto phase = moonPhaseFromId(j.value("lunarPhase", std::string{}));
+            if (!phase) return fail("unknown lunarPhase (use new, waxingCrescent, firstQuarter, waxingGibbous, full, waningGibbous, lastQuarter, waningCrescent)");
+            w.lunarPhase = *phase;
+        }
         if (j.contains("music") && j["music"].is_object()) {
             const Json& m = j["music"];
             w.tempo = m.value("tempo", 120.0);
@@ -100,7 +105,7 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
             w.unlock = *u;
         }
         w.extra = j;
-        for (const char* k : {"format", "schemaVersion", "id", "name", "artist", "tier", "fadeSeconds", "music", "stems", "rules", "unlock", "adaptive", "sections"})
+        for (const char* k : {"format", "schemaVersion", "id", "name", "artist", "tier", "fadeSeconds", "music", "stems", "rules", "unlock", "adaptive", "sections", "lunarPhase"})
             w.extra.erase(k);
         return w;
     } catch (const std::exception& e) {
@@ -114,6 +119,7 @@ Json worldToJson(const WorldManifest& w) {
     j["schemaVersion"] = 1;
     j["id"] = w.id; j["name"] = w.name; j["artist"] = w.artist; j["tier"] = w.tier;
     j["fadeSeconds"] = w.fadeSeconds;
+    if (w.lunarPhase) j["lunarPhase"] = moonPhaseId(*w.lunarPhase);
     Json loop = {{"fromSeconds", w.loopFromSeconds}};
     loop["toSeconds"] = w.loopToSeconds ? Json(*w.loopToSeconds) : Json(nullptr);
     j["music"] = {{"tempo", w.tempo}, {"key", w.key}, {"loop", loop}, {"beatsPerBar", w.beatsPerBar},

@@ -7,6 +7,7 @@ add_executable(atmos_tests
   unit/ReactiveTests.cpp
   unit/WorldTests.cpp
   unit/SectionTests.cpp
+  unit/LunarTests.cpp
   unit/SpatialTests.cpp
   unit/RecordingTests.cpp
   unit/SessionDocumentTests.cpp
