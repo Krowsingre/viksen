@@ -10,7 +10,7 @@
   <Identity Name="Krowsingre.Viksen" Publisher="CN=Krowsingre" Version="0.1.0.0" />
 
   <Properties>
-    <DisplayName>Viksen: Aural Dimensions</DisplayName>
+    <DisplayName>Viksen Dimensions</DisplayName>
     <PublisherDisplayName>Krowsingre</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>

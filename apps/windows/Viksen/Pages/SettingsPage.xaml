@@ -43,7 +43,7 @@
             <TextBlock Text="ABOUT" Style="{StaticResource VkSectionHeader}" />
             <Border Style="{StaticResource VkCardStyle}">
                 <StackPanel Spacing="6">
-                    <TextBlock Text="Viksen: Aural Dimensions" FontSize="16" />
+                    <TextBlock Text="Viksen Dimensions" FontSize="16" />
                     <TextBlock x:Name="VersionText" Opacity="0.7" />
                     <TextBlock TextWrapping="Wrap" Opacity="0.8"
                                Text="Music by Krowsingre. Spatial audio by Steam Audio (Apache-2.0, Valve). Audio I/O by miniaudio (MIT-0). JSON for Modern C++ (MIT). PFFFT (BSD-like)." />

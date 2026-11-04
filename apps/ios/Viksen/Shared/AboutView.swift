@@ -7,7 +7,7 @@ struct AboutView: View {
         NavigationStack {
             List {
                 Section {
-                    Text("Viksen shapes sound as an environment you can inhabit: enhance songs with atmosphere and spatial movement, or let the sounds around you become an evolving, reactive world.")
+                    Text("Viksen Dimensions turns music into worlds you inhabit: each Dimension follows the moon, the time of day and the world around you, in 3D around your headphones.")
                 }
                 Section("Privacy") {
                     Text("Everything runs on this \(Platform.deviceNoun). Microphone audio is processed live and never recorded, saved or uploaded. No account, no tracking.")
@@ -24,7 +24,7 @@ struct AboutView: View {
                     LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")
                 }
             }
-            .navigationTitle("About Viksen")
+            .navigationTitle("About Viksen Dimensions")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }

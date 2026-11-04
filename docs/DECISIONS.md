@@ -59,3 +59,5 @@
 | 55 | **No recording in the Viksen listener app** (protects the owner's music and any other copyrighted music playing in the room when the room is blended in). Removed from iPhone, Mac and Windows; privacy texts updated. | Owner |
 | 56 | Free/subscription split approved: free = time of day, moon phase, Moon Chart and collecting, hidden Phases, basic senses, 3D sound, simple room blend; subscription = head tracking, weather, heart rate, stay here, 3D arranging, room memory and frequency shift, album Dimensions. Subscribed users see album packs as "Included" (no buy button). | Owner |
 | 57 | Reuvo repository renamed **Krowsingre/viksen-studio**. Launch plan: Lunar Fox Spirit + two album Dimensions, then about one Dimension pack every two months. | Owner |
+| 58 | **The app is renamed "Viksen Dimensions"** (App Store name; the owner changes it in App Store Connect). The companion app is "Viksen Studio". | Owner |
+| 59 | **Discoveries belong to the Dimension being heard.** A lunar Phase discovered while listening to one Dimension unlocks only that Dimension's Phase; every Dimension's lunar journey is independent. | Owner |
