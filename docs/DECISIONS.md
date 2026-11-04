@@ -61,3 +61,6 @@
 | 57 | Reuvo repository renamed **Krowsingre/viksen-studio**. Launch plan: Lunar Fox Spirit + two album Dimensions, then about one Dimension pack every two months. | Owner |
 | 58 | **The app is renamed "Viksen Dimensions"** (App Store name; the owner changes it in App Store Connect). The companion app is "Viksen Studio". | Owner |
 | 59 | **Discoveries belong to the Dimension being heard.** A lunar Phase discovered while listening to one Dimension unlocks only that Dimension's Phase; every Dimension's lunar journey is independent. | Owner |
+| 60 | In-Dimension contextual states are called **Moods**; **Phase** means only the eight lunar phases. | Owner |
+| 61 | Launch line-up: Core + **one** album Dimension (could change with how much content each Dimension holds). Not all achievements are free; weather stays subscription-only for now. | Owner |
+| 62 | Approved: Moon Chart song plays through and returns to tonight's song (free); **3 minutes** of audible listening discovers a Phase; accurate astronomical lunar calculation (UTC); badge set (Lunar Journey, secrets, all five, global, a few milestones); "heard in" strip; user-initiated share cards with no private data; event log + iCloud union sync; obfuscated secret definitions. **Progression plan P-1…P-6 approved.** | Owner |
