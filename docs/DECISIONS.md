@@ -47,3 +47,6 @@
 | 43 | Audio delivery spec (dry mono objects, stereo beds, 48 kHz/24-bit masters, −18 LUFS staging): **tentatively approved**. Owner supplies **reference full mixes** for every song (kept only in the private assets repo). | Owner |
 | 44 | **Beat maps** approved (songs with drifting tempo still switch and trigger on the beat). | Owner |
 | 45 | Android: **not yet, but planned**. Pricing after the launch-content change: **under discussion**. | Owner |
+| 46 | Milestone order **A**: continuity (overlap, lasting tails, beat maps, graceful Dimension change) → preparation tools → living events → Phases and context v2 → 3D movement → Lunar Fox Spirit → store and lock-screen. | Owner |
+| 47 | **Viksen Studio becomes a completely separate app.** The Viksen app keeps no Studio features (already hidden); Studio purchases in this app are to be retired before launch. | Owner |
+| 48 | Pricing: "pay for the app" rejected; the name "Viksen Full" rejected; deciding between free + one-time unlock + packs and a subscription. | Owner, under discussion |
