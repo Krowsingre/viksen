@@ -6,6 +6,7 @@ import SwiftUI
 /// a count only, never a total.
 struct MoonChartView: View {
     var initialDimensionID: String?
+    var onClose: (() -> Void)? = nil
     @Environment(EngineController.self) private var engine
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -54,7 +55,7 @@ struct MoonChartView: View {
             .navigationTitle("Moon Chart")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }
+                    Button { if let onClose { onClose() } else { dismiss() } } label: { Image(systemName: "xmark") }
                         .accessibilityLabel("Close")
                 }
             }

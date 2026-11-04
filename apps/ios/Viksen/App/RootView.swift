@@ -1,50 +1,70 @@
 import SwiftUI
 
-enum AppTab: Hashable { case home, experience, studio, library }
+/// The screens. There is no tab bar (owner, 2026-11-04): everything opens from Home by
+/// swiping. Studio and Library stay hidden.
+enum AppTab: Hashable { case home, experience, moonChart, settings, studio, library }
 
-/// Tabs: Home and Dimensions (the Experience). Studio (once purchased) and Library are
-/// hidden for now by owner request; flip `showMoreTabs` to bring them back.
-/// Compact iPhones show the floating tab bar; wide (unfolded) layouts show the tabs
-/// as a sidebar (owner's concept). Settings opens from the gear.
-enum AppTabs {
-    static let showMoreTabs = false
-}
-
+/// Swipe navigation from Home:
+///   swipe left  → Dimensions        swipe right → Moon Chart
+///   swipe up    → Settings          swipe down (from the top of any page) → Home
+/// Dimensions also returns Home with a swipe right, the Moon Chart with a swipe left
+/// (both from the top band, so dragging inside a page never leaves it). VoiceOver: the
+/// escape gesture returns Home, and Home lists the pages as actions.
 struct RootView: View {
-    @Environment(Store.self) private var store
     @State private var tab: AppTab = .home
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Swipes that leave a page must start in its top band (title area).
+    private static let topBand: CGFloat = 150
 
     var body: some View {
-        TabView(selection: $tab) {
-            Tab("Home", systemImage: "house", value: AppTab.home) {
-                HomeView(selectedTab: $tab)
+        ZStack {
+            HomeView(selectedTab: $tab)
+                .accessibilityHidden(tab != .home && tab != .settings)
+            if tab == .experience {
+                page { ExperienceView() }
+                    .transition(.move(edge: .trailing))
             }
-            Tab("Dimensions", systemImage: "square.stack.3d.up", value: AppTab.experience) {
-                ExperienceView()
-            }
-            if AppTabs.showMoreTabs && store.tier >= .studio {
-                Tab("Studio", systemImage: "slider.horizontal.3", value: AppTab.studio) {
-                    StudioView()
-                }
-            }
-            if AppTabs.showMoreTabs {
-                Tab("Library", systemImage: "books.vertical", value: AppTab.library) {
-                    LibraryView()
-                }
+            if tab == .moonChart {
+                page { MoonChartView(onClose: { go(.home) }) }
+                    .transition(.move(edge: .leading))
             }
         }
-        .tabViewStyle(.sidebarAdaptable)
-        // Swipe right from the left edge of any screen to return Home.
+        .sheet(isPresented: Binding(get: { tab == .settings }, set: { if !$0 && tab == .settings { tab = .home } })) {
+            SettingsView()
+        }
         .simultaneousGesture(
-            DragGesture(minimumDistance: 24, coordinateSpace: .global)
-                .onEnded { g in
-                    guard tab != .home, g.startLocation.x < 28,
-                          g.translation.width > 90, abs(g.translation.height) < 80 else { return }
-                    withAnimation(.easeInOut(duration: 0.25)) { tab = .home }
-                }
+            DragGesture(minimumDistance: 30, coordinateSpace: .global).onEnded(swiped)
         )
-        .onChange(of: store.tier) { _, tier in
-            if tier < .studio && tab == .studio { tab = .home }
+    }
+
+    private func page<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        content()
+            .background(Theme.background.ignoresSafeArea())
+            .zIndex(1)
+            .accessibilityAction(.escape) { go(.home) }
+    }
+
+    private func go(_ t: AppTab) {
+        withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.38, dampingFraction: 0.9)) { tab = t }
+    }
+
+    private func swiped(_ g: DragGesture.Value) {
+        let dx = g.translation.width, dy = g.translation.height
+        let horizontal = abs(dx) > 80 && abs(dx) > 1.5 * abs(dy)
+        let vertical = abs(dy) > 100 && abs(dy) > 1.5 * abs(dx)
+        let fromTop = g.startLocation.y < Self.topBand
+        switch tab {
+        case .home:
+            if horizontal { go(dx < 0 ? .experience : .moonChart) }
+            else if vertical && dy < 0 { go(.settings) }
+        case .experience:
+            // The left edge is the system's back swipe inside a Dimension's page.
+            if fromTop && ((vertical && dy > 0) || (horizontal && dx > 0 && g.startLocation.x > 30)) { go(.home) }
+        case .moonChart:
+            if (fromTop && vertical && dy > 0) || (horizontal && dx < 0) { go(.home) }
+        default:
+            break
         }
     }
 }

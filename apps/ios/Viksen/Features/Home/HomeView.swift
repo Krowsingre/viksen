@@ -8,9 +8,6 @@ struct HomeView: View {
     @Binding var selectedTab: AppTab
     @Environment(EngineController.self) private var engine
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @State private var showSettings = false
-    @State private var showMoonChart = false
-    @State private var page = 0
 
     private var wide: Bool { sizeClass == .regular }
 
@@ -31,30 +28,20 @@ struct HomeView: View {
                     continueCards
                         .frame(maxWidth: wide ? 640 : .infinity)
                         .padding(.horizontal, wide ? 48 : 20)
-                    if continueItems.count > 1 { pageDots.padding(.top, 10) }
                     Spacer(minLength: wide ? 24 : 12)
                 }
                 .frame(maxWidth: .infinity)
             }
         }
-        .overlay(alignment: .topTrailing) {
-            Button { showSettings = true } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.title3.weight(.light))
-                    .foregroundStyle(Color(red: 0.86, green: 0.80, blue: 1))
-                    .frame(width: 48, height: 48)
-                    .background(Color.black.opacity(0.25), in: Circle())
-                    .overlay(Circle().stroke(Color(red: 0.80, green: 0.70, blue: 1).opacity(0.5), lineWidth: 1))
-                    .shadow(color: Theme.accentGlow.opacity(0.5), radius: 8)
-            }
-            .padding(.trailing, 18)
-            .padding(.top, 4)
-            .accessibilityLabel("Menu")
-        }
-        .sheet(isPresented: $showSettings) { SettingsView() }
-        .sheet(isPresented: $showMoonChart) { MoonChartView() }
+        .accessibilityAction(named: "Dimensions") { selectedTab = .experience }
+        .accessibilityAction(named: "Moon Chart") { selectedTab = .moonChart }
+        .accessibilityAction(named: "Settings") { selectedTab = .settings }
         .preferredColorScheme(.dark)
         .onAppear { engine.refreshWorlds() }
+    }
+
+    private func go(_ t: AppTab) {
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.9)) { selectedTab = t }
     }
 
     // MARK: Wordmark
@@ -112,9 +99,9 @@ struct HomeView: View {
 
     private func foxButton(size: CGFloat) -> some View {
         Button {
-            if inDimension { selectedTab = .experience }
-            else if let w = enterTarget { engine.enterWorld(w) }
-            else { selectedTab = .experience }   // nothing downloaded yet: choose one
+            if inDimension { engine.leaveWorld() }                 // the waveform fox stops the music
+            else if let w = enterTarget { engine.enterWorld(w) }   // the play fox starts it
+            else { go(.experience) }                               // nothing downloaded yet: choose one
         } label: {
             ZStack {
                 Image(inDimension ? "FoxEmpty" : "FoxPlay").resizable().scaledToFit()
@@ -128,7 +115,7 @@ struct HomeView: View {
             .contentShape(Circle().scale(0.5))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(inDimension ? "Open \(engine.worldStatus.name)" : (enterTarget.map { "Enter \($0.name)" } ?? "Choose a Dimension"))
+        .accessibilityLabel(inDimension ? "Stop \(engine.worldStatus.name)" : (enterTarget.map { "Play \($0.name)" } ?? "Choose a Dimension"))
     }
 
     // MARK: Enter Dimension
@@ -154,22 +141,17 @@ struct HomeView: View {
     @ViewBuilder private var continueCards: some View {
         let items = continueItems
         if items.isEmpty {
-            Button { selectedTab = .experience } label: {
+            Button { go(.experience) } label: {
                 card(art: nil, title: "Choose your first Dimension", subtitle: "Download one to begin", progress: nil, wideTime: nil)
             }
             .buttonStyle(.plain)
         } else {
-            TabView(selection: $page) {
-                ForEach(Array(items.enumerated()), id: \.element.worldID) { index, w in
-                    Button { selectedTab = .experience; if !(engine.worldStatus.worldID == w.worldID && engine.worldStatus.playing) { engine.enterWorld(w) } } label: {
-                        cardFor(w)
-                    }
-                    .buttonStyle(.plain)
-                    .tag(index)
-                }
+            // One card (the current or last Dimension): sideways swipes on Home change page.
+            let w = items[0]
+            Button { if !(engine.worldStatus.worldID == w.worldID && engine.worldStatus.playing) { engine.enterWorld(w) } } label: {
+                cardFor(w)
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 128)
+            .buttonStyle(.plain)
         }
     }
 
@@ -222,19 +204,10 @@ struct HomeView: View {
         .contentShape(RoundedRectangle(cornerRadius: 24))
     }
 
-    private var pageDots: some View {
-        HStack(spacing: 10) {
-            ForEach(0..<continueItems.count, id: \.self) { i in
-                Circle().fill(i == page ? Color.white : Color.white.opacity(0.3)).frame(width: 6, height: 6)
-            }
-        }
-        .accessibilityHidden(true)
-    }
-
     // MARK: Moon
 
     private var moon: some View {
-        Button { showMoonChart = true } label: { moonLine }
+        Button { go(.moonChart) } label: { moonLine }
             .buttonStyle(.plain)
             .accessibilityHint("Opens the Moon Chart")
     }
@@ -271,7 +244,7 @@ struct HomeView: View {
             Text("Restore your last session? The microphone stays off until you turn it on.")
                 .font(.caption).foregroundStyle(.white.opacity(0.7))
             HStack {
-                Button("Restore") { engine.restoreAutosave(); selectedTab = .experience }
+                Button("Restore") { engine.restoreAutosave(); go(.experience) }
                     .buttonStyle(.borderedProminent)
                 Button("Not now") { engine.dismissRestore() }
                     .buttonStyle(.bordered)
