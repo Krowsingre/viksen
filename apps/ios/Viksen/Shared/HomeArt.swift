@@ -30,7 +30,7 @@ struct MoonRingPulse: View {
 
     private static let centres: [String: (x: CGFloat, y: CGFloat, r: CGFloat)] = [
         "new": (660, 184, 96), "waxingCrescent": (970, 300, 96), "firstQuarter": (1080, 600, 96),
-        "waxingGibbous": (966, 876, 96), "full": (660, 1000, 108), "waningGibbous": (340, 876, 96),
+        "waxingGibbous": (962, 874, 97), "full": (660, 1000, 108), "waningGibbous": (342, 878, 97),
         "lastQuarter": (230, 596, 96), "waningCrescent": (340, 300, 96),
     ]
 
@@ -88,5 +88,30 @@ struct LiveWaveform: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+/// The play triangle in the fox's button, drawn to match the art's glow.
+struct PlayGlyph: View {
+    var body: some View {
+        Triangle()
+            .fill(LinearGradient(colors: [.white, Color(red: 1, green: 0.80, blue: 0.93)], startPoint: .top, endPoint: .bottom))
+            .shadow(color: Color(red: 1, green: 0.7, blue: 0.95).opacity(0.9), radius: 5)
+            .accessibilityHidden(true)
+    }
+
+    private struct Triangle: Shape {
+        func path(in r: CGRect) -> Path {
+            var p = Path()
+            let k = r.width * 0.12   // rounded corners
+            p.move(to: CGPoint(x: r.minX + k * 0.3, y: r.minY + k))
+            p.addQuadCurve(to: CGPoint(x: r.minX + k, y: r.minY + k * 0.35), control: CGPoint(x: r.minX, y: r.minY))
+            p.addLine(to: CGPoint(x: r.maxX - k * 0.6, y: r.midY - k * 0.5))
+            p.addQuadCurve(to: CGPoint(x: r.maxX - k * 0.6, y: r.midY + k * 0.5), control: CGPoint(x: r.maxX + k * 0.2, y: r.midY))
+            p.addLine(to: CGPoint(x: r.minX + k, y: r.maxY - k * 0.35))
+            p.addQuadCurve(to: CGPoint(x: r.minX + k * 0.3, y: r.maxY - k), control: CGPoint(x: r.minX, y: r.maxY))
+            p.closeSubpath()
+            return p
+        }
     }
 }

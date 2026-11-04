@@ -117,12 +117,19 @@ struct HomeView: View {
             else { go(.experience) }                               // nothing downloaded yet: choose one
         } label: {
             ZStack {
-                Image(inDimension ? "FoxEmpty" : "FoxPlay").resizable().scaledToFit()
-                if inDimension {
-                    LiveWaveform(level: Double(max(engine.meters.outputPeakLeft, engine.meters.outputPeakRight)))
-                        .frame(width: size * 0.088, height: size * 0.072)
-                        .position(x: size * 491 / 1024, y: size * 535 / 1024)
+                // One fox for both states (the circle is empty in the art): a play
+                // triangle when idle, a live waveform while a Dimension plays.
+                Image("FoxEmpty").resizable().scaledToFit()
+                Group {
+                    if inDimension {
+                        LiveWaveform(level: Double(max(engine.meters.outputPeakLeft, engine.meters.outputPeakRight)))
+                            .frame(width: size * 0.088, height: size * 0.072)
+                    } else {
+                        PlayGlyph().frame(width: size * 0.052, height: size * 0.058)
+                            .offset(x: size * 0.006)   // optical centre of a triangle
+                    }
                 }
+                .position(x: size * 491 / 1024, y: size * 535 / 1024)
             }
             .frame(width: size, height: size)
             .contentShape(Circle().scale(0.5))

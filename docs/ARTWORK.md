@@ -1,9 +1,10 @@
 # Artwork
 
 Home uses the owner's art (decision #71): `HomeSky` (night sky), `MoonRing` (the eight
-moons; tonight's is made to pulse in code), `FoxPlay` (fox with play button) and
-`FoxEmpty` (the same fox with the button's circle emptied, so the app draws a live
-waveform in it while playing). Until artwork is supplied, the Dimension cards use a
+moons; tonight's is made to pulse in code; the two gibbous moons were corrected so every
+phase is lit on the right side) and `FoxEmpty` (the waveform fox with the button's circle
+emptied; the app draws the play triangle or the live waveform in it, so both states are
+the same fox). Until artwork is supplied, the Dimension cards use a
 scene drawn in code (`Shared/DimensionArt.swift`).
 Owner artwork replaces it automatically:
 
