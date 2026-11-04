@@ -50,3 +50,9 @@
 | 46 | Milestone order **A**: continuity (overlap, lasting tails, beat maps, graceful Dimension change) → preparation tools → living events → Phases and context v2 → 3D movement → Lunar Fox Spirit → store and lock-screen. | Owner |
 | 47 | **Viksen Studio becomes a completely separate app.** The Viksen app keeps no Studio features (already hidden); Studio purchases in this app are to be retired before launch. | Owner |
 | 48 | Pricing: "pay for the app" rejected; the name "Viksen Full" rejected; deciding between free + one-time unlock + packs and a subscription. | Owner, under discussion |
+| 49 | **Reuvo folds into the separate Studio app, renamed "Viksen Studio"** (stem separation + song-to-Dimension preparation). | Owner |
+| 50 | Approved: **Moon Chart** (lunar wheel of the eight Phases), **discovering a Phase** by living through its real moon (then playable from the chart any time), **hidden Phases**. | Owner |
+| 51 | Everything is tied to the listener's **Apple ID**: purchases restorable any time (StoreKit), discoveries and settings synced through iCloud (no Viksen account). | Owner |
+| 52 | Pricing: **blend** — free core; a subscription including features and album Dimensions; album packs sold to own forever. Some **special Dimensions may be excluded** from the subscription (sold only). | Owner |
+| 53 | **Stay here** keeps the current track; the track still reacts to context inside itself. | Owner |
+| 54 | Free tier includes time of day, moon phase, collecting Phases, basic senses (final free list pending). Recording is a Studio feature (pending confirmation). | Owner, pending |
