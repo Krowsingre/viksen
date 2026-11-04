@@ -6,6 +6,7 @@
 #include <string>
 
 #include "core/progress/DiscoveryTracker.h"
+#include "core/progress/ProgressLog.h"
 #include "core/worlds/WorldConditions.h"
 #include "core/worlds/WorldManifest.h"
 #include "tests/TestHarness.h"
@@ -118,4 +119,56 @@ TEST_CASE("worlds/songs carry an optional lunar phase") {
     CHECK(back->lunarPhase == w->lunarPhase);
     j["lunarPhase"] = "blue";
     CHECK(!parseWorld(j).has_value());
+}
+
+
+TEST_CASE("worlds/progress log: idempotent, per Dimension, union merge keeps the earliest time") {
+    ProgressLog a, b;
+    auto phase = [](const char* dim, const char* p, double at) { return ProgressEvent{ProgressKind::PhaseDiscovered, dim, p, at}; };
+    CHECK(a.add(phase("core", "full", 100)));
+    CHECK(!a.add(phase("core", "full", 200)));                // repeat: not new, earliest time kept
+    CHECK(a.add(phase("albumA", "full", 150)));               // same phase, other Dimension: separate
+    CHECK(a.discoveredPhases("core").size() == 1);
+    CHECK(a.discoveredPhases("albumA").size() == 1);
+    CHECK(a.discoveredPhases("albumB").empty());
+    // Another device discovered the same Full Moon earlier, plus a New Moon.
+    CHECK(b.add(phase("core", "full", 90)));
+    CHECK(b.add(phase("core", "new", 120)));
+    CHECK(a.merge(b) == 1);                                   // only the New Moon is new
+    CHECK(b.merge(a) == 1);                                   // and albumA reaches b
+    CHECK(a.size() == b.size());
+    for (const auto& e : a.events()) if (e.id() == "phase:core:full") CHECK(e.atDaysUtc == 90.0);
+    // Merging again changes nothing (no duplicates).
+    CHECK(a.merge(b) == 0);
+    // Survives a round trip; malformed entries are skipped.
+    Json j = a.toJson();
+    j["events"].push_back({{"kind", "phase"}, {"dimension", "core"}, {"subject", "blue-moon"}, {"at", 1}});
+    j["events"].push_back({{"kind", "unknown"}, {"dimension", "core"}, {"subject", "x"}, {"at", 1}});
+    auto back = ProgressLog::fromJson(j);
+    CHECK(back.size() == a.size());
+}
+
+TEST_CASE("worlds/progress log: lunar journey, five secrets, global secrets without totals") {
+    ProgressLog log;
+    const char* phases[] = {"new", "waxingCrescent", "firstQuarter", "waxingGibbous", "full", "waningGibbous", "lastQuarter"};
+    double t = 10;
+    for (auto p : phases) log.add({ProgressKind::PhaseDiscovered, "core", p, t++});
+    CHECK(!log.lunarJourneyComplete("core"));
+    CHECK(log.dimensionSecretsFound("core") == 0);
+    log.add({ProgressKind::PhaseDiscovered, "core", "waningCrescent", 50});
+    CHECK(log.lunarJourneyComplete("core"));
+    CHECK(*log.lunarJourneyCompletedAt("core") == 50.0);   // when the 8th phase was found
+    CHECK(!log.lunarJourneyComplete("albumA"));            // never transferred
+    CHECK(!log.allDimensionSecretsFound("core"));          // journey complete does not mean all secrets
+    for (int i = 0; i < 5; ++i) log.add({ProgressKind::DimensionSecret, "core", "s" + std::to_string(i), 60.0 + i});
+    CHECK(log.dimensionSecretsFound("core") == 5);
+    CHECK(log.allDimensionSecretsFound("core"));
+    CHECK(log.dimensionSecretsFound("albumA") == 0);
+    // Global secrets have no Dimension and no total.
+    log.add({ProgressKind::GlobalSecret, "core", "g-moonrise", 70});   // a dimension given by mistake is dropped
+    log.add({ProgressKind::GlobalSecret, "", "g-moonrise", 80});
+    CHECK(log.globalSecretsFound() == 1);
+    // Invalid events are refused.
+    CHECK(!log.add({ProgressKind::PhaseDiscovered, "", "full", 1}));
+    CHECK(!log.add({ProgressKind::DimensionSecret, "core", "", 1}));
 }

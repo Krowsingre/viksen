@@ -16,7 +16,7 @@ detail: `docs/TECHNICAL_PROPOSAL.md`. Decisions: `docs/DECISIONS.md`.
 
 ## Progression (approved plan, DECISIONS #62)
 - [x] P-1 Accurate lunar engine (UTC, phase octants) + 3-minute discovery tracker (engine side; persistence is P-2)
-- [ ] P-2 Progress store (event log, per Dimension, union merge) + iCloud sync
+- [ ] P-2 Progress store (event log, per Dimension, union merge) + iCloud sync — engine log + merge done; Swift persistence + iCloud KVS next (needs iCloud capability on the App ID)
 - [ ] P-3 Moon Chart (design approval first) + play discovered songs from the chart
 - [ ] P-4 Dimension Secrets (exactly 5, at least 2 hidden songs) + validator rules
 - [ ] P-5 Global Secrets (own namespace, totals never shown)
