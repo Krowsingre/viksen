@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       dimensions:
-        description: "Dimension ids to upload (space separated; each track is its own pack); empty = all"
+        description: "Dimension ids to upload (space separated; one pack per Dimension); empty = all"
         required: false
         default: ""
       dry_run:
@@ -46,8 +46,7 @@ jobs:
             [ -f "$manifest" ] || { echo "::warning::$id has no world.json in the app; skipped"; continue; }
             mkdir -p "$root/Dimensions/$id"
             cp "$dir"*.m4a "$root/Dimensions/$id/"
-            # One on-demand pack per track: "<dimension>" for single-song Dimensions,
-            # "<dimension>--<song>" for each song of a multi-song Dimension.
+            # One on-demand pack per Dimension (its id), holding every song.
             python3 tools/asset_pack_manifests.py "$manifest" "$root" > "$RUNNER_TEMP/$id.packs"
             while read -r pack; do
               (cd "$root" && xcrun ba-package "$pack.manifest.json" -o "$out/$pack.aar")

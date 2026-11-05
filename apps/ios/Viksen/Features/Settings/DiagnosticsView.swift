@@ -21,6 +21,7 @@ struct DiagnosticsView: View {
                     Text("TestFlight only. Lets the Moon Chart's 3-minute counter run with songs that are not lunar songs yet, so it can be tested. Discoveries made this way are real and stay in your progress.")
                 }
             }
+            AudioRouteSection()
             Section("Recent events") {
                 if lines.isEmpty { Text("No events yet").foregroundStyle(.secondary) }
                 ForEach(Array(lines.reversed().enumerated()), id: \.offset) { _, line in
@@ -35,4 +36,28 @@ struct DiagnosticsView: View {
             Button("Clear", role: .destructive) { AppLog.clear(); lines = [] }
         }
     }
+}
+
+/// The current audio route (what iOS reports) and dropouts.
+private struct AudioRouteSection: View {
+    @Environment(EngineController.self) private var engine
+
+    var body: some View {
+        Section {
+            LabeledContent("Output", value: engine.route.outputName)
+            LabeledContent("Input", value: engine.route.inputName)
+            LabeledContent("Engine sample rate", value: String(format: "%.0f Hz", engine.sampleRate))
+            LabeledContent("I/O buffer", value: String(format: "%.1f ms", engine.route.ioBufferDuration * 1000))
+            LabeledContent("Reported round trip",
+                           value: String(format: "%.1f ms", (engine.route.reportedInputLatency + engine.route.reportedOutputLatency + 2 * engine.route.ioBufferDuration) * 1000))
+            UnderrunsRow()
+        } header: { Text("Audio route") } footer: {
+            Text("What iOS reports for the current route, not a measurement. Bluetooth adds delay the system may not report.")
+        }
+    }
+}
+
+private struct UnderrunsRow: View {
+    @Environment(EngineController.self) private var engine
+    var body: some View { LabeledContent("Underruns", value: "\(engine.meters.underruns)") }
 }

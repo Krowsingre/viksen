@@ -6,9 +6,8 @@ import Foundation
 /// else is playing, and it mixes with other sound. It fades away when a Dimension starts,
 /// returns when the Dimension is stopped, and keeps playing when the app is minimised.
 ///
-/// Three 8-bar loops at 80 BPM: B is home and always opens. At each loop boundary A may
-/// come in (about 1 in 8) or, more rarely, C (about 1 in 25); either stays for 4–6 loops,
-/// then B returns. Each loop file carries the bar that follows it, so every next loop
+/// Three 8-bar loops at 80 BPM: B is home and always opens. Over a long listen B plays
+/// about 50 % of the time, A 35 % and C 15 %; A or C stays 4–6 loops, then B returns. Each loop file carries the bar that follows it, so every next loop
 /// (the same or another) crossfades out of the one before over one bar, on the beat.
 @MainActor
 final class ThresholdSound {
@@ -129,8 +128,8 @@ final class ThresholdSound {
     }
 }
 
-/// Which loop plays next: B by default; A (about 1 in 8) or C (about 1 in 25) may take
-/// over for 4–6 loops, then B returns. The opening loop is always B.
+/// Which loop plays next: B by default; A (14 % per B loop) or C (6 %) take over for 4–6
+/// loops, then B returns (B 50 %, A 35 %, C 15 % of the time). The opening loop is always B.
 struct LoopChooser {
     private(set) var current: ThresholdSound.Loop = .b
     private var remaining = 0
@@ -143,8 +142,10 @@ struct LoopChooser {
             current = .b
             return .b
         }
+        // Long-run share of time (owner, 2026-11-05): B 50 %, A 35 %, C 15 %. With A and C
+        // staying 5 loops on average, entering them at 14 % and 6 % per B loop gives that.
         let r = Double.random(in: 0..<1)
-        if r < 0.04 { current = .c } else if r < 0.16 { current = .a } else { return .b }
+        if r < 0.06 { current = .c } else if r < 0.20 { current = .a } else { return .b }
         remaining = Int.random(in: 4...6)
         return current
     }

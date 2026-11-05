@@ -97,11 +97,13 @@ private struct HomeFoxRing: View {
     @Environment(EngineController.self) private var engine
     @Environment(AppNavigator.self) private var nav
 
-    /// The Dimension the play fox starts: the last one entered, else the first playable.
+    /// The Dimension the play fox starts: the one on the Home card, else Viksen.
     private var target: AtmosWorldInfo? {
+        let chosen = engine.worlds.first { $0.worldID == engine.lastDimensionID }
+        if let chosen, engine.isPlayable(chosen) { return chosen }
+        if chosen != nil { return nil }   // chosen but not downloaded: the fox opens Dimensions
         let playable = engine.worlds.filter(engine.isPlayable)
-        return playable.first { $0.worldID == engine.lastDimensionID }
-            ?? playable.first { $0.worldID == EngineController.coreDimensionID } ?? playable.first
+        return playable.first { $0.worldID == EngineController.coreDimensionID } ?? playable.first
     }
 
     var body: some View {
@@ -218,22 +220,48 @@ private struct ContextLine: View {
 /// row opens Apple Music.
 private struct NowPlayingCard: View {
     @Environment(EngineController.self) private var engine
+    @Environment(Store.self) private var store
+
+    var body: some View {
+        // Swipe through unlocked Dimensions (owner, 2026-11-05): only once at least one
+        // besides the built-in Viksen is unlocked. The card shown is what the fox plays.
+        let unlocked = engine.worlds.filter { DimensionAccess.required($0) <= store.tier }
+            .sorted { ($0.worldID == EngineController.coreDimensionID ? 0 : 1) < ($1.worldID == EngineController.coreDimensionID ? 0 : 1) }
+        let core = unlocked.first { $0.worldID == EngineController.coreDimensionID } ?? unlocked.first
+        if unlocked.count > 1 {
+            TabView(selection: Binding(get: { engine.lastDimensionID ?? core?.worldID ?? "" },
+                                       set: { engine.selectDimension($0) })) {
+                ForEach(unlocked, id: \.worldID) { w in
+                    DimensionCard(world: w).padding(.horizontal, 2).tag(w.worldID)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .always))
+            .frame(height: 196)
+        } else {
+            DimensionCard(world: core)
+        }
+    }
+}
+
+/// One Dimension's card: art, label, title, progress and the album link.
+private struct DimensionCard: View {
+    let world: AtmosWorldInfo?
+    @Environment(EngineController.self) private var engine
     @Environment(AppNavigator.self) private var nav
     private let lavender = HomeView.lavender
 
     var body: some View {
         let st = engine.worldStatus
-        let active = st.loaded && st.worldID != "studio"
-        let dimension = engine.worlds.first { $0.worldID == (active ? st.worldID : engine.lastDimensionID) }
+        let active = world != nil && st.loaded && st.worldID == world?.worldID
         VStack(spacing: 0) {
             Button { nav.go(.experience) } label: {
                 HStack(spacing: 16) {
-                    DimensionThumbnail(dimensionID: dimension?.worldID)
+                    DimensionThumbnail(dimensionID: world?.worldID)
                         .frame(width: 84, height: 84)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(lavender.opacity(0.3), lineWidth: 1))
-                    if let dimension {
-                        CardProgress(dimensionID: dimension.worldID, dimensionName: dimension.name, active: active)
+                    if let world {
+                        CardProgress(dimensionID: world.worldID, dimensionName: world.name, active: active)
                     } else {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("BEGIN").font(.system(size: 11, design: .serif)).tracking(2.5).foregroundStyle(lavender.opacity(0.75))
@@ -246,9 +274,9 @@ private struct NowPlayingCard: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            if let dimension, !dimension.album.isEmpty {
+            if let world, !world.album.isEmpty {
                 Rectangle().fill(lavender.opacity(0.18)).frame(height: 0.6).padding(.horizontal, 16)
-                AlbumRow(world: dimension)
+                AlbumRow(world: world)
             }
         }
         .background(Color(red: 0.12, green: 0.07, blue: 0.20).opacity(0.55), in: RoundedRectangle(cornerRadius: 26))

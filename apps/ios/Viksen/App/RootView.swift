@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The screens. There is no tab bar and no swiping (owner, 2026-11-04): a menu button
-/// opens a side menu with every screen. Studio and Library stay hidden.
-enum AppTab: Hashable { case home, experience, moonChart, settings, studio, library }
+/// The screens. No tab bar: the menu button on Home opens a side menu (Moon Chart,
+/// Dimensions, Settings); every other page closes back to Home.
+enum AppTab: Hashable { case home, experience, moonChart, settings }
 
 /// Where the app is, shared by the side menu and the pages.
 @MainActor
@@ -92,10 +92,10 @@ struct SideMenu: View {
     @Environment(AppNavigator.self) private var nav
     private static let lavender = Color(red: 0.90, green: 0.86, blue: 1)
 
+    // Every page closes back to Home, so Home is not in the menu (owner, 2026-11-05).
     private let items: [(AppTab, String, String)] = [
-        (.home, "Home", "house"),
-        (.experience, "Dimensions", "square.stack.3d.up"),
         (.moonChart, "Moon Chart", "moonphase.waxing.gibbous"),
+        (.experience, "Dimensions", "square.stack.3d.up"),
         (.settings, "Settings", "gearshape"),
     ]
 

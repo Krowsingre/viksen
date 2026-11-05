@@ -508,12 +508,12 @@ final class EngineController {
 
     func refreshWorlds() {
         worlds = bridge.availableWorlds()
+        // Whole Dimensions download as one pack (owner, 2026-11-05): its songs are found by
+        // listening, not chosen. The pack id is the Dimension id.
         for w in worlds where !w.userMade {
-            let tracks = bridge.songs(forWorld: w.worldID).compactMap { s -> DimensionDownloads.Track? in
-                guard let id = s["id"] as? String, let title = s["title"] as? String, let files = s["files"] as? [String] else { return nil }
-                return DimensionDownloads.Track(id: id, dimensionID: w.worldID, title: title, files: files)
-            }
-            downloads.setTracks(tracks, for: w.worldID)
+            let files = bridge.songs(forWorld: w.worldID).flatMap { ($0["files"] as? [String]) ?? [] }
+            downloads.setTracks([DimensionDownloads.Track(id: w.worldID, dimensionID: w.worldID, title: w.name, files: files)],
+                                for: w.worldID)
         }
         downloads.refresh(bundled: Set(worlds.filter(\.audioAvailable).map(\.worldID)))
     }
@@ -805,6 +805,13 @@ final class EngineController {
     /// Enters a World: loads its music, starts audio if needed and fades it in.
     /// The Dimension the listener entered last (Home's "Enter Dimension" returns to it).
     private(set) var lastDimensionID: String? = UserDefaults.standard.string(forKey: "lastDimension")
+
+    /// The Dimension chosen on the Home card (what the play fox starts).
+    func selectDimension(_ id: String) {
+        guard id != lastDimensionID else { return }
+        lastDimensionID = id
+        UserDefaults.standard.set(id, forKey: "lastDimension")
+    }
 
     /// True when a Dimension's audio is on this device.
     func isPlayable(_ world: AtmosWorldInfo) -> Bool {

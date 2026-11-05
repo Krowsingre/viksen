@@ -55,6 +55,20 @@ final class DimensionDownloads {
         tracks(dimensionID).contains { if case .downloading = state($0.id) { return true }; return false }
     }
     func bytes(_ dimensionID: String) -> Int64 { tracks(dimensionID).compactMap { sizes[$0.id] }.reduce(0, +) }
+    /// Download progress of a Dimension (0...1).
+    func progress(_ dimensionID: String) -> Double {
+        let ts = tracks(dimensionID)
+        guard !ts.isEmpty else { return 0 }
+        return ts.map { t -> Double in
+            switch state(t.id) { case .installed: 1; case .downloading(let p): p; default: 0 }
+        }.reduce(0, +) / Double(ts.count)
+    }
+    /// Why a Dimension's download failed, if it did.
+    func failure(_ dimensionID: String) -> String? {
+        for t in tracks(dimensionID) { if case .failed(let why) = state(t.id) { return why } }
+        return nil
+    }
+    func cancelAll(_ dimensionID: String) { for t in tracks(dimensionID) { cancel(t) } }
 
     /// Local URLs of every downloaded track's audio in a Dimension (file name -> URL).
     func audioFiles(_ dimensionID: String) -> [String: URL]? {

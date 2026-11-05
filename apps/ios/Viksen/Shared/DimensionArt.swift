@@ -177,13 +177,23 @@ struct DimensionThumbnail: View {
         }
     }
 
-    static func artwork(_ id: String) -> Image? {
-        guard let worlds = Bundle.main.url(forResource: "Worlds", withExtension: nil) else { return nil }
-        for name in ["art.jpg", "art.png"] {
-            let url = worlds.appendingPathComponent(id).appendingPathComponent(name)
-            if let image = UIImageCompat.file(url) { return image }
+    /// The Viksen Dimension's badge is the app icon art (owner, 2026-11-05); others use
+    /// their folder's art.jpg/png. Looked up once, then cached (not read on every redraw).
+    @MainActor private static var cache: [String: Image?] = [:]
+
+    @MainActor static func artwork(_ id: String) -> Image? {
+        if let hit = cache[id] { return hit }
+        var found: Image?
+        if id == "viksen" {
+            found = Image("ViksenBadge")
+        } else if let worlds = Bundle.main.url(forResource: "Worlds", withExtension: nil) {
+            for name in ["art.jpg", "art.png"] {
+                let url = worlds.appendingPathComponent(id).appendingPathComponent(name)
+                if let image = UIImageCompat.file(url) { found = image; break }
+            }
         }
-        return nil
+        cache[id] = found
+        return found
     }
 }
 

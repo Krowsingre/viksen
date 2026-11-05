@@ -1,15 +1,155 @@
 import SwiftUI
 
+/// Settings (owner's plan, 2026-11-05): a short list of sub-pages. Membership holds the
+/// tier and the subscription; everything about sound, the senses, the moon, the look,
+/// privacy and help has its own page.
 struct SettingsView: View {
-    @Environment(EngineController.self) private var engine
-    @AppStorage("appearance") private var appearance: Appearance = .dark
     @Environment(\.dismiss) private var dismiss
-    @AppStorage(ThresholdSound.settingKey) private var openingSound = false
+    @Environment(Store.self) private var store
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    NavigationLink { MembershipPage() } label: {
+                        LabeledContent { Text(store.tier == .free ? "Free" : "Subscriber") } label: {
+                            Label("Membership", systemImage: "crown")
+                        }
+                    }
+                }
+                Section {
+                    NavigationLink { SoundPage() } label: { Label("Sound", systemImage: "speaker.wave.2") }
+                    NavigationLink { SensesPage() } label: { Label("Senses", systemImage: "sensor") }
+                    NavigationLink { MoonPage() } label: { Label("The Moon", systemImage: "moon") }
+                    NavigationLink { AppearancePage() } label: { Label("Appearance", systemImage: "paintbrush") }
+                }
+                Section {
+                    NavigationLink { PrivacyPage() } label: { Label("Privacy", systemImage: "hand.raised") }
+                    NavigationLink { AboutPage() } label: { Label("About & Help", systemImage: "info.circle") }
+                    NavigationLink { DiagnosticsView() } label: { Label("Diagnostics", systemImage: "stethoscope") }
+                }
+            }
+            .navigationTitle("Settings")
+            .toolbar { ToolbarItem(placement: .confirmationAction) { CloseButton(compact: true) { dismiss() } } }
+        }
+    }
+}
+
+// MARK: Membership
+
+/// The tier, what it includes, subscribing, and restoring purchases. Single Dimensions
+/// are bought from their own page under Dimensions.
+struct MembershipPage: View {
     @Environment(Store.self) private var store
     @State private var showPaywall = false
 
+    var body: some View {
+        List {
+            Section {
+                LabeledContent("Your membership", value: store.tier == .free ? "Free" : store.tier.title)
+            } footer: {
+                Text(store.tier == .free
+                     ? "Free includes the Viksen Dimension, the time of day, the moon, the Moon Chart and the basic senses."
+                     : "Your subscription includes every Dimension except special editions, and all the senses.")
+            }
+            Section {
+                if store.tier == .free {
+                    Button("Subscribe…") { showPaywall = true }
+                } else if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                    Link("Manage subscription", destination: url)
+                }
+                Button("Restore Purchases") { Task { await store.restore() } }
+            } footer: {
+                Text("Purchases belong to your Apple Account, so they come back on any of your devices with Restore Purchases.")
+            }
+        }
+        .navigationTitle("Membership")
+        .sheet(isPresented: $showPaywall) { PaywallView() }
+    }
+}
+
+// MARK: Sound
+
+struct SoundPage: View {
+    @Environment(EngineController.self) private var engine
+    @AppStorage(ThresholdSound.settingKey) private var openingSound = false
+
+    var body: some View {
+        @Bindable var engine = engine
+        List {
+            Section {
+                Toggle("3D audio", isOn: $engine.dimension3D)
+                Toggle("Adaptive music", isOn: $engine.adaptiveOnHeadphones)
+            } header: { Text("With headphones") }
+            Section {
+                Toggle("3D audio", isOn: $engine.spatialOnSpeaker)
+                Toggle("Adaptive music", isOn: $engine.adaptiveOnSpeaker)
+            } header: { Text("On the \(Platform.deviceNoun)'s speaker") } footer: {
+                Text("Adaptive music moves each song between its parts and shapes its mix with the moment: time, the moon, movement and heart rate (and, with headphones, how quiet or loud it is around you). Off, songs play as written; day, night and rain songs still change. 3D audio places the instruments around you; it is made for headphones.")
+            }
+            Section {
+                Toggle("Blend the room", isOn: Binding(get: { engine.roomBlendOn }, set: { engine.setRoomBlend($0) }))
+                    .disabled(!engine.onHeadphones)
+                BlendSection()
+            } header: { Text("Room blend") } footer: {
+                Text(engine.onHeadphones
+                     ? "Your surroundings, echoed on the song's beat and reverberated, under the music. Nothing is recorded, saved or uploaded."
+                     : "Connect headphones to blend the room in: through a speaker the microphone would hear the music.")
+            }
+            Section {
+                Toggle("Opening sound", isOn: $openingSound)
+                    .onChange(of: openingSound) { _, on in
+                        if on { engine.threshold.start(engineAudioRunning: engine.audioRunning) } else { engine.threshold.fadeOut(seconds: 0.5) }
+                    }
+            } footer: {
+                Text("Soft loops from Lunar Promise when Viksen opens. It only plays if nothing else is playing, never interrupts your own music, and fades away when a Dimension starts.")
+            }
+            Section("Atmosphere") {
+                Toggle("Atmosphere bed", isOn: $engine.bedEnabled)
+                if engine.bedEnabled {
+                    LabeledSlider(title: "Density", value: $engine.bedLevel, range: 0...0.6, format: "%.2f")
+                    LabeledSlider(title: "Colour", value: $engine.bedColourHz, range: 150...6000, format: "%.0f Hz")
+                }
+                BusSliders()
+            }
+            Section {
+                LabeledSlider(title: "Output ceiling", value: $engine.limiterCeilingDb, range: -24...(-1), format: "%.0f dBFS")
+            } header: { Text("Hearing safety") } footer: {
+                Text("A safety limiter on the final output never lets the signal exceed this level. Immersive audio can mask traffic and other important sounds: stay aware of your surroundings.")
+            }
+        }
+        .navigationTitle("Sound")
+    }
+}
+
+// MARK: Senses
+
+struct SensesPage: View {
+    var body: some View {
+        List {
+            Section {
+                SensesSection()
+                BodyMotionSection()
+            } footer: {
+                Text("Senses steer the music: each part of a Dimension belongs to a moment (still, moving, quiet, loud, working out). Everything stays on this \(Platform.deviceNoun).")
+            }
+            Section {
+                WeatherSection()
+            } header: { Text("Weather") } footer: {
+                Text("When it rains where you are, a Dimension plays its storm song, with rain and thunder under it.")
+            }
+        }
+        .navigationTitle("Senses")
+    }
+}
+
+// MARK: The Moon
+
+struct MoonPage: View {
+    @Environment(EngineController.self) private var engine
+
     private var nightFooter: String {
-        var t = "By day each Dimension plays its day track. After dark it plays the song for tonight's moon, and only that listening counts toward the Moon Chart."
+        var t = "By day each Dimension plays its day track. After dark it plays its night song, and that listening counts toward tonight's phase on the Moon Chart."
         if engine.nightClock.rule == .sunsetSunrise {
             t += engine.nightClock.locationDenied
                 ? " Sunset and sunrise need your approximate location, which is off, so 7 pm to 4 am is used."
@@ -19,100 +159,60 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        @Bindable var engine = engine
-        NavigationStack {
-            Form {
-                Section("Purchases") {
-                    LabeledContent("Edition", value: store.tier.title)
-                    if store.tier < .studio {
-                        Button(store.tier == .free ? "Upgrade…" : "Upgrade to Studio…") { showPaywall = true }
-                    }
-                    Button("Restore Purchases") { Task { await store.restore() } }
+        List {
+            Section {
+                Label("\(Lunar.phaseName(engine.moonPhaseID)) · lunar day \(engine.lunarDay) of 30",
+                      systemImage: Lunar.symbol(engine.moonPhaseID))
+                Picker("Night", selection: Bindable(engine.nightClock).rule) {
+                    ForEach(NightClock.Rule.allCases) { Text($0.title).tag($0) }
                 }
+            } footer: { Text(nightFooter) }
+            Section {
+                Text("Viksen follows the lunar calendar, worked out on this \(Platform.deviceNoun). The fuller the moon, the longer and wider the echoes and reverb that carry the music from one part to the next, and the wider the room blend; near the new moon, changes are closer and drier.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle("The Moon")
+    }
+}
 
-                DownloadsSettingsSection()
+// MARK: Appearance
 
-                Section {
-                    Label("\(Lunar.phaseName(engine.moonPhaseID)) · lunar day \(engine.lunarDay) of 30",
-                          systemImage: Lunar.symbol(engine.moonPhaseID))
-                    Text("Viksen follows the lunar calendar, worked out on this \(Platform.deviceNoun). The fuller the moon, the longer and wider the echoes and reverb wash that carry the music from one part to the next; near the new moon, changes are closer and drier. Each Dimension also has parts it favours under the full moon and at the new moon, and some favour the night.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                    Picker("Night", selection: Bindable(engine.nightClock).rule) {
-                        ForEach(NightClock.Rule.allCases) { Text($0.title).tag($0) }
-                    }
-                    Text(nightFooter).font(.footnote).foregroundStyle(.secondary)
-                } header: {
-                    Text("The Moon")
-                }
+struct AppearancePage: View {
+    @AppStorage("appearance") private var appearance: Appearance = .dark
+    @AppStorage(HomeSkyBackground.settingKey) private var animated = true
 
-                Section("Audio route") {
-                    LabeledContent("Output", value: engine.route.outputName)
-                    LabeledContent("Input", value: engine.route.inputName)
-                    LabeledContent("Engine sample rate", value: String(format: "%.0f Hz", engine.sampleRate))
-                    LabeledContent("I/O buffer", value: String(format: "%.1f ms", engine.route.ioBufferDuration * 1000))
-                    LabeledContent("Reported round trip",
-                                   value: String(format: "%.1f ms", (engine.route.reportedInputLatency + engine.route.reportedOutputLatency + 2 * engine.route.ioBufferDuration) * 1000))
-                    UnderrunsRow()
-                }
-                Section {
-                    Text("Latency above is what iOS reports for the current route, not a measurement. Bluetooth headphones add delay the system may not report accurately; wired headphones are best for live monitoring.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
-
-                Section {
-                    Toggle("Opening sound", isOn: $openingSound)
-                        .onChange(of: openingSound) { _, on in
-                            if on { engine.threshold.start(engineAudioRunning: engine.audioRunning) } else { engine.threshold.fadeOut(seconds: 0.5) }
-                        }
-                } footer: {
-                    Text("Soft loops from Lunar Promise when Viksen opens, now and then drifting to another part. It only plays if nothing else is playing, never interrupts your own music, and fades away when a Dimension starts.")
-                }
-
-                Section {
-                    Toggle("3D audio", isOn: $engine.dimension3D)
-                    Toggle("Adaptive music", isOn: $engine.adaptiveOnHeadphones)
-                } header: {
-                    Text("With headphones")
-                }
-                Section {
-                    Toggle("3D audio", isOn: $engine.spatialOnSpeaker)
-                    Toggle("Adaptive music", isOn: $engine.adaptiveOnSpeaker)
-                } header: {
-                    Text("On the \(Platform.deviceNoun)'s speaker")
-                } footer: {
-                    Text("Adaptive music moves each song between its parts and shapes its mix with the moment: time, the moon, movement and heart rate (and, with headphones, how quiet or loud it is around you). Off, songs play as written; day, night and rain songs still change. 3D audio places the instruments around you; it is made for headphones.")
-                }
-
-                Section("Hearing safety") {
-                    LabeledSlider(title: "Output ceiling", value: $engine.limiterCeilingDb, range: -24...(-1), format: "%.0f dBFS")
-                    Text("A safety limiter on the final output never lets the signal exceed this level.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
-
-                Section("Privacy") {
-                    LabeledContent("Microphone permission", value: permissionText)
-                    Text("All processing happens on this \(Platform.deviceNoun). Nothing is ever recorded or saved, and nothing is uploaded. No account is required.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
-
-                Section("Appearance") {
-                    Picker("Theme", selection: $appearance) {
-                        ForEach(Appearance.allCases) { Text($0.title).tag($0) }
-                    }
-                }
-
-                Section("Support") {
-                    NavigationLink("Diagnostics") { DiagnosticsView() }
-                }
-
-                Section("About") {
-                    LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")
+    var body: some View {
+        List {
+            Section {
+                Toggle("Animated background", isOn: $animated)
+            } footer: {
+                Text("The night sky on Home drifts slowly and its swirls brighten and dim. Also off when Reduce Motion is on.")
+            }
+            Section {
+                Picker("Theme", selection: $appearance) {
+                    ForEach(Appearance.allCases) { Text($0.title).tag($0) }
                 }
             }
-            .navigationTitle("Settings")
-            .sheet(isPresented: $showPaywall) { PaywallView() }
-            .toolbar { ToolbarItem(placement: .confirmationAction) { CloseButton(compact: true) { dismiss() } } }
         }
+        .navigationTitle("Appearance")
+    }
+}
+
+// MARK: Privacy, About
+
+struct PrivacyPage: View {
+    @Environment(EngineController.self) private var engine
+
+    var body: some View {
+        List {
+            Section {
+                LabeledContent("Microphone", value: permissionText)
+            } footer: {
+                Text("All processing happens on this \(Platform.deviceNoun). Nothing is ever recorded or saved, and nothing is uploaded. Your Moon Chart syncs only through your own iCloud. No account is required.")
+            }
+        }
+        .navigationTitle("Privacy")
     }
 
     private var permissionText: String {
@@ -124,42 +224,15 @@ struct SettingsView: View {
     }
 }
 
-/// Downloaded tracks per Dimension and the space they use; open one to remove tracks.
-private struct DownloadsSettingsSection: View {
-    @Environment(EngineController.self) private var engine
-
+struct AboutPage: View {
     var body: some View {
-        let downloaded = engine.worlds.filter { !$0.userMade && !$0.audioAvailable && engine.downloads.isAnyInstalled($0.worldID) }
-        Section {
-            if downloaded.isEmpty {
-                Text("No tracks downloaded.").foregroundStyle(.secondary)
+        List {
+            Section {
+                LabeledContent("Version", value: (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")
+                               + " (" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "–") + ")")
+                LabeledContent("Music", value: "Krowsingre")
             }
-            ForEach(downloaded, id: \.worldID) { w in
-                NavigationLink {
-                    DimensionTracksView(world: w, showPaywall: .constant(false))
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(w.name)
-                            Text("\(engine.downloads.installedCount(w.worldID)) of \(engine.downloads.tracks(w.worldID).count) tracks")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Text(ByteCountFormatter.string(fromByteCount: engine.downloads.bytes(w.worldID), countStyle: .file))
-                            .foregroundStyle(.secondary).monospacedDigit()
-                    }
-                }
-            }
-        } header: {
-            Text("Downloaded Tracks")
-        } footer: {
-            Text("Open a Dimension to remove tracks one by one or all at once. Download them again from Dimensions any time.")
         }
+        .navigationTitle("About & Help")
     }
-}
-
-/// Reads the meters itself, so Settings does not redraw with every meter update.
-private struct UnderrunsRow: View {
-    @Environment(EngineController.self) private var engine
-    var body: some View { LabeledContent("Underruns", value: "\(engine.meters.underruns)") }
 }

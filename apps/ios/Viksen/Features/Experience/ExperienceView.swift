@@ -1,91 +1,33 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The everyday listening & augmented-reality surface (spec §5 "Experience").
+/// Dimensions (owner's plan, 2026-11-05): your Dimensions first (tap to open, play from
+/// the list), then the ones you can unlock. No settings here; those live in Settings.
 struct ExperienceView: View {
     @Environment(EngineController.self) private var engine
     @Environment(AppNavigator.self) private var nav
-    @State private var showSaveProject = false
-    @State private var projectName = ""
     @Environment(Store.self) private var store
-    @State private var showPaywall = false
-    @State private var showBlend = false
+
+    private func locked(_ w: AtmosWorldInfo) -> Bool { DimensionAccess.required(w) > store.tier }
 
     var body: some View {
-        @Bindable var engine = engine
+        let mine = engine.worlds.filter { !locked($0) }
+        let more = engine.worlds.filter { locked($0) }
         NavigationStack {
             List {
-                NowPlayingSection()
-                DimensionPickerSection(showPaywall: $showPaywall)
-
-                Section {
-                    SensesSection()
-                    BodyMotionSection()
-                } header: {
-                    Text("Senses")
-                } footer: {
-                    Text("Senses steer the music: each part of a Dimension belongs to a moment (still, moving, quiet, loud, working out), and the song moves to the part that fits you. With every sense off it plays as composed. The time of day and the moon always shape it a little. Everything stays on this \(Platform.deviceNoun).")
+                Section("Your Dimensions") {
+                    ForEach(mine, id: \.worldID) { DimensionRow(world: $0, locked: false) }
                 }
-
-                if let loadedID = engine.loadedDimensionID {
-                    Section("Space") {
-                        Toggle("3D for headphones", isOn: $engine.dimension3D)
-                        if let current = engine.worlds.first(where: { $0.worldID == loadedID }) {
-                            NavigationLink("Arrange the instruments") { WorldDetailView(world: current) }
-                        }
+                if !more.isEmpty {
+                    Section {
+                        ForEach(more, id: \.worldID) { DimensionRow(world: $0, locked: true) }
+                    } header: { Text("More Dimensions") } footer: {
+                        Text("Open one to see how to unlock it.")
                     }
-                }
-
-                Section {
-                    DisclosureGroup("Blend the room in", isExpanded: $showBlend) {
-                        BlendSection()
-                        Toggle("Atmosphere bed", isOn: $engine.bedEnabled)
-                        if engine.bedEnabled {
-                            LabeledSlider(title: "Density", value: $engine.bedLevel, range: 0...0.6, format: "%.2f")
-                            LabeledSlider(title: "Colour", value: $engine.bedColourHz, range: 150...6000, format: "%.0f Hz")
-                        }
-                        WeatherSection()
-                        BusSliders()
-                    }
-                } footer: {
-                    Text("Optional: hear your surroundings, transformed, under the music. Off by default. Nothing is ever recorded, saved or uploaded.")
-                }
-
-                StatusSection()
-
-                Section {
-                    Text("Immersive audio can mask traffic and other important sounds. Stay aware of your surroundings.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
                 }
             }
             .navigationTitle("Dimensions")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) { CloseButton(compact: true) { nav.go(.home) } }
-                if store.tier >= .studio {
-                    ToolbarItem(placement: .barLeading) {
-                        Menu {
-                            Button("Save as Project\u{2026}") { projectName = engine.worldStatus.name; showSaveProject = true }
-                        } label: { Image(systemName: "ellipsis.circle") }
-                        .accessibilityLabel("More")
-                    }
-                }
-                ToolbarItem(placement: .barTrailing) {
-                    Button(role: .destructive) { engine.panic() } label: {
-                        Label("Stop all sound", systemImage: "speaker.slash.fill")
-                    }
-                    .tint(Theme.danger)
-                    .accessibilityHint("Immediately silences all output")
-                }
-            }
-            .alert("Save as Project", isPresented: $showSaveProject) {
-                TextField("Name", text: $projectName)
-                Button("Save") { engine.saveProject(named: projectName) }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Saves your levels, atmosphere, microphone effects and current Dimension.")
-            }
-            .sheet(isPresented: $showPaywall) { PaywallView(highlight: .experience) }
+            .toolbar { ToolbarItem(placement: .primaryAction) { CloseButton(compact: true) { nav.go(.home) } } }
             .alert("Problem", isPresented: Binding(get: { engine.lastError != nil }, set: { if !$0 { engine.lastError = nil } })) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -95,8 +37,63 @@ struct ExperienceView: View {
     }
 }
 
+enum DimensionAccess {
+    static func required(_ w: AtmosWorldInfo) -> Tier {
+        switch w.tier { case "studio": .studio; case "experience": .experience; default: .free }
+    }
+}
+
+/// One Dimension in the list: art, name, what is on this device; play from the row.
+private struct DimensionRow: View {
+    let world: AtmosWorldInfo
+    let locked: Bool
+    @Environment(EngineController.self) private var engine
+
+    var body: some View {
+        let current = engine.activeDimensionID == world.worldID
+        HStack(spacing: 12) {
+            NavigationLink { DimensionDetailView(world: world) } label: {
+                HStack(spacing: 12) {
+                    DimensionThumbnail(dimensionID: world.worldID)
+                        .frame(width: 52, height: 52)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(alignment: .bottomTrailing) {
+                            if locked {
+                                Image(systemName: "lock.fill").font(.caption2).padding(4)
+                                    .background(.black.opacity(0.6), in: Circle()).foregroundStyle(.white)
+                            }
+                        }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(world.name).font(.headline)
+                        Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            if !locked && engine.isPlayable(world) {
+                Button { if current { engine.leaveWorld() } else { engine.enterWorld(world) } } label: {
+                    Image(systemName: current ? "stop.circle.fill" : "play.circle.fill")
+                        .font(.title2).foregroundStyle(Theme.accent)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(current ? "Stop \(world.name)" : "Play \(world.name)")
+            }
+        }
+    }
+
+    private var subtitle: String {
+        if locked { return "Included with a subscription" }
+        if world.audioAvailable || world.userMade { return "Built in" }
+        if engine.downloads.isDownloading(world.worldID) { return "Downloading…" }
+        let bytes = engine.downloads.bytes(world.worldID)
+        if engine.downloads.isAnyInstalled(world.worldID) {
+            return bytes > 0 ? "On this \(Platform.deviceNoun) · " + ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file) : "On this \(Platform.deviceNoun)"
+        }
+        return "Not downloaded"
+    }
+}
+
 /// The level sliders with live meters: their own view, so only they redraw with the meters.
-private struct BusSliders: View {
+struct BusSliders: View {
     @Environment(EngineController.self) private var engine
 
     var body: some View {
@@ -114,7 +111,7 @@ private struct BusSliders: View {
     }
 }
 
-private struct StatusSection: View {
+struct StatusSection: View {
     @Environment(EngineController.self) private var engine
 
     var body: some View {
@@ -163,7 +160,7 @@ private struct StatusSection: View {
 }
 
 /// Live, debounced states of the surroundings. Display only.
-private struct EnvironmentStateChips: View {
+struct EnvironmentStateChips: View {
     @Environment(EngineController.self) private var engine
 
     var body: some View {
@@ -190,7 +187,7 @@ private struct EnvironmentStateChips: View {
 }
 
 /// What the Dimension listens to. The microphone here only analyses the room.
-private struct SensesSection: View {
+struct SensesSection: View {
     @Environment(EngineController.self) private var engine
 
     var body: some View {
@@ -224,7 +221,7 @@ private struct SensesSection: View {
 }
 
 /// Optional: hear the surroundings, transformed, under the music.
-private struct BlendSection: View {
+struct BlendSection: View {
     @Environment(EngineController.self) private var engine
 
     var body: some View {
@@ -261,144 +258,6 @@ private struct BlendSection: View {
     }
 }
 
-/// The Dimension being heard: which part of its song, and why.
-private struct NowPlayingSection: View {
-    @Environment(EngineController.self) private var engine
-
-    var body: some View {
-        let st = engine.worldStatus
-        let inDimension = st.loaded && st.worldID != "studio"
-        Section {
-            if inDimension {
-                HStack(alignment: .center, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(st.name).font(.title3.weight(.semibold))
-                        if st.songCount > 1 {
-                            Text(st.songTitle).font(.subheadline)
-                        }
-                        if !st.sectionTitle.isEmpty {
-                            Text(st.sectionTitle).font(.subheadline).foregroundStyle(Theme.accent)
-                        }
-                        Text(reason(st)).font(.caption).foregroundStyle(.secondary)
-                        if let world = engine.worlds.first(where: { $0.worldID == st.worldID }),
-                           let url = engine.albums.link(for: world) {
-                            Link(destination: url) {
-                                Text("From \(world.album) \u{203A}").font(.caption).foregroundStyle(Theme.accent)
-                            }
-                            .accessibilityLabel("Open the album \(world.album) on Apple Music")
-                        }
-                    }
-                    Spacer()
-                    Button {
-                        if st.playing { engine.leaveWorld() }
-                        else if let w = engine.worlds.first(where: { $0.worldID == st.worldID }) { engine.enterWorld(w) }
-                    } label: {
-                        Image(systemName: st.playing ? "stop.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 44)).foregroundStyle(Theme.accent)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(st.playing ? "Leave \(st.name)" : "Enter \(st.name)")
-                }
-                .padding(.vertical, 6)
-            } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Step into a Dimension").font(.title3.weight(.semibold))
-                    Text("Choose one below. Headphones recommended.").font(.caption).foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 6)
-            }
-        }
-    }
-
-    private func reason(_ st: AtmosWorldStatus) -> String {
-        if !st.playing { return "Paused" }
-        if !st.adaptive { return "Playing" }
-        if st.composed { return "Playing as composed. Turn on a sense and the song will follow you." }
-        return st.sectionLabel.isEmpty ? "Following you" : st.sectionLabel
-    }
-}
-
-/// Built-in Dimensions (and your own, made in Studio). Each row shows how many of its
-/// tracks are on this device; open it to download or remove tracks one by one or all.
-private struct DimensionPickerSection: View {
-    @Environment(EngineController.self) private var engine
-    @Environment(Store.self) private var store
-    @Binding var showPaywall: Bool
-
-    var body: some View {
-        Section {
-            if engine.worlds.isEmpty {
-                Text("No Dimensions in this build yet.").foregroundStyle(.secondary)
-            }
-            ForEach(engine.worlds, id: \.worldID) { world in
-                row(world)
-            }
-        } header: {
-            Text("Dimensions")
-        } footer: {
-            Text("Open a Dimension to choose which of its tracks to download. A Dimension plays the tracks you have; remove any track to free up space, and download it again any time.")
-        }
-    }
-
-    private func isBundled(_ w: AtmosWorldInfo) -> Bool { w.audioAvailable || w.userMade }
-
-    @ViewBuilder private func row(_ world: AtmosWorldInfo) -> some View {
-        let locked = requiredTier(world) > store.tier
-        let current = engine.activeDimensionID == world.worldID
-        HStack(spacing: 12) {
-            NavigationLink {
-                DimensionTracksView(world: world, showPaywall: $showPaywall)
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: current ? "waveform" : (locked ? "lock.fill" : "square.stack.3d.up"))
-                        .foregroundStyle(current ? Theme.accent : .secondary)
-                        .frame(width: 24)
-                        .symbolEffect(.variableColor.iterative, isActive: current)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(world.name).font(.headline)
-                        Text(subtitle(world, locked: locked)).font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            }
-            if !locked && engine.isPlayable(world) {
-                Button {
-                    if current { engine.leaveWorld() } else { engine.enterWorld(world) }
-                } label: {
-                    Image(systemName: current ? "stop.circle.fill" : "play.circle.fill")
-                        .font(.title2).foregroundStyle(Theme.accent)
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel(current ? "Leave \(world.name)" : "Enter \(world.name)")
-            }
-        }
-        .swipeActions {
-            if world.userMade {
-                Button("Delete", role: .destructive) { engine.deleteDimension(world) }
-            }
-        }
-    }
-
-    private func requiredTier(_ w: AtmosWorldInfo) -> Tier {
-        switch w.tier { case "studio": .studio; case "experience": .experience; default: .free }
-    }
-
-    private func subtitle(_ w: AtmosWorldInfo, locked: Bool) -> String {
-        var parts: [String] = []
-        if !w.artist.isEmpty { parts.append(w.artist) }
-        if !w.album.isEmpty && w.album != w.name { parts.append(w.album) }
-        if w.userMade { parts.append("yours") }
-        if locked { parts.append(requiredTier(w).title) }
-        else if isBundled(w) { parts.append(w.songCount > 1 ? "\(w.songCount) tracks" : "1 track") }
-        else {
-            let total = engine.downloads.tracks(w.worldID).count
-            let have = engine.downloads.installedCount(w.worldID)
-            if engine.downloads.isDownloading(w.worldID) { parts.append("downloading") }
-            parts.append(have == 0 ? "\(total) track\(total == 1 ? "" : "s") to download" : "\(have) of \(total) on this \(Platform.deviceNoun)")
-        }
-        return parts.joined(separator: " · ")
-    }
-}
-
 struct LabeledSlider: View {
     var title: String
     @Binding var value: Float
@@ -417,7 +276,7 @@ struct LabeledSlider: View {
     }
 }
 
-private struct BodyMotionSection: View {
+struct BodyMotionSection: View {
     @Environment(EngineController.self) private var engine
 
     var body: some View {
@@ -495,7 +354,7 @@ private struct BodyMotionSection: View {
     }
 }
 
-private struct WeatherSection: View {
+struct WeatherSection: View {
     @Environment(EngineController.self) private var engine
 
     var body: some View {
@@ -533,33 +392,73 @@ private struct WeatherSection: View {
     }
 }
 
-/// A Dimension's tracks: download or remove each one, or all of them, and enter it.
-struct DimensionTracksView: View {
+/// One Dimension: play it, download or remove it (the whole Dimension: its songs are
+/// discovered by listening), the album, and its Moon Chart. Locked: how to unlock it.
+struct DimensionDetailView: View {
     let world: AtmosWorldInfo
-    @Binding var showPaywall: Bool
     @Environment(EngineController.self) private var engine
     @Environment(Store.self) private var store
-    @State private var confirmRemoveAll = false
+    @State private var confirmRemove = false
     @State private var showMoonChart = false
+    @State private var showPaywall = false
 
-    private var tracks: [DimensionDownloads.Track] { engine.downloads.tracks(world.worldID) }
     private var bundled: Bool { world.audioAvailable || world.userMade }
-    private var locked: Bool {
-        let need: Tier = world.tier == "studio" ? .studio : world.tier == "experience" ? .experience : .free
-        return need > store.tier
-    }
+    private var locked: Bool { DimensionAccess.required(world) > store.tier }
 
     var body: some View {
         let current = engine.activeDimensionID == world.worldID
+        let downloads = engine.downloads
+        let installed = downloads.isAnyInstalled(world.worldID)
         List {
-            if !world.album.isEmpty {
-                Section {
-                    LabeledContent("From the album", value: world.album)
-                    if !world.artist.isEmpty { LabeledContent("Artist", value: world.artist) }
-                    if let url = engine.albums.link(for: world) {
-                        Link(destination: url) {
-                            Label("Listen to the full album on Apple Music", systemImage: "music.note")
+            Section {
+                HStack(spacing: 16) {
+                    DimensionThumbnail(dimensionID: world.worldID)
+                        .frame(width: 96, height: 96)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(world.name).font(.title3.weight(.semibold))
+                        if !world.artist.isEmpty { Text(world.artist).foregroundStyle(.secondary) }
+                        if !world.album.isEmpty && world.album != world.name {
+                            Text(world.album).font(.footnote).foregroundStyle(.secondary)
                         }
+                    }
+                }
+                .listRowBackground(Color.clear)
+            }
+            if locked {
+                Section {
+                    Button("Subscribe to unlock…") { showPaywall = true }
+                } footer: {
+                    Text("\(world.name) is included with a Viksen subscription.")
+                }
+            } else {
+                Section {
+                    if engine.isPlayable(world) {
+                        Button { if current { engine.leaveWorld() } else { engine.enterWorld(world) } } label: {
+                            Label(current ? "Stop" : "Play", systemImage: current ? "stop.fill" : "play.fill")
+                        }
+                    }
+                    if !bundled {
+                        if downloads.isDownloading(world.worldID) {
+                            HStack {
+                                ProgressView(value: downloads.progress(world.worldID))
+                                Button("Cancel") { downloads.cancelAll(world.worldID) }.buttonStyle(.borderless)
+                            }
+                        } else if !installed {
+                            Button("Download", systemImage: "arrow.down.circle") { downloads.downloadAll(world.worldID) }
+                        } else {
+                            Button("Remove from this \(Platform.deviceNoun)", systemImage: "trash", role: .destructive) { confirmRemove = true }
+                        }
+                        if let failure = downloads.failure(world.worldID) {
+                            Text("Download failed: \(failure)").font(.footnote).foregroundStyle(Theme.danger)
+                        }
+                    }
+                } footer: {
+                    if bundled { Text("Built into Viksen.") }
+                    else if installed, downloads.bytes(world.worldID) > 0 {
+                        Text("Using \(ByteCountFormatter.string(fromByteCount: downloads.bytes(world.worldID), countStyle: .file)). Its songs reveal themselves as you listen.")
+                    } else {
+                        Text("Download it to play. Its songs reveal themselves as you listen.")
                     }
                 }
             }
@@ -571,107 +470,19 @@ struct DimensionTracksView: View {
                         Label("Moon Chart", systemImage: "moonphase.waxing.gibbous")
                     }
                 }
-            }
-            Section {
-                if locked {
-                    Button("Unlock \(world.name)") { showPaywall = true }
-                } else {
-                    Button {
-                        if current { engine.leaveWorld() } else { engine.enterWorld(world) }
-                    } label: {
-                        Label(current ? "Leave" : "Enter", systemImage: current ? "stop.fill" : "play.fill")
-                    }
-                    .disabled(!engine.isPlayable(world))
-                }
-            } footer: {
-                if !locked && !engine.isPlayable(world) {
-                    Text("Download at least one track to enter.")
-                } else if !locked && !bundled && engine.downloads.installedCount(world.worldID) < tracks.count {
-                    Text("Plays the tracks on this \(Platform.deviceNoun). Tracks you download later join the next time you enter.")
-                }
-            }
-
-            Section {
-                if bundled {
-                    ForEach(engine.bridgeSongTitles(world), id: \.self) { Text($0) }
-                } else {
-                    ForEach(tracks) { t in trackRow(t) }
-                }
-            } header: {
-                Text("Tracks")
-            } footer: {
-                if !bundled, engine.downloads.bytes(world.worldID) > 0 {
-                    Text("Using \(ByteCountFormatter.string(fromByteCount: engine.downloads.bytes(world.worldID), countStyle: .file)) on this \(Platform.deviceNoun).")
-                }
-            }
-
-            if !bundled && !locked && tracks.count > 1 {
-                Section {
-                    if engine.downloads.installedCount(world.worldID) < tracks.count {
-                        Button("Download All Tracks", systemImage: "arrow.down.circle") { engine.downloads.downloadAll(world.worldID) }
-                    }
-                    if engine.downloads.installedCount(world.worldID) > 0 {
-                        Button("Remove All Tracks", systemImage: "trash", role: .destructive) { confirmRemoveAll = true }
-                    }
+                if let url = engine.albums.link(for: world) {
+                    Link(destination: url) { Label("Listen to the album on Apple Music", systemImage: "music.note") }
                 }
             }
         }
         .navigationTitle(world.name)
-        .sheet(isPresented: $showMoonChart) { MoonChartView(initialDimensionID: world.worldID) }
         .inlineNavigationTitle()
-        .confirmationDialog("Remove every track of \(world.name) from this \(Platform.deviceNoun)?",
-                            isPresented: $confirmRemoveAll, titleVisibility: .visible) {
-            Button("Remove All Tracks", role: .destructive) { engine.removeAllTracks(world) }
+        .sheet(isPresented: $showMoonChart) { MoonChartView(initialDimensionID: world.worldID) }
+        .sheet(isPresented: $showPaywall) { PaywallView(highlight: .experience) }
+        .confirmationDialog("Remove \(world.name) from this \(Platform.deviceNoun)?", isPresented: $confirmRemove, titleVisibility: .visible) {
+            Button("Remove", role: .destructive) { engine.removeAllTracks(world) }
         } message: {
-            Text("You can download them again any time.")
-        }
-    }
-
-    @ViewBuilder private func trackRow(_ t: DimensionDownloads.Track) -> some View {
-        let state = engine.downloads.state(t.id)
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(t.title)
-                switch state {
-                case .installed:
-                    Text(engine.downloads.sizes[t.id].map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "On this \(Platform.deviceNoun)")
-                        .font(.caption).foregroundStyle(.secondary)
-                case .downloading(let p):
-                    Text(String(format: "Downloading %.0f%%", p * 100)).font(.caption).foregroundStyle(.secondary)
-                case .failed(let why):
-                    Text("Download failed: \(why)").font(.caption).foregroundStyle(Theme.danger)
-                case .notInstalled:
-                    EmptyView()
-                }
-            }
-            Spacer()
-            if locked {
-                Image(systemName: "lock.fill").foregroundStyle(.secondary)
-            } else {
-                switch state {
-                case .installed:
-                    Button(role: .destructive) { engine.removeTrack(t) } label: {
-                        Image(systemName: "trash").foregroundStyle(Theme.danger)
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Remove \(t.title)")
-                case .downloading(let p):
-                    Button { engine.downloads.cancel(t) } label: {
-                        ZStack {
-                            ProgressView(value: p).progressViewStyle(.circular)
-                            Image(systemName: "stop.fill").font(.system(size: 8))
-                        }
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Cancel download of \(t.title)")
-                case .notInstalled, .failed:
-                    Button { engine.downloads.download(t) } label: {
-                        Image(systemName: "arrow.down.circle").font(.title2).foregroundStyle(Theme.accent)
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Download \(t.title)")
-                }
-            }
+            Text("Your Moon Chart progress stays. You can download it again any time.")
         }
     }
 }

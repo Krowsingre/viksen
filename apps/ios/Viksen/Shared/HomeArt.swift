@@ -1,29 +1,34 @@
 import SwiftUI
 
 /// The owner's night sky behind Home, gently alive (owner, 2026-11-05): a very slow drift
-/// (pan and zoom over about a minute, back and forth) and the purple swirls slowly
-/// brightening and dimming. Both are system animations (no per-frame work) and stop
-/// with Reduce Motion.
+/// (pan and zoom, about 35 s each way) and the purple swirls brightening and dimming
+/// (about 7 s breaths). Driven by the clock (20 frames a second), so it always runs, even
+/// after Home is rebuilt. Settings > Appearance > Animated background turns it off, as
+/// does Reduce Motion.
 struct HomeSkyBackground: View {
+    static let settingKey = "animatedBackground"
+    @AppStorage(HomeSkyBackground.settingKey) private var enabled = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var drift = false
-    @State private var glow = false
 
     var body: some View {
+        let animate = enabled && !reduceMotion
         GeometryReader { geo in
-            ZStack {
-                sky(geo.size)
-                // Breathing light: the same sky, screened over itself, fading in and out.
-                sky(geo.size)
-                    .blendMode(.screen)
-                    .saturation(1.2)
-                    .opacity(reduceMotion ? 0 : (glow ? 0.38 : 0.0))
+            TimelineView(.animation(minimumInterval: 1.0 / 20, paused: !animate)) { context in
+                let t = animate ? context.date.timeIntervalSinceReferenceDate : 0
+                let drift = 0.5 - 0.5 * cos(t * 2 * .pi / 70)     // 0…1…0 over 70 s
+                let breath = 0.5 - 0.5 * cos(t * 2 * .pi / 7)     // 0…1…0 over 7 s
+                ZStack {
+                    sky(geo.size)
+                    sky(geo.size)
+                        .blendMode(.screen)
+                        .saturation(1.2)
+                        .opacity(animate ? 0.38 * breath : 0)
+                }
+                .scaleEffect(1.04 + 0.05 * drift)
+                .offset(x: geo.size.width * (0.015 - 0.035 * drift), y: geo.size.height * (-0.008 + 0.02 * drift))
+                .frame(width: geo.size.width, height: geo.size.height)
+                .clipped()
             }
-            .scaleEffect(reduceMotion ? 1.04 : (drift ? 1.09 : 1.04))
-            .offset(x: reduceMotion ? 0 : (drift ? -geo.size.width * 0.02 : geo.size.width * 0.015),
-                    y: reduceMotion ? 0 : (drift ? geo.size.height * 0.012 : -geo.size.height * 0.008))
-            .frame(width: geo.size.width, height: geo.size.height)
-            .clipped()
             .overlay {
                 // Keeps the card and lunar line readable over the brightest swirls.
                 LinearGradient(stops: [.init(color: .clear, location: 0.55),
@@ -33,11 +38,6 @@ struct HomeSkyBackground: View {
         }
         .background(Theme.background)
         .accessibilityHidden(true)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 32).repeatForever(autoreverses: true)) { drift = true }
-            withAnimation(.easeInOut(duration: 7).repeatForever(autoreverses: true)) { glow = true }
-        }
     }
 
     private func sky(_ size: CGSize) -> some View {

@@ -111,6 +111,8 @@ NSError* makeError(const std::string& msg) {
     AtmosAudioSession *_audioSession;
     BOOL _wasRunningBeforeInterruption;
     AtmosMotionSource *_motion;
+    dispatch_queue_t _sessionQueue;   // slow AVAudioSession changes, off the main thread
+    NSUInteger _restartGeneration;
 #else
     // Mac: Core Audio through miniaudio. The host rebuilds the engine for the device rate.
     std::unique_ptr<atmos::desktop::MiniaudioHost> _host;
@@ -128,6 +130,7 @@ NSError* makeError(const std::string& msg) {
         _audioSession.delegate = self;
         _io = std::make_unique<atmos::ios::IOSAudioIO>(_session->engine());
         _motion = [AtmosMotionSource new];
+        _sessionQueue = dispatch_queue_create("viksen.audiosession", DISPATCH_QUEUE_SERIAL);
 #else
         _host = std::make_unique<atmos::desktop::MiniaudioHost>(*_session);
 #endif
@@ -173,8 +176,9 @@ NSError* makeError(const std::string& msg) {
         if (error) *error = err;
         return NO;
     }
-    const double hwRate = [AVAudioSession sharedInstance].sampleRate;
-    if (hwRate > 0 && hwRate != _session->sampleRate()) [self rebuildAtRate:hwRate];
+    // The engine stays at its own rate (48 kHz): RemoteIO converts to whatever the
+    // headphones run at (44.1 or 48 kHz), so switching headphones never rebuilds the engine
+    // and its 3D setup (that rebuild froze the app for up to a second).
     std::string msg;
     if (!_io->start(_session->sampleRate(), withMic, msg)) {
         if (error) *error = makeError(msg);
@@ -192,9 +196,26 @@ NSError* makeError(const std::string& msg) {
 - (void)restartIOIfRunning {
     if (!self.audioRunning) return;
     _io->stop();
-    NSError *err = nil;
-    if (![self startAudioWithError:&err])
-        [self.delegate engineBridgeStateDidChange:[NSString stringWithFormat:@"Audio restart failed: %@", err.localizedDescription]];
+    // Changing the session (category for the microphone, activation) can take most of a
+    // second, especially with Bluetooth: do it on a background queue, then restart the
+    // audio unit (fast) on the main thread. A newer restart supersedes an older one.
+    const BOOL withMic = _session->settings().micEnabled;
+    const NSUInteger generation = ++_restartGeneration;
+    AtmosAudioSession *audioSession = _audioSession;
+    __weak AtmosEngineBridge *weakSelf = self;
+    dispatch_async(_sessionQueue, ^{
+        NSError *err = nil;
+        const BOOL ok = [audioSession configureForMicrophone:withMic error:&err] && [audioSession setActive:YES error:&err];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            AtmosEngineBridge *s = weakSelf;
+            if (!s || generation != s->_restartGeneration) return;
+            std::string msg;
+            if (!ok || !s->_io->start(s->_session->sampleRate(), s->_session->settings().micEnabled, msg)) {
+                NSString *why = ok ? @(msg.c_str()) : err.localizedDescription;
+                [s.delegate engineBridgeStateDidChange:[NSString stringWithFormat:@"Audio restart failed: %@", why]];
+            }
+        });
+    });
 }
 
 #else
@@ -801,10 +822,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         _session->engine().setBusGain(Bus::MicTransformed, 0.0f);
         _session->engine().pause();   // a song track (Studio) still stops, per Apple's guidance
     }
-    if (self.audioRunning && route.sampleRate > 0 && route.sampleRate != _session->sampleRate()) {
-        [self rebuildAtRate:route.sampleRate];
-        [self startAudioWithError:nil];
-    }
+    // No rebuild on a new hardware rate: RemoteIO converts (see startAudioWithError).
     [self.delegate engineBridgeStateDidChange:oldDeviceUnavailable ? @"Headphones disconnected" : @"Audio route changed"];
 }
 
