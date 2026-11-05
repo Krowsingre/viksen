@@ -13,6 +13,7 @@ struct MoonChartView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var dimensionID: String?
     @State private var path: [String] = []
+    @Environment(\.colorScheme) private var scheme
 
     static let lavender = Color(red: 0.90, green: 0.86, blue: 1)
     static let violet = Color(red: 0.62, green: 0.48, blue: 1)
@@ -85,10 +86,14 @@ struct MoonChartView: View {
                                 dimensionName: dimensions.first { $0.worldID == dim }?.name ?? "this Dimension")
             }
         }
-        // Always dark (owner, 2026-11-05), whatever the Appearance setting.
-        .environment(\.colorScheme, .dark)
-        .preferredColorScheme(.dark)
     }
+
+    // Colours that read in both light and dark (the page follows the Appearance setting).
+    private var dark: Bool { scheme == .dark }
+    /// Lines, sparkles and quiet text: lavender on dark, a deeper violet on light.
+    private var soft: Color { dark ? Self.lavender : Color(red: 0.40, green: 0.30, blue: 0.72) }
+    /// The glow of discovered moons and tonight's ring.
+    private var glow: Color { dark ? Self.lavender : Self.violet }
 
     // MARK: Ring
 
@@ -98,12 +103,12 @@ struct MoonChartView: View {
             let radius: CGFloat = min(geo.size.width / 2 - 50, 160)
             let moon: CGFloat = 62
             ZStack {
-                Circle().stroke(Self.lavender.opacity(0.22), lineWidth: 1)
+                Circle().stroke(soft.opacity(dark ? 0.22 : 0.3), lineWidth: 1)
                     .frame(width: radius * 2 + 40, height: radius * 2 + 40).position(c)
                 ForEach(0..<4, id: \.self) { k in
                     let a = Double(k) * Double.pi / 2 - Double.pi / 2
                     let ca: Double = cos(a), sa: Double = sin(a)
-                    Image(systemName: "sparkle").font(.system(size: 9)).foregroundStyle(Self.lavender)
+                    Image(systemName: "sparkle").font(.system(size: 9)).foregroundStyle(soft)
                         .position(x: c.x + (radius + 20) * CGFloat(ca), y: c.y + (radius + 20) * CGFloat(sa))
                 }
                 .accessibilityHidden(true)
@@ -115,8 +120,9 @@ struct MoonChartView: View {
                         Image("Moon-\(id)").resizable().scaledToFit()
                             .frame(width: moon, height: moon)
                             .saturation(lit ? 1 : 0.6)
-                            .opacity(lit || id == tonight ? 1 : 0.7)
-                            .shadow(color: lit ? Self.lavender.opacity(0.6) : .clear, radius: 8)
+                            .opacity(lit || id == tonight ? 1 : (dark ? 0.7 : 0.85))
+                            // On light, every moon gets a soft shadow so it stands off the page.
+                            .shadow(color: lit ? glow.opacity(0.6) : (dark ? .clear : .black.opacity(0.18)), radius: lit ? 8 : 4)
                             .overlay(Circle().stroke(Self.violet, lineWidth: id == tonight ? 2 : 0).padding(-6))
                             .shadow(color: id == tonight ? Self.violet : .clear, radius: 10)
                             .frame(width: moon + 16, height: moon + 16)
@@ -136,22 +142,22 @@ struct MoonChartView: View {
         VStack(spacing: 6) {
             if let done = progress.journeyCompletedAt(dim) {
                 Text("LUNAR JOURNEY").font(.system(size: 12, design: .serif)).tracking(3).foregroundStyle(Theme.gold)
-                Text("Complete").font(.system(size: 28, design: .serif)).foregroundStyle(.white)
+                Text("Complete").font(.system(size: 28, design: .serif)).foregroundStyle(.primary)
                 Text("All eight phases, \(done.formatted(date: .abbreviated, time: .omitted))")
-                    .font(.system(size: 14, design: .serif)).foregroundStyle(Self.lavender.opacity(0.8))
+                    .font(.system(size: 14, design: .serif)).foregroundStyle(soft.opacity(0.85))
             } else {
                 Text("TONIGHT").font(.system(size: 13, design: .serif)).tracking(4).foregroundStyle(Self.violet)
                 HStack(spacing: 6) {
-                    Rectangle().fill(Self.lavender.opacity(0.4)).frame(width: 30, height: 0.6)
+                    Rectangle().fill(soft.opacity(0.4)).frame(width: 30, height: 0.6)
                     Image(systemName: "sparkle").font(.system(size: 8))
-                    Rectangle().fill(Self.lavender.opacity(0.4)).frame(width: 30, height: 0.6)
+                    Rectangle().fill(soft.opacity(0.4)).frame(width: 30, height: 0.6)
                 }
-                .foregroundStyle(Self.lavender).accessibilityHidden(true)
-                Text(Lunar.phaseName(tonight)).font(.system(size: 28, design: .serif)).foregroundStyle(.white)
+                .foregroundStyle(soft).accessibilityHidden(true)
+                Text(Lunar.phaseName(tonight)).font(.system(size: 28, design: .serif)).foregroundStyle(.primary)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 if let w = progress.nextWindow(tonight) {
                     Text("until \(w.end.formatted(.dateTime.month(.abbreviated).day()))")
-                        .font(.system(size: 15, design: .serif)).foregroundStyle(Self.lavender.opacity(0.85))
+                        .font(.system(size: 15, design: .serif)).foregroundStyle(.secondary)
                 }
                 if found[tonight] == nil {
                     TimelineView(.periodic(from: .now, by: 1)) { _ in
@@ -159,20 +165,21 @@ struct MoonChartView: View {
                         VStack(spacing: 8) {
                             GeometryReader { g in
                                 ZStack(alignment: .leading) {
-                                    Capsule().fill(Color.white.opacity(0.15))
-                                    Capsule().fill(LinearGradient(colors: [.white, Self.violet], startPoint: .leading, endPoint: .trailing))
+                                    Capsule().fill(Color.primary.opacity(0.15))
+                                    Capsule().fill(LinearGradient(colors: [dark ? .white : Self.violet.opacity(0.5), Self.violet],
+                                                                  startPoint: .leading, endPoint: .trailing))
                                         .frame(width: max(6, g.size.width * p))
                                 }
                             }
                             .frame(width: 150, height: 4)
                             Text("\(Self.clock(p * 180)) of 3:00 heard")
-                                .font(.system(size: 14).monospacedDigit()).foregroundStyle(Self.lavender.opacity(0.9))
+                                .font(.system(size: 14).monospacedDigit()).foregroundStyle(.secondary)
                         }
                         .padding(.top, 8)
                     }
                 } else {
                     Text("Discovered in this Dimension").font(.system(size: 14, design: .serif))
-                        .foregroundStyle(Self.lavender.opacity(0.9)).padding(.top, 8)
+                        .foregroundStyle(.secondary).padding(.top, 8)
                 }
             }
         }
@@ -199,7 +206,7 @@ private struct PhaseRow: View {
             Image("Moon-\(phase)").resizable().scaledToFit()
                 .frame(width: 36, height: 36)
                 .saturation(lit ? 1 : 0.6)
-                .opacity(lit || phase == tonight ? 1 : 0.55)
+                .opacity(lit || phase == tonight ? 1 : 0.75)
             Text(Lunar.phaseName(phase))
             Spacer()
             Text(status).font(.subheadline).foregroundStyle(phase == tonight && !lit ? Theme.gold : .secondary)
@@ -233,7 +240,7 @@ struct PhaseDetailView: View {
                     Image("Moon-\(phase)").resizable().scaledToFit()
                         .frame(width: 120, height: 120)
                         .saturation(found[phase] != nil ? 1 : 0.6)
-                        .shadow(color: MoonChartView.lavender.opacity(found[phase] != nil ? 0.6 : 0), radius: 12)
+                        .shadow(color: found[phase] != nil ? MoonChartView.violet.opacity(0.6) : .black.opacity(0.15), radius: 12)
                         .accessibilityHidden(true)
                     Text(name).font(.system(size: 26, design: .serif))
                     Text(dimensionName).font(.subheadline).foregroundStyle(.secondary)
