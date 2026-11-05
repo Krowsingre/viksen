@@ -1,0 +1,40 @@
+Copyright (c) 2026 Krowsingre Publishing. All rights reserved.
+
+PROPRIETARY AND CONFIDENTIAL. NO LICENSE IS GRANTED.
+
+This repository and everything in it (source code, documentation, designs,
+artwork, images, icons, text, data, Dimension descriptions, configuration and
+any other material, together "the Materials") are the exclusive property of
+Krowsingre Publishing and are protected by copyright and other laws.
+
+No permission is granted to anyone, for any purpose, to use, copy, modify,
+merge, publish, distribute, sublicense, sell, rent, lease, lend, host, train
+any machine-learning or AI model on, create derivative works from, reverse
+engineer, or otherwise exploit the Materials, in whole or in part, whether
+for commercial or non-commercial purposes, without the prior written
+permission of Krowsingre Publishing.
+
+Being able to see this repository (for example, on GitHub) does not give any
+right to use it. Any use not expressly authorised in writing is prohibited.
+
+THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL KROWSINGRE PUBLISHING BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY ARISING FROM OR IN CONNECTION WITH THE MATERIALS.
+
+Music and audio by Krowsingre are not part of this repository and are not
+licensed by it.
+
+Third-party components
+----------------------
+The folders under third_party/ contain software by other authors, each under
+its own license, which is included with it and continues to apply to that
+software only:
+
+  third_party/miniaudio    see third_party/miniaudio/LICENSE
+  third_party/nlohmann     see third_party/nlohmann/LICENSE.MIT
+  third_party/pffft        see third_party/pffft/LICENSE.txt
+  third_party/steamaudio   see third_party/steamaudio/LICENSE.md
+
+Nothing in those licenses grants any right to the rest of the Materials.
+
+Requests for permission: Krowsingre Publishing.

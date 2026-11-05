@@ -40,3 +40,10 @@ JUCE is fetched automatically (or pass `-DATMOS_JUCE_DIR=/path/to/JUCE`). Platfo
 ## iPhone app
 
 See [apps/ios/README.md](apps/ios/README.md) (XcodeGen + Xcode 15.3+).
+
+## License
+
+Copyright (c) 2026 Krowsingre Publishing. All rights reserved. This is proprietary
+software: no one may use, copy, modify, distribute or sell anything in this repository
+without written permission. See [LICENSE](LICENSE). Third-party components under
+`third_party/` keep their own licenses.

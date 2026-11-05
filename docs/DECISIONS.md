@@ -124,3 +124,4 @@
 | 120 | **Home cards are tinted with the active (playing) Dimension's badge colour** (Viksen purple when nothing plays; Depths deep blue, Shatter Gardens crimson) and stays see-through. **Swiping past either end of the cards loops** round to the other end. | Owner |
 | 121 | **The Moon Chart is a standard page like Settings and Dimensions** (option B): title and X in the bar, the ring of moons as the picture at the top, then the Dimension, the eight phases (each with its own page) and the journey as grouped rows, on a plain dark background. | Owner |
 | 122 | **Sub-pages follow the Appearance setting** (light or dark); none is forced dark. The Moon Chart's ring, text and moons use colours that read on both. | Owner |
+| 123 | **Proprietary license** (LICENSE): Copyright Krowsingre Publishing, all rights reserved; no use, copying, modification, distribution or sale without written permission. Third-party components keep their own licenses. | Owner |
