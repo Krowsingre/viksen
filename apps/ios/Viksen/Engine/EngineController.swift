@@ -30,6 +30,7 @@ final class EngineController {
     let progress = ProgressStore()
     let nightClock = NightClock()
     private let nowPlaying = NowPlaying()
+    let threshold = ThresholdSound()
     private var lastProgressTick = Date.distantPast
     private let delegateProxy = BridgeDelegateProxy()
     private var meterTimer: Timer?
@@ -646,6 +647,7 @@ final class EngineController {
 
     /// Scene phase hook: going to the background is a clean stop point.
     func appDidEnterBackground() {
+        threshold.fadeOut(seconds: 0.3)
         autosave()
         try? FileManager.default.removeItem(at: Self.runningFlag)
     }
@@ -678,6 +680,7 @@ final class EngineController {
         appDidEnterBackground()
     }
     func appWillEnterForeground() {
+        if activeDimensionID == nil && !studioActive { threshold.start() }
         FileManager.default.createFile(atPath: Self.runningFlag.path, contents: nil)
     }
 
@@ -764,6 +767,7 @@ final class EngineController {
             if trackName != nil { bridge.pause() }   // one music source at a time
             if !audioRunning { startAudio() }
             bridge.clearPanic()
+            threshold.fadeOut(seconds: 2.5)   // the opening sound gives way to the Dimension
             bridge.startWorld()
         } catch {
             lastError = error.localizedDescription

@@ -87,3 +87,4 @@
 | 83 | **App icon**: the owner's fox art (corners filled so iOS can round them). | Owner |
 | 84 | Lunar Promise: **80 BPM** (measured; sharp grid peak, first beat 0.523 s), loop 0 → 364.149375 s (the owner's hard-cut file, exact), the ten proposed parts as labelled sections (no reactive rules yet). | Owner |
 | 85 | **Opening ("threshold") sound approved as an optional setting.** | Owner |
+| 86 | Opening sound: **off by default** (Settings → Opening sound). Plays only if no other audio is playing, mixes with others, fades into a Dimension. Candidate A (Awakening) is used until the owner chooses A/B/C. | Owner |

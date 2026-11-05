@@ -4,6 +4,7 @@ struct SettingsView: View {
     @Environment(EngineController.self) private var engine
     @AppStorage("appearance") private var appearance: Appearance = .dark
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(ThresholdSound.settingKey) private var openingSound = false
     @Environment(Store.self) private var store
     @State private var showPaywall = false
 
@@ -56,6 +57,15 @@ struct SettingsView: View {
                 Section {
                     Text("Latency above is what iOS reports for the current route, not a measurement. Bluetooth headphones add delay the system may not report accurately; wired headphones are best for live monitoring.")
                         .font(.footnote).foregroundStyle(.secondary)
+                }
+
+                Section {
+                    Toggle("Opening sound", isOn: $openingSound)
+                        .onChange(of: openingSound) { _, on in
+                            if on { engine.threshold.start() } else { engine.threshold.fadeOut(seconds: 0.5) }
+                        }
+                } footer: {
+                    Text("A soft loop from Lunar Promise when Viksen opens. It only plays if nothing else is playing, never interrupts your own music, and fades away when a Dimension starts.")
                 }
 
                 Section("Hearing safety") {

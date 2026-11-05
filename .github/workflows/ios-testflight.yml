@@ -131,13 +131,15 @@ jobs:
           [ -n "$ASSETS_TOKEN" ] || { echo "::error::ASSETS_TOKEN is not set"; exit 1; }
           git clone --depth 1 --filter=blob:none --sparse \
             "https://x-access-token:${ASSETS_TOKEN}@github.com/Krowsingre/viksen-assets.git" "$RUNNER_TEMP/assets"
-          git -C "$RUNNER_TEMP/assets" sparse-checkout set theme/lunar-promise
+          git -C "$RUNNER_TEMP/assets" sparse-checkout set theme/lunar-promise theme/threshold-candidates
           dest=apps/ios/Viksen/Resources/Worlds/viksen
           for f in "$RUNNER_TEMP/assets/theme/lunar-promise/"*.m4a; do
             cp "$f" "$dest/lunar-promise-$(basename "$f")"
           done
           ls -la "$dest"
-          n=$(ls "$dest"/*.m4a | wc -l); [ "$n" -eq 11 ] || { echo "::error::expected 11 stems, found $n"; exit 1; }
+          n=$(ls "$dest"/lunar-promise-*.m4a | wc -l); [ "$n" -eq 11 ] || { echo "::error::expected 11 stems, found $n"; exit 1; }
+          # The optional opening sound: the owner's chosen candidate (A until chosen).
+          cp "$RUNNER_TEMP/assets/theme/threshold-candidates/Threshold-${THRESHOLD_CANDIDATE:-A-awakening}.m4a" "$dest/threshold.m4a"
           rm -rf "$RUNNER_TEMP/assets"
 
       - name: Archive (signed, build number = run number)
