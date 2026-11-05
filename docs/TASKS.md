@@ -5,6 +5,8 @@ detail: `docs/TECHNICAL_PROPOSAL.md`. Decisions: `docs/DECISIONS.md`.
 
 ## Queued by the owner (build when the owner says)
 
+- [ ] Remove the "VIKSEN" title from the top of the side menu.
+
 - [ ] Remove the Atmosphere bed from Settings (switch, Density, Colour, "Weather shapes the atmosphere"); keep it in the engine for Dimensions to use by design. Record it in docs/HIDDEN_FEATURES.md.
 
 - [ ] Opening (threshold) music per Dimension: The Depths Have Spoken and The Shatter Gardens, from their core songs (waiting for the owner's core songs).
