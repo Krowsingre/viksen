@@ -88,3 +88,4 @@
 | 84 | Lunar Promise: **80 BPM** (measured; sharp grid peak, first beat 0.523 s), loop 0 → 364.149375 s (the owner's hard-cut file, exact), the ten proposed parts as labelled sections (no reactive rules yet). | Owner |
 | 85 | **Opening ("threshold") sound approved as an optional setting.** | Owner |
 | 86 | Opening sound: **off by default** (Settings → Opening sound). Plays only if no other audio is playing, mixes with others, fades into a Dimension. Candidate A (Awakening) is used until the owner chooses A/B/C. | Owner |
+| 87 | Opening sound: **B (First Contact) is home and always opens**; at each 24 s loop **A** may come in (~1 in 8) and, more rarely, **C** (~1 in 25), each staying **4–6 loops** before B returns; every change crossfades over one bar on the beat. | Owner |

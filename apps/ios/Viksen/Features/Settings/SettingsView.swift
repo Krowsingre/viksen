@@ -65,7 +65,7 @@ struct SettingsView: View {
                             if on { engine.threshold.start() } else { engine.threshold.fadeOut(seconds: 0.5) }
                         }
                 } footer: {
-                    Text("A soft loop from Lunar Promise when Viksen opens. It only plays if nothing else is playing, never interrupts your own music, and fades away when a Dimension starts.")
+                    Text("Soft loops from Lunar Promise when Viksen opens, now and then drifting to another part. It only plays if nothing else is playing, never interrupts your own music, follows the silent switch, and fades away when a Dimension starts.")
                 }
 
                 Section("Hearing safety") {
