@@ -1,9 +1,15 @@
 name: CI
 
+# Runs only when started by hand (owner, 2026-11-05: saves build minutes for a private
+# repository). Actions tab -> CI -> Run workflow. Engine tests and the iPhone build
+# always run; tick "all_apps" to also build the desktop, Mac and Windows apps.
 on:
-  push:
-  pull_request:
-  workflow_dispatch:   # run by hand to also build the Mac, Windows and desktop apps
+  workflow_dispatch:
+    inputs:
+      all_apps:
+        description: "Also build the desktop, Mac and Windows apps"
+        type: boolean
+        default: false
 
 jobs:
   engine-tests:
@@ -32,7 +38,7 @@ jobs:
 
   desktop:
     # iPhone first (owner): other platforms build only on manual runs.
-    if: github.event_name == 'workflow_dispatch'
+    if: inputs.all_apps
     name: Desktop app (${{ matrix.name }})
     strategy:
       fail-fast: false
@@ -85,7 +91,7 @@ jobs:
 
   mac:
     # iPhone first (owner): other platforms build only on manual runs.
-    if: github.event_name == 'workflow_dispatch'
+    if: inputs.all_apps
     name: Mac app (build)
     runs-on: macos-15
     steps:
@@ -110,7 +116,7 @@ jobs:
 
   windows-app:
     # iPhone first (owner): other platforms build only on manual runs.
-    if: github.event_name == 'workflow_dispatch'
+    if: inputs.all_apps
     name: Windows app (WinUI 3)
     runs-on: windows-latest
     steps:
