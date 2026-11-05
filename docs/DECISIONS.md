@@ -111,3 +111,4 @@
 | 107 | Viksen **Waxing Crescent**: The First Stirring of the Light (11 stems, 103 BPM measured, clean grid; parts on bars; loop 0 → 308.6 s candidate). **First Quarter**: Against the Gathering Dark (12 stems; no reliable tempo from its sparse drums, so parts follow the timestamps; loop 0 → 308.2 s candidate). Both with first-draft mood maps and mix rules. | Owner |
 | 108 | **Opening sound switch and its own volume slider at the bottom of the side menu** (the loops only; Dimensions unaffected). | Owner |
 | 109 | Album information shows **only for albums live on Apple Music** (Home card line and the Dimension page). | Owner |
+| 110 | Album line only for **Sites Only the Horizon Sees** (The Hinds of Morrow) and **The Depths Have Spoken** (Light of a Distant Sun). Beneath the Listening Sky is a single on Apple Music and **does not count** (marked not live). | Owner |
