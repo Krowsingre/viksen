@@ -131,7 +131,7 @@ jobs:
           [ -n "$ASSETS_TOKEN" ] || { echo "::error::ASSETS_TOKEN is not set"; exit 1; }
           git clone --depth 1 --filter=blob:none --sparse \
             "https://x-access-token:${ASSETS_TOKEN}@github.com/Krowsingre/viksen-assets.git" "$RUNNER_TEMP/assets"
-          git -C "$RUNNER_TEMP/assets" sparse-checkout set theme/lunar-promise theme/lunar-dark-promise theme/lunar-storm-promise theme/what-was-once theme/threshold ambience/weather ambience/transitions
+          git -C "$RUNNER_TEMP/assets" sparse-checkout set theme/lunar-promise theme/lunar-dark-promise theme/lunar-storm-promise theme/what-was-once theme/the-first-stirring theme/against-the-gathering-dark theme/threshold ambience/weather ambience/transitions
           dest=apps/ios/Viksen/Resources/Worlds/viksen
           for f in "$RUNNER_TEMP/assets/theme/lunar-promise/"*.m4a; do
             cp "$f" "$dest/lunar-promise-$(basename "$f")"
@@ -153,6 +153,12 @@ jobs:
             cp "$f" "$dest/what-was-once-$(basename "$f")"
           done
           n=$(ls "$dest"/what-was-once-*.m4a | wc -l); [ "$n" -eq 12 ] || { echo "::error::expected 12 waning crescent stems, found $n"; exit 1; }
+          # The First Stirring of the Light (Waxing Crescent, 11 stems), Against the Gathering Dark (First Quarter, 12).
+          for song in the-first-stirring:11 against-the-gathering-dark:12; do
+            id=${song%%:*}; want=${song##*:}
+            for f in "$RUNNER_TEMP/assets/theme/$id/"*.m4a; do cp "$f" "$dest/$id-$(basename "$f")"; done
+            n=$(ls "$dest"/$id-*.m4a | wc -l); [ "$n" -eq "$want" ] || { echo "::error::expected $want $id stems, found $n"; exit 1; }
+          done
           # The optional opening sound: loops A, B (home) and C, each with its following bar.
           cp "$RUNNER_TEMP/assets/theme/threshold/"threshold-?.wav "$dest/"
           [ "$(ls "$dest"/threshold-?.wav | wc -l)" -eq 3 ] || { echo "::error::expected 3 opening loops"; exit 1; }

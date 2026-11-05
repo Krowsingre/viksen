@@ -985,6 +985,673 @@
       ]
     },
     {
+      "id": "the-first-stirring",
+      "title": "The First Stirring of the Light",
+      "lunarPhase": "waxingCrescent",
+      "music": {
+        "tempo": 103,
+        "key": "",
+        "beatsPerBar": 4,
+        "barOffsetSeconds": 0.006,
+        "loop": {
+          "fromSeconds": 0,
+          "toSeconds": 308.6
+        }
+      },
+      "adaptive": {
+        "jumpEveryBars": 4,
+        "minStayBars": 8,
+        "crossfadeBeats": 2
+      },
+      "fadeSeconds": 3,
+      "stems": [
+        {
+          "id": "lead-vocals",
+          "file": "the-first-stirring-lead-vocals.m4a",
+          "title": "Lead Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 0,
+            "distance": 1.5,
+            "width": 20
+          }
+        },
+        {
+          "id": "backing-vocals",
+          "file": "the-first-stirring-backing-vocals.m4a",
+          "title": "Backing Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 10,
+            "distance": 2.2,
+            "width": 100
+          }
+        },
+        {
+          "id": "drums",
+          "file": "the-first-stirring-drums.m4a",
+          "title": "Drums",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -5,
+            "distance": 2.0,
+            "width": 60
+          }
+        },
+        {
+          "id": "bass",
+          "file": "the-first-stirring-bass.m4a",
+          "title": "Bass",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -10,
+            "distance": 1.4,
+            "width": 20
+          }
+        },
+        {
+          "id": "guitar",
+          "file": "the-first-stirring-guitar.m4a",
+          "title": "Guitar",
+          "spatial": {
+            "azimuth": 55,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 30
+          }
+        },
+        {
+          "id": "keyboard",
+          "file": "the-first-stirring-keyboard.m4a",
+          "title": "Keyboard",
+          "spatial": {
+            "azimuth": -40,
+            "elevation": 0,
+            "distance": 1.6,
+            "width": 40
+          }
+        },
+        {
+          "id": "percussion",
+          "file": "the-first-stirring-percussion.m4a",
+          "title": "Percussion",
+          "spatial": {
+            "azimuth": -25,
+            "elevation": 5,
+            "distance": 1.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "strings",
+          "file": "the-first-stirring-strings.m4a",
+          "title": "Strings",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 15,
+            "distance": 2.8,
+            "width": 150
+          }
+        },
+        {
+          "id": "synth",
+          "file": "the-first-stirring-synth.m4a",
+          "title": "Synth",
+          "spatial": {
+            "azimuth": 180,
+            "elevation": 25,
+            "distance": 3.0,
+            "width": 90
+          }
+        },
+        {
+          "id": "other",
+          "file": "the-first-stirring-other.m4a",
+          "title": "Other",
+          "spatial": {
+            "azimuth": 120,
+            "elevation": 10,
+            "distance": 2.5,
+            "width": 60
+          }
+        },
+        {
+          "id": "woodwinds",
+          "file": "the-first-stirring-woodwinds.m4a",
+          "title": "Woodwinds",
+          "spatial": {
+            "azimuth": -60,
+            "elevation": 10,
+            "distance": 2.0,
+            "width": 30
+          }
+        }
+      ],
+      "rules": [
+        {
+          "stem": "lead-vocals",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          },
+          "gainDb": 0,
+          "otherwiseDb": -3,
+          "label": "The voice comes close when you are still"
+        },
+        {
+          "stem": "strings",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "Strings open up in the quiet"
+        },
+        {
+          "stem": "drums",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "The drums rise when you move"
+        }
+      ],
+      "sections": [
+        {
+          "id": "before-the-first-light",
+          "title": "Before the First Light",
+          "fromBar": 0,
+          "toBar": 13,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "a-voice-through-the-dark",
+          "title": "A Voice Through the Dark",
+          "fromBar": 13,
+          "toBar": 22,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-stirring",
+          "title": "The Stirring",
+          "fromBar": 22,
+          "toBar": 34,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "a-fragile-resolve",
+          "title": "A Fragile Resolve",
+          "fromBar": 34,
+          "toBar": 50,
+          "label": ""
+        },
+        {
+          "id": "breath-before-the-rise",
+          "title": "Breath Before the Rise",
+          "fromBar": 50,
+          "toBar": 60,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "light-takes-shape",
+          "title": "Light Takes Shape",
+          "fromBar": 60,
+          "toBar": 73,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-unfolding",
+          "title": "The Unfolding",
+          "fromBar": 73,
+          "toBar": 86,
+          "label": "Your heart rate is up",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        {
+          "id": "held-against-the-night",
+          "title": "Held Against the Night",
+          "fromBar": 86,
+          "toBar": 99,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-brightening",
+          "title": "The Brightening",
+          "fromBar": 99,
+          "toBar": 113,
+          "label": "Your surroundings are loud",
+          "when": {
+            "all": [
+              {
+                "type": "loud"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-last-reach",
+          "title": "The Last Reach",
+          "fromBar": 113,
+          "toBar": 121,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-distant-glow",
+          "title": "The Distant Glow",
+          "fromBar": 121,
+          "toBar": 132,
+          "label": ""
+        }
+      ]
+    },
+    {
+      "id": "against-the-gathering-dark",
+      "title": "Against the Gathering Dark",
+      "lunarPhase": "firstQuarter",
+      "music": {
+        "tempo": 63,
+        "key": "",
+        "beatsPerBar": 4,
+        "barOffsetSeconds": 0.188,
+        "loop": {
+          "fromSeconds": 0,
+          "toSeconds": 308.2
+        }
+      },
+      "adaptive": {
+        "jumpEveryBars": 4,
+        "minStayBars": 8,
+        "crossfadeBeats": 2
+      },
+      "fadeSeconds": 3,
+      "stems": [
+        {
+          "id": "lead-vocals",
+          "file": "against-the-gathering-dark-lead-vocals.m4a",
+          "title": "Lead Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 0,
+            "distance": 1.5,
+            "width": 20
+          }
+        },
+        {
+          "id": "backing-vocals",
+          "file": "against-the-gathering-dark-backing-vocals.m4a",
+          "title": "Backing Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 10,
+            "distance": 2.2,
+            "width": 100
+          }
+        },
+        {
+          "id": "drums",
+          "file": "against-the-gathering-dark-drums.m4a",
+          "title": "Drums",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -5,
+            "distance": 2.0,
+            "width": 60
+          }
+        },
+        {
+          "id": "bass",
+          "file": "against-the-gathering-dark-bass.m4a",
+          "title": "Bass",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -10,
+            "distance": 1.4,
+            "width": 20
+          }
+        },
+        {
+          "id": "guitar",
+          "file": "against-the-gathering-dark-guitar.m4a",
+          "title": "Guitar",
+          "spatial": {
+            "azimuth": 55,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 30
+          }
+        },
+        {
+          "id": "keyboard",
+          "file": "against-the-gathering-dark-keyboard.m4a",
+          "title": "Keyboard",
+          "spatial": {
+            "azimuth": -40,
+            "elevation": 0,
+            "distance": 1.6,
+            "width": 40
+          }
+        },
+        {
+          "id": "percussion",
+          "file": "against-the-gathering-dark-percussion.m4a",
+          "title": "Percussion",
+          "spatial": {
+            "azimuth": -25,
+            "elevation": 5,
+            "distance": 1.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "strings",
+          "file": "against-the-gathering-dark-strings.m4a",
+          "title": "Strings",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 15,
+            "distance": 2.8,
+            "width": 150
+          }
+        },
+        {
+          "id": "synth",
+          "file": "against-the-gathering-dark-synth.m4a",
+          "title": "Synth",
+          "spatial": {
+            "azimuth": 180,
+            "elevation": 25,
+            "distance": 3.0,
+            "width": 90
+          }
+        },
+        {
+          "id": "other",
+          "file": "against-the-gathering-dark-other.m4a",
+          "title": "Other",
+          "spatial": {
+            "azimuth": 120,
+            "elevation": 10,
+            "distance": 2.5,
+            "width": 60
+          }
+        },
+        {
+          "id": "brass",
+          "file": "against-the-gathering-dark-brass.m4a",
+          "title": "Brass",
+          "spatial": {
+            "azimuth": 70,
+            "elevation": 15,
+            "distance": 2.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "woodwinds",
+          "file": "against-the-gathering-dark-woodwinds.m4a",
+          "title": "Woodwinds",
+          "spatial": {
+            "azimuth": -60,
+            "elevation": 10,
+            "distance": 2.0,
+            "width": 30
+          }
+        }
+      ],
+      "rules": [
+        {
+          "stem": "lead-vocals",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          },
+          "gainDb": 0,
+          "otherwiseDb": -3,
+          "label": "The voice comes close when you are still"
+        },
+        {
+          "stem": "strings",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "Strings open up in the quiet"
+        },
+        {
+          "stem": "drums",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "The drums rise when you move"
+        }
+      ],
+      "sections": [
+        {
+          "id": "the-watch-before-dawn",
+          "title": "The Watch Before Dawn",
+          "fromSeconds": 0,
+          "toSeconds": 24,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-approaching-shadow",
+          "title": "The Approaching Shadow",
+          "fromSeconds": 24,
+          "toSeconds": 49,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "a-voice-against-the-dark",
+          "title": "A Voice Against the Dark",
+          "fromSeconds": 49,
+          "toSeconds": 85,
+          "label": ""
+        },
+        {
+          "id": "into-the-hollow",
+          "title": "Into the Hollow",
+          "fromSeconds": 85,
+          "toSeconds": 114,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-low-current",
+          "title": "The Low Current",
+          "fromSeconds": 114,
+          "toSeconds": 150,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "resolve-takes-hold",
+          "title": "Resolve Takes Hold",
+          "fromSeconds": 150,
+          "toSeconds": 184,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-dark-answers",
+          "title": "The Dark Answers",
+          "fromSeconds": 184,
+          "toSeconds": 216,
+          "label": "Your heart rate is up",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        {
+          "id": "against-the-gathering-dark",
+          "title": "Against the Gathering Dark",
+          "fromSeconds": 216,
+          "toSeconds": 248,
+          "label": "Your surroundings are loud",
+          "when": {
+            "all": [
+              {
+                "type": "loud"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-aftershock",
+          "title": "The Aftershock",
+          "fromSeconds": 248,
+          "toSeconds": 276,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-last-surge",
+          "title": "The Last Surge",
+          "fromSeconds": 276,
+          "toSeconds": 296.7,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "into-the-quiet",
+          "title": "Into the Quiet",
+          "fromSeconds": 296.7,
+          "toSeconds": 308.2,
+          "label": ""
+        }
+      ]
+    },
+    {
       "id": "lunar-storm-promise",
       "title": "Lunar Storm Promise",
       "music": {

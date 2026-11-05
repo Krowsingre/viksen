@@ -169,7 +169,9 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
         {"viksen/lunar-promise", 364.57},
         {"viksen/lunar-dark-promise", 279.57},
         {"viksen/lunar-storm-promise", 348.2},
-        {"viksen/what-was-once", 309.29}};
+        {"viksen/what-was-once", 309.29},
+        {"viksen/the-first-stirring", 309.57},
+        {"viksen/against-the-gathering-dark", 309.29}};
     int songs = 0;
     for (const auto& dir : fs::directory_iterator(root)) {
         std::ifstream in(dir.path() / "world.json");
@@ -196,7 +198,7 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
             ++songs;
         }
     }
-    CHECK(songs == 10);
+    CHECK(songs == 12);
 }
 
 namespace {

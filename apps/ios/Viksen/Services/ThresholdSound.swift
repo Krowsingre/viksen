@@ -15,7 +15,19 @@ final class ThresholdSound {
     enum Loop: String, CaseIterable { case a = "A", b = "B", c = "C" }
 
     private static let barFrames: AVAudioFrameCount = 144_000   // 3 s at 48 kHz (80 BPM, 4/4)
-    private static let level: Float = 0.55
+    static let volumeKey = "thresholdVolume"
+    /// The opening sound's own level (0...1), separate from the Dimensions (owner, 2026-11-05).
+    private static var level: Float {
+        UserDefaults.standard.object(forKey: volumeKey) as? Float ?? 0.55
+    }
+
+    /// Changes the opening sound's level at once while it plays.
+    func setVolume(_ v: Float) {
+        UserDefaults.standard.set(v, forKey: Self.volumeKey)
+        guard let mixer = engine?.mainMixerNode, fadeTimer == nil || !(fadeTimer?.isValid ?? false) else { return }
+        mixer.outputVolume = v
+    }
+    var isPlaying: Bool { engine != nil }
 
     private var engine: AVAudioEngine?
     private var node: AVAudioPlayerNode?

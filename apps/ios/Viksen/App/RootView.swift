@@ -129,6 +129,8 @@ struct SideMenu: View {
                         .accessibilityAddTraits(on ? .isSelected : [])
                     }
                     Spacer()
+                    OpeningSoundControls()
+                        .padding(.bottom, 28)
                 }
                 .padding(.top, 70).padding(.horizontal, 18)
                 .frame(width: 290)
@@ -140,5 +142,42 @@ struct SideMenu: View {
                 .accessibilityAction(.escape) { nav.toggleMenu() }
             }
         }
+    }
+}
+
+/// At the bottom of the side menu: the opening loops on or off, and their own volume
+/// (separate from the Dimensions).
+private struct OpeningSoundControls: View {
+    @Environment(EngineController.self) private var engine
+    @AppStorage(ThresholdSound.settingKey) private var on = false
+    @AppStorage(ThresholdSound.volumeKey) private var volume: Double = 0.55
+    private static let lavender = Color(red: 0.90, green: 0.86, blue: 1)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: $on) {
+                Label("Opening sound", systemImage: "music.note")
+                    .font(.system(size: 17, design: .serif))
+                    .foregroundStyle(Self.lavender)
+            }
+            .tint(Theme.accent)
+            .onChange(of: on) { _, isOn in
+                if isOn { engine.threshold.start(engineAudioRunning: engine.audioRunning) }
+                else { engine.threshold.fadeOut(seconds: 0.5) }
+            }
+            HStack(spacing: 10) {
+                Image(systemName: "speaker.fill").font(.caption)
+                Slider(value: $volume, in: 0...1)
+                    .tint(Theme.accent)
+                    .onChange(of: volume) { _, v in engine.threshold.setVolume(Float(v)) }
+                    .accessibilityLabel("Opening sound volume")
+                Image(systemName: "speaker.wave.3.fill").font(.caption)
+            }
+            .foregroundStyle(Self.lavender.opacity(0.8))
+            .disabled(!on)
+            .opacity(on ? 1 : 0.4)
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
     }
 }

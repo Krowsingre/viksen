@@ -5,7 +5,7 @@ detail: `docs/TECHNICAL_PROPOSAL.md`. Decisions: `docs/DECISIONS.md`.
 
 ## Queued by the owner (build when the owner says)
 
-- [ ] Opening sound volume slider (Settings > Sound > Opening sound): changes only the opening loops, live.
+- [x] Opening sound switch and volume slider at the bottom of the side menu (changes only the opening loops, live).
 
 ## Engine and content (milestone order A)
 - [x] M0 Long-blend stall fix and regression test
