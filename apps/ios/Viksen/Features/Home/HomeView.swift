@@ -151,33 +151,70 @@ private struct FoxWaveform: View {
     }
 }
 
-// MARK: Lunar day
+// MARK: Lunar line (owner's concept, 2026-11-05)
 
+/// "☾ LUNAR DAY 26", tonight's phase, and what is shaping the song right now: the time of
+/// day and the listener's state ("Night · You are still"). Plain text, not a button.
 private struct LunarDayLine: View {
     var wide: Bool
     @Environment(EngineController.self) private var engine
+    private let lavender = HomeView.lavender
 
     var body: some View {
-        VStack(spacing: 10) {
-            Text("Lunar Day \(engine.lunarDay)")
-                .font(.system(size: wide ? 26 : 22, weight: .regular, design: .serif))
-            HStack(spacing: 10) {
-                Rectangle().fill(HomeView.lavender.opacity(0.3)).frame(width: 110, height: 0.6)
-                Image(systemName: "sparkle").font(.system(size: 11)).foregroundStyle(Theme.gold)
-                Rectangle().fill(HomeView.lavender.opacity(0.3)).frame(width: 110, height: 0.6)
+        VStack(spacing: 8) {
+            HStack(spacing: 14) {
+                Rectangle().fill(lavender.opacity(0.35)).frame(width: 64, height: 0.6)
+                Image(systemName: Lunar.symbol(engine.moonPhaseID)).font(.system(size: 18)).foregroundStyle(Theme.gold)
+                Text("LUNAR DAY \(engine.lunarDay)").font(.system(size: 13, design: .serif)).tracking(3)
+                Rectangle().fill(lavender.opacity(0.35)).frame(width: 64, height: 0.6)
             }
-            .accessibilityHidden(true)
+            .foregroundStyle(lavender)
+            Text(Lunar.phaseName(engine.moonPhaseID))
+                .font(.system(size: wide ? 34 : 30, design: .serif)).foregroundStyle(.white)
+            HStack(spacing: 14) {
+                Image(systemName: "sparkle").font(.system(size: 9))
+                ContextLine()
+                Image(systemName: "sparkle").font(.system(size: 9))
+            }
+            .foregroundStyle(lavender.opacity(0.85))
         }
-        .foregroundStyle(HomeView.lavender)
         .frame(maxWidth: .infinity)
         .multilineTextAlignment(.center)
+        .accessibilityElement(children: .combine)
     }
 }
 
-// MARK: Now Playing
+/// The song's current context: time of day, then the listener's state (the reason the
+/// music is in its current part). Reads the status itself (it changes often).
+private struct ContextLine: View {
+    @Environment(EngineController.self) private var engine
 
-/// The active Dimension (or the last one), its song and progress, centred. Tapping it
-/// opens Dimensions.
+    var body: some View {
+        let st = engine.worldStatus
+        let parts = [Self.timeOfDay(night: engine.nightClock.isNight),
+                     st.playing && !st.composed ? st.sectionLabel : ""].filter { !$0.isEmpty }
+        Text(parts.joined(separator: " · "))
+            .font(.system(size: 17, design: .serif)).italic()
+            .lineLimit(1).minimumScaleFactor(0.8)
+    }
+
+    static func timeOfDay(night: Bool) -> String {
+        if night { return "Night" }
+        let h = Calendar.current.component(.hour, from: Date())
+        switch h {
+        case 4..<12: return "Morning"
+        case 12..<17: return "Afternoon"
+        default: return "Evening"
+        }
+    }
+}
+
+// MARK: Now Playing card (owner's concept, 2026-11-05)
+
+/// Art, a label, the song title, progress, and the album link. After dark, before
+/// tonight's phase is discovered here, the progress is tonight's discovery (x of 3:00);
+/// otherwise it is the song's own progress. Tapping the card opens Dimensions; the album
+/// row opens Apple Music.
 private struct NowPlayingCard: View {
     @Environment(EngineController.self) private var engine
     @Environment(AppNavigator.self) private var nav
@@ -187,51 +224,119 @@ private struct NowPlayingCard: View {
         let st = engine.worldStatus
         let active = st.loaded && st.worldID != "studio"
         let dimension = engine.worlds.first { $0.worldID == (active ? st.worldID : engine.lastDimensionID) }
-        Button { nav.go(.experience) } label: {
-            VStack(spacing: 6) {
-                Text(dimension?.name ?? "Choose a Dimension")
-                    .font(.system(size: 21, design: .serif)).foregroundStyle(.white)
-                    .lineLimit(1).minimumScaleFactor(0.7)
-                if active, !st.songTitle.isEmpty {
-                    Text(st.songTitle).font(.system(size: 15, design: .serif)).foregroundStyle(lavender.opacity(0.85))
-                        .lineLimit(1)
-                }
-                if active, st.lengthSeconds > 0 {
-                    VStack(spacing: 4) {
-                        GeometryReader { g in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(Color.white.opacity(0.15))
-                                Capsule().fill(LinearGradient(colors: [lavender, Theme.accent], startPoint: .leading, endPoint: .trailing))
-                                    .frame(width: g.size.width * min(1, max(0, st.positionSeconds / st.lengthSeconds)))
-                            }
+        VStack(spacing: 0) {
+            Button { nav.go(.experience) } label: {
+                HStack(spacing: 16) {
+                    DimensionThumbnail(dimensionID: dimension?.worldID)
+                        .frame(width: 84, height: 84)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(lavender.opacity(0.3), lineWidth: 1))
+                    if let dimension {
+                        CardProgress(dimensionID: dimension.worldID, dimensionName: dimension.name, active: active)
+                    } else {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("BEGIN").font(.system(size: 11, design: .serif)).tracking(2.5).foregroundStyle(lavender.opacity(0.75))
+                            Text("Choose a Dimension").font(.system(size: 21, design: .serif)).foregroundStyle(.white)
                         }
-                        .frame(height: 4)
-                        HStack {
-                            Text(Self.clock(st.positionSeconds))
-                            Spacer()
-                            Text(Self.clock(st.lengthSeconds))
-                        }
-                        .font(.caption2.monospacedDigit()).foregroundStyle(lavender.opacity(0.6))
                     }
-                    .padding(.top, 4)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(Self.clock(st.positionSeconds)) of \(Self.clock(st.lengthSeconds))")
+                    Spacer(minLength: 0)
+                }
+                .padding(16)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if let dimension, !dimension.album.isEmpty {
+                Rectangle().fill(lavender.opacity(0.18)).frame(height: 0.6).padding(.horizontal, 16)
+                AlbumRow(world: dimension)
+            }
+        }
+        .background(Color(red: 0.12, green: 0.07, blue: 0.20).opacity(0.55), in: RoundedRectangle(cornerRadius: 26))
+        .background(.ultraThinMaterial.opacity(0.35), in: RoundedRectangle(cornerRadius: 26))
+        .overlay(RoundedRectangle(cornerRadius: 26).stroke(lavender.opacity(0.25), lineWidth: 1))
+    }
+}
+
+/// Label, song title and the progress line of the card.
+private struct CardProgress: View {
+    var dimensionID: String
+    var dimensionName: String
+    var active: Bool
+    @Environment(EngineController.self) private var engine
+    private let lavender = HomeView.lavender
+
+    var body: some View {
+        let st = engine.worldStatus
+        let progress = engine.progress
+        let phase = engine.moonPhaseID
+        let discovered = progress.discoveredPhases(dimensionID).contains(phase)
+        let discovering = engine.nightClock.isNight && !discovered
+        let label = discovering ? "TONIGHT'S DISCOVERY" : (discovered && engine.nightClock.isNight ? "DISCOVERED TONIGHT"
+                    : (active && st.playing ? "NOW PLAYING" : dimensionName.uppercased()))
+        let title = active && !st.songTitle.isEmpty ? st.songTitle : dimensionName
+        let fraction: Double, detail: String
+        if discovering {
+            let heard = progress.phaseProgress(dimensionID) * 180
+            fraction = heard / 180
+            detail = "\(Self.clock(heard)) of 3:00"
+        } else if active, st.lengthSeconds > 0 {
+            fraction = st.positionSeconds / st.lengthSeconds
+            detail = "\(Self.clock(st.positionSeconds)) of \(Self.clock(st.lengthSeconds))"
+        } else {
+            fraction = discovered ? 1 : 0
+            detail = discovered ? "\(Lunar.phaseName(phase)) discovered" : ""
+        }
+        return VStack(alignment: .leading, spacing: 5) {
+            Text(label).font(.system(size: 11, design: .serif)).tracking(2.5).foregroundStyle(lavender.opacity(0.75))
+                .lineLimit(1).minimumScaleFactor(0.8)
+            Text(title).font(.system(size: 21, design: .serif)).foregroundStyle(.white)
+                .lineLimit(1).minimumScaleFactor(0.7)
+            if !detail.isEmpty {
+                Text(detail).font(.system(size: 16, design: .serif).monospacedDigit()).foregroundStyle(lavender.opacity(0.9))
+            }
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.15))
+                    Capsule().fill(Color(red: 0.70, green: 0.60, blue: 1))
+                        .frame(width: g.size.width * min(1, max(0, fraction)))
                 }
             }
-            .multilineTextAlignment(.center)
-            .padding(16)
-            .frame(maxWidth: .infinity)
-            .background(Color(red: 0.12, green: 0.07, blue: 0.20).opacity(0.55), in: RoundedRectangle(cornerRadius: 24))
-            .background(.ultraThinMaterial.opacity(0.35), in: RoundedRectangle(cornerRadius: 24))
-            .overlay(RoundedRectangle(cornerRadius: 24).stroke(lavender.opacity(0.2), lineWidth: 1))
-            .contentShape(RoundedRectangle(cornerRadius: 24))
+            .frame(height: 5)
+            .padding(.top, 3)
         }
-        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
     }
 
     static func clock(_ s: Double) -> String {
         let t = Int(max(0, s))
         return String(format: "%d:%02d", t / 60, t % 60)
+    }
+}
+
+/// "From <album> · Apple Music ↗".
+private struct AlbumRow: View {
+    var world: AtmosWorldInfo
+    @Environment(EngineController.self) private var engine
+    @Environment(\.openURL) private var openURL
+    private let lavender = HomeView.lavender
+
+    var body: some View {
+        let url = engine.albums.link(for: world)
+        Button { if let url { openURL(url) } } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "square.stack.3d.up").foregroundStyle(lavender.opacity(0.8))
+                (Text("From \(world.album)").foregroundColor(lavender.opacity(0.85))
+                 + Text(url != nil ? " · Apple Music" : "").foregroundColor(Theme.gold))
+                    .font(.system(size: 15, design: .serif))
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                Spacer(minLength: 0)
+                if url != nil { Image(systemName: "arrow.up.right.square").foregroundStyle(lavender.opacity(0.85)) }
+            }
+            .padding(.horizontal, 18).frame(minHeight: 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(url == nil)
+        .accessibilityLabel(url != nil ? "From \(world.album). Open in Apple Music" : "From \(world.album)")
     }
 }
 
