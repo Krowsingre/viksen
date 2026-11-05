@@ -225,6 +225,10 @@ struct MoonChartView: View {
             tagColor = Self.lavender
             line1 = "Heard in \(dimensions.first { $0.worldID == dim }?.name ?? "this Dimension")."
             line2 = "Its song returns here after dark with every \(name)."
+        } else if !engine.phaseHasSong(dim, phase) {
+            tag = "Still to come"; tagColor = Self.lavender.opacity(0.7)
+            line1 = "The \(name)'s song for this Dimension is still being written."
+            line2 = "It will be discoverable once it arrives."
         } else if phase == tonight {
             let left = max(0, Int(180 - progress.phaseProgress(dim) * 180))
             tag = "Tonight"; tagColor = Theme.gold

@@ -510,12 +510,24 @@ final class EngineController {
         worlds = bridge.availableWorlds()
         // Whole Dimensions download as one pack (owner, 2026-11-05): its songs are found by
         // listening, not chosen. The pack id is the Dimension id.
+        var phases: [String: Set<String>] = [:]
         for w in worlds where !w.userMade {
-            let files = bridge.songs(forWorld: w.worldID).flatMap { ($0["files"] as? [String]) ?? [] }
+            let songs = bridge.songs(forWorld: w.worldID)
+            phases[w.worldID] = Set(songs.compactMap { ($0["lunarPhase"] as? String).flatMap { $0.isEmpty ? nil : $0 } })
+            let files = songs.flatMap { ($0["files"] as? [String]) ?? [] }
             downloads.setTracks([DimensionDownloads.Track(id: w.worldID, dimensionID: w.worldID, title: w.name, files: files)],
                                 for: w.worldID)
         }
+        phaseSongs = phases
         downloads.refresh(bundled: Set(worlds.filter(\.audioAvailable).map(\.worldID)))
+    }
+
+    /// Phases that have their own song in each Dimension (only those can be discovered).
+    private(set) var phaseSongs: [String: Set<String>] = [:]
+    /// Dimensions with phase songs show "still to come" for phases without one.
+    func phaseHasSong(_ dimensionID: String, _ phase: String) -> Bool {
+        guard let set = phaseSongs[dimensionID], !set.isEmpty else { return true }
+        return set.contains(phase)
     }
 
     /// Removes one downloaded track (it can be downloaded again). If its Dimension is

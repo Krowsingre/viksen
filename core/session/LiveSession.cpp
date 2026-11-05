@@ -284,8 +284,11 @@ int LiveSession::lunarTarget(const ConditionContext& c) const {
     for (size_t i = 0; i < songs.size(); ++i) {
         const auto& s = songs[i];
         const int k = static_cast<int>(i);
-        if (s.lunarPhase) { if (*s.lunarPhase == now && lunar < 0) lunar = k; }
-        else if (s.plays == WorldManifest::Plays::Night) { if (night < 0) night = k; }
+        // A phase song may also be the night song for phases that have none yet
+        // ("plays": "night" plus "lunarPhase"); only its own phase counts on the Moon Chart.
+        if (s.lunarPhase && *s.lunarPhase == now && lunar < 0) lunar = k;
+        if (s.plays == WorldManifest::Plays::Night) { if (night < 0) night = k; }
+        else if (s.lunarPhase) {}
         else if (s.plays == WorldManifest::Plays::Rain) { if (rain < 0) rain = k; }
         else if (day < 0) day = k;
     }

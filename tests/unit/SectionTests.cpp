@@ -168,7 +168,8 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
         {"the-listening-sky/dance-of-the-dragonfly", 871.53},
         {"viksen/lunar-promise", 364.57},
         {"viksen/lunar-dark-promise", 279.57},
-        {"viksen/lunar-storm-promise", 348.2}};
+        {"viksen/lunar-storm-promise", 348.2},
+        {"viksen/what-was-once", 309.29}};
     int songs = 0;
     for (const auto& dir : fs::directory_iterator(root)) {
         std::ifstream in(dir.path() / "world.json");
@@ -195,7 +196,7 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
             ++songs;
         }
     }
-    CHECK(songs == 9);
+    CHECK(songs == 10);
 }
 
 namespace {
@@ -495,4 +496,32 @@ TEST_CASE("worlds/adaptive music off plays parts as written") {
     CHECK(!chooseSections(w->sections, ctx).composed);
     ctx.adaptive = false;
     CHECK(chooseSections(w->sections, ctx).composed);
+}
+
+TEST_CASE("session/a phase song can stand in for other nights without counting for them") {
+    const double t = 20000.25;
+    const std::string tonight = moonPhaseId(moonPhaseName(t));
+    const std::string other = moonPhaseId(static_cast<MoonPhaseName>((static_cast<int>(moonPhaseName(t)) + 4) % 8));
+    Json j = twoSongDimension();
+    j["songs"][1]["plays"] = "night";
+    j["songs"][1]["lunarPhase"] = other;             // Song B: another phase's song, and the night song
+    auto d = parseDimension(j);
+    REQUIRE(d.has_value());
+    const double rate = 48000;
+    auto clip = std::make_shared<const AudioClip>(test::makeSine(rate, static_cast<int>(rate * 4), 330, 0.3f));
+    LiveSession::StemFileDecoder decode = [&](const std::string&, double, std::string&) -> std::unique_ptr<StemDecoder> {
+        return std::make_unique<ClipStemDecoder>(clip);
+    };
+    LiveSession s(rate, 256);
+    ConditionContext c;
+    c.daysSinceUnixEpochUtc = t;
+    c.night = true;
+    s.updateWorld(0, c);
+    std::string err;
+    REQUIRE(s.loadDimension(*d, decode, &err));
+    auto st = s.worldStatus();
+    CHECK(st.songTitle == "Song B");                  // night sounds like night
+    CHECK(st.songLunarPhase == other);                // but it only counts for its own phase
+    CHECK(st.songLunarPhase != tonight);
+    s.unloadWorld();
 }

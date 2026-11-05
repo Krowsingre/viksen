@@ -554,7 +554,8 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     for (const auto &song : w->songs) {
         NSMutableArray<NSString *> *files = [NSMutableArray array];
         for (const auto &st : song.stems) [files addObject:@(st.file.c_str())];
-        [out addObject:@{@"id": @(song.id.c_str()), @"title": @(song.name.c_str()), @"files": files}];
+        [out addObject:@{@"id": @(song.id.c_str()), @"title": @(song.name.c_str()), @"files": files,
+                          @"lunarPhase": song.lunarPhase ? @(atmos::core::moonPhaseId(*song.lunarPhase)) : @""}];
     }
     return out;
 }
