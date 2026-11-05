@@ -5,6 +5,8 @@ detail: `docs/TECHNICAL_PROPOSAL.md`. Decisions: `docs/DECISIONS.md`.
 
 ## Queued by the owner (build when the owner says)
 
+- [ ] Hide creator-style controls from Settings > Sound (owner, 2026-11-05): the room effect sliders (Tone, Echo time, Echo feedback, Effect mix), Frequency shift and its amount, Room memory and its level/pitch, and the level sliders with meters (Music, Atmosphere, Raw mic, Transformed mic, Master). Keep the "Blend the room" switch plus one "Room level" slider. Songs already set their own room colour ("roomBlend"). Record each in docs/HIDDEN_FEATURES.md.
+
 - [ ] Remove the "VIKSEN" title from the top of the side menu.
 
 - [ ] Remove the Atmosphere bed from Settings (switch, Density, Colour, "Weather shapes the atmosphere"); keep it in the engine for Dimensions to use by design. Record it in docs/HIDDEN_FEATURES.md.
