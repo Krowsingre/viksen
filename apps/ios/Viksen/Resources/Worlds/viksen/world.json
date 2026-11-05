@@ -5,19 +5,18 @@
   "name": "Viksen",
   "artist": "Krowsingre",
   "tier": "free",
-  "core": true,
   "songs": [
     {
       "id": "lunar-promise",
       "title": "Lunar Promise",
       "music": {
-        "tempo": 83,
+        "tempo": 80,
         "key": "",
         "beatsPerBar": 4,
-        "barOffsetSeconds": 0,
+        "barOffsetSeconds": 0.523,
         "loop": {
           "fromSeconds": 0,
-          "toSeconds": 364.155792
+          "toSeconds": 364.149375
         }
       },
       "fadeSeconds": 3,
@@ -142,6 +141,68 @@
             "distance": 2.0,
             "width": 30
           }
+        }
+      ],
+      "sections": [
+        {
+          "id": "awakening",
+          "title": "Awakening",
+          "fromSeconds": 0,
+          "toSeconds": 44
+        },
+        {
+          "id": "first-contact",
+          "title": "First Contact",
+          "fromSeconds": 44,
+          "toSeconds": 69
+        },
+        {
+          "id": "the-current",
+          "title": "The Current",
+          "fromSeconds": 69,
+          "toSeconds": 96
+        },
+        {
+          "id": "reaching",
+          "title": "Reaching",
+          "fromSeconds": 96,
+          "toSeconds": 119
+        },
+        {
+          "id": "suspension",
+          "title": "Suspension",
+          "fromSeconds": 119,
+          "toSeconds": 142
+        },
+        {
+          "id": "ascension",
+          "title": "Ascension",
+          "fromSeconds": 142,
+          "toSeconds": 171
+        },
+        {
+          "id": "momentum",
+          "title": "Momentum",
+          "fromSeconds": 171,
+          "toSeconds": 199
+        },
+        {
+          "id": "the-turning",
+          "title": "The Turning",
+          "fromSeconds": 199,
+          "toSeconds": 230
+        },
+        {
+          "id": "fulfillment",
+          "title": "Fulfillment",
+          "fromSeconds": 230,
+          "toSeconds": 263
+        },
+        {
+          "id": "the-long-return",
+          "title": "The Long Return",
+          "fromSeconds": 263,
+          "toSeconds": 364.149375
         }
       ]
     }

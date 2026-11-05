@@ -166,7 +166,7 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
         {"the-quiet-storm/the-silent-alley", 355.37},
         {"the-quiet-storm/in-different-times", 436.65},
         {"the-listening-sky/dance-of-the-dragonfly", 871.53},
-        {"viksen/lunar-promise", 364.57}};   // the core theme: plays as composed (no sections yet)
+        {"viksen/lunar-promise", 364.57}};
     int songs = 0;
     for (const auto& dir : fs::directory_iterator(root)) {
         std::ifstream in(dir.path() / "world.json");
@@ -178,7 +178,7 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
         CHECK(d->id == dir.path().filename().string());
         CHECK(d->artist == "Krowsingre");
         for (const auto& w : d->songs) {
-            CHECK((!w.sections.empty() || w.id == "viksen/lunar-promise"));
+            CHECK(!w.sections.empty());
             CHECK(w.stems.size() <= 16);
             const auto len = lengths.find(w.id);
             if (len == lengths.end()) std::printf("unknown song %s\n", w.id.c_str());

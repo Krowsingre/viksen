@@ -84,3 +84,6 @@
 | 80 | **Home bottom after the owner's concept** (replaces #75/#79 card): "☾ LUNAR DAY N", tonight's phase name, and the song's context ("Night · You are still": time of day · listener's state). Card: art, label, **song title**, progress, and "From <album> · Apple Music". After dark, until tonight's phase is found here, the label is "Tonight's Discovery" and the bar is the 3 minutes; otherwise the song's progress. | Owner |
 | 81 | **Lunar Promise** (11 stems, 6:04) received for the app's own theme; stored in the private assets repo only (`theme/lunar-promise`). How it plays is being explored. | Owner |
 | 82 | **Lunar Promise is the Viksen (Core) Dimension's day track** and ships inside the app. Its audio is copied from the private assets repo during the TestFlight build only. It loops 0 → 6:04.156 (the owner's hard-cut loop point, aligned with the stems). The play fox starts the last Dimension, else Viksen. | Owner |
+| 83 | **App icon**: the owner's fox art (corners filled so iOS can round them). | Owner |
+| 84 | Lunar Promise: **80 BPM** (measured; sharp grid peak, first beat 0.523 s), loop 0 → 364.149375 s (the owner's hard-cut file, exact), the ten proposed parts as labelled sections (no reactive rules yet). | Owner |
+| 85 | **Opening ("threshold") sound approved as an optional setting.** | Owner |
