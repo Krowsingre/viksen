@@ -332,6 +332,9 @@ final class EngineController {
             let adaptive = onHeadphones
             #endif
             if bridge.headphones != adaptive { bridge.headphones = adaptive }
+            // Rain plays a Dimension's storm song, on every tier (needs Weather on).
+            let raining = weatherEnabled && (weather.mood == .rain || weather.mood == .storm)
+            if bridge.raining != raining { bridge.raining = raining }
             let audible = worldStatus.playing && masterGain > 0.001 && busGains[BusLevel.music.rawValue] > 0.001
             // Only tonight's lunar song, after dark, counts. TestFlight-only check of the
             // counter: any song counts, at any hour.

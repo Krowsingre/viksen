@@ -167,7 +167,8 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
         {"the-quiet-storm/in-different-times", 436.65},
         {"the-listening-sky/dance-of-the-dragonfly", 871.53},
         {"viksen/lunar-promise", 364.57},
-        {"viksen/lunar-dark-promise", 279.57}};
+        {"viksen/lunar-dark-promise", 279.57},
+        {"viksen/lunar-storm-promise", 348.2}};
     int songs = 0;
     for (const auto& dir : fs::directory_iterator(root)) {
         std::ifstream in(dir.path() / "world.json");
@@ -194,7 +195,7 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
             ++songs;
         }
     }
-    CHECK(songs == 8);
+    CHECK(songs == 9);
 }
 
 namespace {
@@ -439,4 +440,45 @@ TEST_CASE("worlds/without headphones every song plays as written") {
     CHECK(!chooseSections(w->sections, ctx).composed);   // headphones: the moving part is chosen
     ctx.headphones = false;
     CHECK(chooseSections(w->sections, ctx).composed);    // speaker: straight through
+}
+
+TEST_CASE("session/day, night and rain songs: rain wins, then tonight's song, then the night song") {
+    const double t = 20000.25;
+    const std::string tonight = moonPhaseId(moonPhaseName(t));
+    const std::string other = moonPhaseId(static_cast<MoonPhaseName>((static_cast<int>(moonPhaseName(t)) + 4) % 8));
+    Json j = twoSongDimension();
+    j["songs"][1]["plays"] = "night";                 // Song B: every night
+    Json rain = j["songs"][1]; rain["id"] = "r"; rain["title"] = "Storm"; rain["plays"] = "rain";
+    Json phase = j["songs"][1]; phase["id"] = "p"; phase["title"] = "Other Phase"; phase.erase("plays"); phase["lunarPhase"] = other;
+    j["songs"].push_back(rain);
+    j["songs"].push_back(phase);
+    auto d = parseDimension(j);
+    REQUIRE(d.has_value());
+    CHECK(!parseDimension([&] { Json b = j; b["songs"][1]["plays"] = "dusk"; return b; }()).has_value());
+    const double rate = 48000;
+    auto clip = std::make_shared<const AudioClip>(test::makeSine(rate, static_cast<int>(rate * 4), 330, 0.3f));
+    LiveSession::StemFileDecoder decode = [&](const std::string&, double, std::string&) -> std::unique_ptr<StemDecoder> {
+        return std::make_unique<ClipStemDecoder>(clip);
+    };
+    LiveSession s(rate, 256);
+    std::string err;
+    auto songAt = [&](bool night, bool raining) -> WorldStatus {
+        ConditionContext c;
+        c.daysSinceUnixEpochUtc = t;
+        c.night = night;
+        c.raining = raining;
+        s.updateWorld(0, c);
+        const bool loaded = s.loadDimension(*d, decode, &err);
+        CHECK(loaded);
+        auto st = s.worldStatus();
+        s.unloadWorld();
+        return st;
+    };
+    CHECK(songAt(false, false).songTitle == "Song A");          // day
+    auto night = songAt(true, false);
+    CHECK(night.songTitle == "Song B");                          // the night song (no song for tonight's phase)
+    CHECK(night.songLunarPhase == tonight);                       // ...counts for tonight's phase
+    CHECK(songAt(true, true).songTitle == "Storm");              // rain wins, day or night
+    CHECK(songAt(false, true).songTitle == "Storm");
+    CHECK(songAt(false, true).songLunarPhase.empty());           // rain does not count toward the Moon Chart
 }

@@ -415,6 +415,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         ctx.daysSinceUnixEpochUtc = [NSDate date].timeIntervalSince1970 / 86400.0;
         ctx.night = self.night;
         ctx.headphones = self.headphones;
+        ctx.raining = self.raining;
         _session->updateWorld(dt, ctx);
     }
     const atmos::EngineMeters m = engine.meters();

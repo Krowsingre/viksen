@@ -131,7 +131,7 @@ jobs:
           [ -n "$ASSETS_TOKEN" ] || { echo "::error::ASSETS_TOKEN is not set"; exit 1; }
           git clone --depth 1 --filter=blob:none --sparse \
             "https://x-access-token:${ASSETS_TOKEN}@github.com/Krowsingre/viksen-assets.git" "$RUNNER_TEMP/assets"
-          git -C "$RUNNER_TEMP/assets" sparse-checkout set theme/lunar-promise theme/lunar-dark-promise theme/threshold
+          git -C "$RUNNER_TEMP/assets" sparse-checkout set theme/lunar-promise theme/lunar-dark-promise theme/lunar-storm-promise theme/threshold
           dest=apps/ios/Viksen/Resources/Worlds/viksen
           for f in "$RUNNER_TEMP/assets/theme/lunar-promise/"*.m4a; do
             cp "$f" "$dest/lunar-promise-$(basename "$f")"
@@ -143,6 +143,11 @@ jobs:
             cp "$f" "$dest/lunar-dark-promise-$(basename "$f")"
           done
           n=$(ls "$dest"/lunar-dark-promise-*.m4a | wc -l); [ "$n" -eq 12 ] || { echo "::error::expected 12 dark stems, found $n"; exit 1; }
+          # Lunar Storm Promise: plays when it rains.
+          for f in "$RUNNER_TEMP/assets/theme/lunar-storm-promise/"*.m4a; do
+            cp "$f" "$dest/lunar-storm-promise-$(basename "$f")"
+          done
+          n=$(ls "$dest"/lunar-storm-promise-*.m4a | wc -l); [ "$n" -eq 12 ] || { echo "::error::expected 12 storm stems, found $n"; exit 1; }
           # The optional opening sound: loops A, B (home) and C, each with its following bar.
           cp "$RUNNER_TEMP/assets/theme/threshold/"threshold-?.wav "$dest/"
           [ "$(ls "$dest"/threshold-?.wav | wc -l)" -eq 3 ] || { echo "::error::expected 3 opening loops"; exit 1; }

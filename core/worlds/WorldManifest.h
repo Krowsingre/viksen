@@ -47,6 +47,10 @@ struct WorldManifest {
     std::vector<WorldSection> sections;
     // The lunar phase this song belongs to (a Dimension's eight lunar-phase songs), if any.
     std::optional<MoonPhaseName> lunarPhase;
+    // When the song plays in a Dimension with a day track (owner, 2026-11-05): "day"
+    // (default), "night" (every night that has no song for its own phase) or "rain".
+    enum class Plays { Day, Night, Rain };
+    Plays plays = Plays::Day;
     std::vector<WorldStem> stems;
     std::vector<WorldRule> rules;
     ConditionSet unlock;                  // when this World becomes available (empty = always)

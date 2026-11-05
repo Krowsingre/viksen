@@ -27,9 +27,9 @@ enum Feature: CaseIterable {
 
     var requiredTier: Tier {
         switch self {
-        case .atmosphereBed, .liveMicBasic, .motionSensing: .free
+        case .atmosphereBed, .liveMicBasic, .motionSensing, .weather: .free   // rain plays storm songs on every tier
         // Free keeps 3D audio itself ("limited spatial controls"); arranging it is Experience.
-        case .frequencyShift, .roomMemory, .headTracking, .activity, .health, .weather, .expandedWorlds, .spatialCanvas: .experience
+        case .frequencyShift, .roomMemory, .headTracking, .activity, .health, .expandedWorlds, .spatialCanvas: .experience
         case .musicImport, .stemImport, .spatialComposition, .advancedEffects, .automation, .export: .studio
         }
     }

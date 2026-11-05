@@ -27,6 +27,13 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
             if (!phase) return fail("unknown lunarPhase (use new, waxingCrescent, firstQuarter, waxingGibbous, full, waningGibbous, lastQuarter, waningCrescent)");
             w.lunarPhase = *phase;
         }
+        if (j.contains("plays")) {
+            const std::string p = j.value("plays", std::string{});
+            if (p == "day") w.plays = WorldManifest::Plays::Day;
+            else if (p == "night") w.plays = WorldManifest::Plays::Night;
+            else if (p == "rain") w.plays = WorldManifest::Plays::Rain;
+            else return fail("unknown \"plays\" (use day, night or rain)");
+        }
         if (j.contains("music") && j["music"].is_object()) {
             const Json& m = j["music"];
             w.tempo = m.value("tempo", 120.0);
@@ -105,7 +112,7 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
             w.unlock = *u;
         }
         w.extra = j;
-        for (const char* k : {"format", "schemaVersion", "id", "name", "artist", "tier", "fadeSeconds", "music", "stems", "rules", "unlock", "adaptive", "sections", "lunarPhase"})
+        for (const char* k : {"format", "schemaVersion", "id", "name", "artist", "tier", "fadeSeconds", "music", "stems", "rules", "unlock", "adaptive", "sections", "lunarPhase", "plays"})
             w.extra.erase(k);
         return w;
     } catch (const std::exception& e) {
@@ -120,6 +127,8 @@ Json worldToJson(const WorldManifest& w) {
     j["id"] = w.id; j["name"] = w.name; j["artist"] = w.artist; j["tier"] = w.tier;
     j["fadeSeconds"] = w.fadeSeconds;
     if (w.lunarPhase) j["lunarPhase"] = moonPhaseId(*w.lunarPhase);
+    if (w.plays == WorldManifest::Plays::Night) j["plays"] = "night";
+    if (w.plays == WorldManifest::Plays::Rain) j["plays"] = "rain";
     Json loop = {{"fromSeconds", w.loopFromSeconds}};
     loop["toSeconds"] = w.loopToSeconds ? Json(*w.loopToSeconds) : Json(nullptr);
     j["music"] = {{"tempo", w.tempo}, {"key", w.key}, {"loop", loop}, {"beatsPerBar", w.beatsPerBar},

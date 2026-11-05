@@ -23,7 +23,8 @@ struct ConditionContext {
     bool night = false;
     // Contextual mixing is a headphones experience (owner, 2026-11-05): without them every
     // song plays straight through as written (no reactive parts or mix rules).
-    bool headphones = true;                // after dark, by the listener's chosen rule (fixed hours or sunset–sunrise)
+    bool headphones = true;
+    bool raining = false;              // it is raining where the listener is (weather, when on)                // after dark, by the listener's chosen rule (fixed hours or sunset–sunrise)
     EnvironmentStateSnapshot env;
     double totalListeningSeconds = 0;
     int consecutiveWorlds = 0;

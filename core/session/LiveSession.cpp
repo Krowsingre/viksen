@@ -251,27 +251,31 @@ bool LiveSession::loadDimension(const DimensionManifest& d, StemFileDecoder deco
 bool LiveSession::hasLunarSongs() const {
     if (!dimension_) return false;
     for (const auto& s : dimension_->songs)
-        if (s.lunarPhase) return true;
+        if (s.lunarPhase || s.plays != WorldManifest::Plays::Day) return true;
     return false;
 }
 
+// Dimensions with a day track (owner, 2026-11-05): rain plays the rain song; after dark,
+// the song for tonight's phase, else the night song; otherwise the day track (the first
+// song with no phase and no other role). -1: the Dimension has none of these songs.
 int LiveSession::lunarTarget(const ConditionContext& c) const {
-    if (!dimension_) return -1;
+    if (!hasLunarSongs()) return -1;
     const auto& songs = dimension_->songs;
-    int day = -1, lunar = -1;
-    bool anyLunar = false;
+    int day = -1, lunar = -1, night = -1, rain = -1;
     const MoonPhaseName now = moonPhaseName(c.daysSinceUnixEpochUtc);
     for (size_t i = 0; i < songs.size(); ++i) {
-        const auto& lp = songs[i].lunarPhase;
-        if (lp) {
-            anyLunar = true;
-            if (*lp == now && lunar < 0) lunar = static_cast<int>(i);
-        } else if (day < 0) {
-            day = static_cast<int>(i);
-        }
+        const auto& s = songs[i];
+        const int k = static_cast<int>(i);
+        if (s.lunarPhase) { if (*s.lunarPhase == now && lunar < 0) lunar = k; }
+        else if (s.plays == WorldManifest::Plays::Night) { if (night < 0) night = k; }
+        else if (s.plays == WorldManifest::Plays::Rain) { if (rain < 0) rain = k; }
+        else if (day < 0) day = k;
     }
-    if (!anyLunar) return -1;
-    if (c.night && lunar >= 0) return lunar;
+    if (c.raining && rain >= 0) return rain;
+    if (c.night) {
+        if (lunar >= 0) return lunar;
+        if (night >= 0) return night;
+    }
     return day >= 0 ? day : 0;
 }
 
@@ -480,6 +484,9 @@ WorldStatus LiveSession::worldStatus() const {
     st.underruns = p.underruns();
     st.adaptive = !world_->sections.empty();
     if (world_->lunarPhase) st.songLunarPhase = moonPhaseId(*world_->lunarPhase);
+    // The night song stands in for every phase without its own song: tonight's phase.
+    else if (world_->plays == WorldManifest::Plays::Night && haveContext_)
+        st.songLunarPhase = moonPhaseId(moonPhaseName(lastContext_.daysSinceUnixEpochUtc));
     if (dimension_) {
         st.id = dimension_->id;
         st.name = dimension_->name;

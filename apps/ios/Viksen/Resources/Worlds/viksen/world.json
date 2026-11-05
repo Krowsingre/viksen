@@ -322,7 +322,6 @@
     {
       "id": "lunar-dark-promise",
       "title": "Lunar Dark Promise",
-      "lunarPhase": "new",
       "music": {
         "tempo": 80,
         "key": "",
@@ -656,7 +655,347 @@
           "toBar": 92,
           "label": ""
         }
-      ]
+      ],
+      "plays": "night"
+    },
+    {
+      "id": "lunar-storm-promise",
+      "title": "Lunar Storm Promise",
+      "music": {
+        "tempo": 80,
+        "key": "",
+        "beatsPerBar": 4,
+        "barOffsetSeconds": 0.461,
+        "loop": {
+          "fromSeconds": 0,
+          "toSeconds": 345.461
+        }
+      },
+      "adaptive": {
+        "jumpEveryBars": 4,
+        "minStayBars": 8,
+        "crossfadeBeats": 2
+      },
+      "fadeSeconds": 3,
+      "stems": [
+        {
+          "id": "lead-vocals",
+          "file": "lunar-storm-promise-lead-vocals.m4a",
+          "title": "Lead Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 0,
+            "distance": 1.5,
+            "width": 20
+          }
+        },
+        {
+          "id": "backing-vocals",
+          "file": "lunar-storm-promise-backing-vocals.m4a",
+          "title": "Backing Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 10,
+            "distance": 2.2,
+            "width": 100
+          }
+        },
+        {
+          "id": "drums",
+          "file": "lunar-storm-promise-drums.m4a",
+          "title": "Drums",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -5,
+            "distance": 2.0,
+            "width": 60
+          }
+        },
+        {
+          "id": "bass",
+          "file": "lunar-storm-promise-bass.m4a",
+          "title": "Bass",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -10,
+            "distance": 1.4,
+            "width": 20
+          }
+        },
+        {
+          "id": "guitar",
+          "file": "lunar-storm-promise-guitar.m4a",
+          "title": "Guitar",
+          "spatial": {
+            "azimuth": 55,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 30
+          }
+        },
+        {
+          "id": "keyboard",
+          "file": "lunar-storm-promise-keyboard.m4a",
+          "title": "Keyboard",
+          "spatial": {
+            "azimuth": -40,
+            "elevation": 0,
+            "distance": 1.6,
+            "width": 40
+          }
+        },
+        {
+          "id": "percussion",
+          "file": "lunar-storm-promise-percussion.m4a",
+          "title": "Percussion",
+          "spatial": {
+            "azimuth": -25,
+            "elevation": 5,
+            "distance": 1.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "strings",
+          "file": "lunar-storm-promise-strings.m4a",
+          "title": "Strings",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 15,
+            "distance": 2.8,
+            "width": 150
+          }
+        },
+        {
+          "id": "synth",
+          "file": "lunar-storm-promise-synth.m4a",
+          "title": "Synth",
+          "spatial": {
+            "azimuth": 180,
+            "elevation": 25,
+            "distance": 3.0,
+            "width": 90
+          }
+        },
+        {
+          "id": "other",
+          "file": "lunar-storm-promise-other.m4a",
+          "title": "Other",
+          "spatial": {
+            "azimuth": 120,
+            "elevation": 10,
+            "distance": 2.5,
+            "width": 60
+          }
+        },
+        {
+          "id": "brass",
+          "file": "lunar-storm-promise-brass.m4a",
+          "title": "Brass",
+          "spatial": {
+            "azimuth": 70,
+            "elevation": 15,
+            "distance": 2.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "woodwinds",
+          "file": "lunar-storm-promise-woodwinds.m4a",
+          "title": "Woodwinds",
+          "spatial": {
+            "azimuth": -60,
+            "elevation": 10,
+            "distance": 2.0,
+            "width": 30
+          }
+        }
+      ],
+      "rules": [
+        {
+          "stem": "lead-vocals",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          },
+          "gainDb": 0,
+          "otherwiseDb": -3,
+          "label": "The voice comes close when you are still"
+        },
+        {
+          "stem": "drums",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "The storm's drums rise when you move"
+        },
+        {
+          "stem": "strings",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "Strings open up in the quiet"
+        }
+      ],
+      "sections": [
+        {
+          "id": "the-gathering-air",
+          "title": "The Gathering Air",
+          "fromBar": 0,
+          "toBar": 8,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "a-distant-signal",
+          "title": "A Distant Signal",
+          "fromBar": 8,
+          "toBar": 17,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-first-stirring",
+          "title": "The First Stirring",
+          "fromBar": 17,
+          "toBar": 27,
+          "label": ""
+        },
+        {
+          "id": "a-voice-in-the-storm",
+          "title": "A Voice in the Storm",
+          "fromBar": 27,
+          "toBar": 37,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "passing-shadows",
+          "title": "Passing Shadows",
+          "fromBar": 37,
+          "toBar": 47,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-rising-current",
+          "title": "The Rising Current",
+          "fromBar": 47,
+          "toBar": 58,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-heart-of-thunder",
+          "title": "The Heart of Thunder",
+          "fromBar": 58,
+          "toBar": 69,
+          "label": "Your heart rate is up",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-turning-sky",
+          "title": "The Turning Sky",
+          "fromBar": 69,
+          "toBar": 80,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-storm-breaks",
+          "title": "The Storm Breaks",
+          "fromBar": 80,
+          "toBar": 91,
+          "label": "Your surroundings are loud",
+          "when": {
+            "all": [
+              {
+                "type": "loud"
+              }
+            ]
+          }
+        },
+        {
+          "id": "after-the-rain",
+          "title": "After the Rain",
+          "fromBar": 91,
+          "toBar": 105,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-last-light",
+          "title": "The Last Light",
+          "fromBar": 105,
+          "toBar": 115,
+          "label": ""
+        }
+      ],
+      "plays": "rain"
     }
   ]
 }
