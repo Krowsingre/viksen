@@ -221,6 +221,7 @@ private struct ContextLine: View {
 private struct NowPlayingCard: View {
     @Environment(EngineController.self) private var engine
     @Environment(Store.self) private var store
+    @State private var cardHeights: [String: CGFloat] = [:]
 
     var body: some View {
         // Swipe through unlocked Dimensions (owner, 2026-11-05): only once at least one
@@ -229,14 +230,31 @@ private struct NowPlayingCard: View {
             .sorted { ($0.worldID == EngineController.coreDimensionID ? 0 : 1) < ($1.worldID == EngineController.coreDimensionID ? 0 : 1) }
         let core = unlocked.first { $0.worldID == EngineController.coreDimensionID } ?? unlocked.first
         if unlocked.count > 1 {
-            TabView(selection: Binding(get: { engine.lastDimensionID ?? core?.worldID ?? "" },
-                                       set: { engine.selectDimension($0) })) {
-                ForEach(unlocked, id: \.worldID) { w in
-                    DimensionCard(world: w).padding(.horizontal, 2).tag(w.worldID)
+            let selected = engine.lastDimensionID.flatMap { id in unlocked.contains { $0.worldID == id } ? id : nil }
+                ?? core?.worldID ?? ""
+            VStack(spacing: 12) {
+                // The pager takes the height of the card shown, so the dots below always sit
+                // just under it, moving down when a card has the album line (owner, 2026-11-05).
+                TabView(selection: Binding(get: { selected }, set: { engine.selectDimension($0) })) {
+                    ForEach(unlocked, id: \.worldID) { w in
+                        DimensionCard(world: w)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeights[w.worldID] = $0 }
+                            .frame(maxHeight: .infinity, alignment: .top)
+                            .padding(.horizontal, 2)
+                            .tag(w.worldID)
+                    }
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: cardHeights[selected] ?? 124)
+                .animation(.easeInOut(duration: 0.25), value: cardHeights[selected])
+                HStack(spacing: 8) {
+                    ForEach(unlocked, id: \.worldID) { w in
+                        Circle().fill(Color.white.opacity(w.worldID == selected ? 0.9 : 0.3)).frame(width: 7, height: 7)
+                    }
+                }
+                .accessibilityHidden(true)
             }
-            .tabViewStyle(.page(indexDisplayMode: .always))
-            .frame(height: 196)
         } else {
             DimensionCard(world: core)
         }
