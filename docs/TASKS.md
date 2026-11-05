@@ -5,6 +5,8 @@ detail: `docs/TECHNICAL_PROPOSAL.md`. Decisions: `docs/DECISIONS.md`.
 
 ## Queued by the owner (build when the owner says)
 
+- [ ] Remove the Atmosphere bed from Settings (switch, Density, Colour, "Weather shapes the atmosphere"); keep it in the engine for Dimensions to use by design. Record it in docs/HIDDEN_FEATURES.md.
+
 - [ ] Opening (threshold) music per Dimension: The Depths Have Spoken and The Shatter Gardens, from their core songs (waiting for the owner's core songs).
 
 - [x] Opening sound switch and volume slider at the bottom of the side menu (changes only the opening loops, live).

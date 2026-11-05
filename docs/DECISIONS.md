@@ -118,3 +118,4 @@
 | 114 | **Home keeps room for the tallest card**, so nothing above it moves; the card hangs from the top and the dots sit just under it. **Tapping a Dimension's badge** on the card switches to that Dimension if it is not the one playing. | Owner |
 | 115 | **Weather is remembered and on by default** (it was forgotten on every launch, so rain was never seen); checked every 15 min and when the app comes back. Only Viksen has a rain song so far. | Owner |
 | 116 | **Each Dimension gets its own opening (threshold) music**, made from its core song once the owner provides the core songs for The Depths Have Spoken and The Shatter Gardens. | Owner |
+| 117 | Keep **docs/HIDDEN_FEATURES.md**: a developer list of features removed from the app's screens but kept in code (candidates for Viksen Studio or per-Dimension design). Atmosphere bed queued for removal from Settings. | Owner |
