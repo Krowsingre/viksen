@@ -87,97 +87,189 @@ struct CloseButton: View {
     }
 }
 
-/// The side menu: slides in from the right over a dimmed page.
+/// The menu (owner's concept, 2026-11-05): a framed panel crowned with the moon, over a
+/// dimmed page. Moon Chart, Dimensions, Settings, then the idle music and its volume.
 struct SideMenu: View {
     @Environment(AppNavigator.self) private var nav
-    private static let lavender = Color(red: 0.90, green: 0.86, blue: 1)
+    static let lavender = Color(red: 0.90, green: 0.86, blue: 1)
+    static let peach = Color(red: 0.98, green: 0.86, blue: 0.80)
+    /// The frame image's own proportions (MenuFrame.png).
+    private static let frameAspect: CGFloat = 979.0 / 1281.0
 
     // Every page closes back to Home, so Home is not in the menu (owner, 2026-11-05).
     private let items: [(AppTab, String, String)] = [
-        (.moonChart, "Moon Chart", "moonphase.waxing.gibbous"),
-        (.experience, "Dimensions", "square.stack.3d.up"),
+        (.moonChart, "Moon Chart", "moon"),
+        (.experience, "Dimensions", "square.3.layers.3d"),
         (.settings, "Settings", "gearshape"),
     ]
 
     var body: some View {
-        ZStack(alignment: .trailing) {
+        ZStack(alignment: .top) {
             if nav.menuOpen {
-                Color.black.opacity(0.45).ignoresSafeArea()
+                Color.black.opacity(0.5).ignoresSafeArea()
                     .onTapGesture { nav.toggleMenu() }
                     .accessibilityLabel("Close menu")
                     .accessibilityAddTraits(.isButton)
                     .transition(.opacity)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("VIKSEN")
-                        .font(.system(size: 22, weight: .light, design: .serif)).tracking(8)
-                        .foregroundStyle(Self.lavender)
-                        .padding(.bottom, 18)
-                    ForEach(items, id: \.0) { tab, title, icon in
-                        let on = nav.tab == tab
-                        Button { nav.go(tab) } label: {
-                            HStack(spacing: 14) {
-                                Image(systemName: icon).frame(width: 26)
-                                Text(title).font(.system(size: 19, design: .serif))
-                                Spacer()
-                            }
-                            .foregroundStyle(on ? .white : Self.lavender.opacity(0.85))
-                            .padding(.horizontal, 14).frame(minHeight: 50)
-                            .background(on ? Theme.accent.opacity(0.28) : .clear, in: RoundedRectangle(cornerRadius: 14))
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(on ? .isSelected : [])
-                    }
-                    Spacer()
-                    OpeningSoundControls()
-                        .padding(.bottom, 28)
+                GeometryReader { geo in
+                    let width = min(geo.size.width - 32, 380)
+                    let height = width / Self.frameAspect
+                    panel(width: width, height: height)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, max(8, min(40, (geo.size.height - height) / 3)))
                 }
-                .padding(.top, 70).padding(.horizontal, 18)
-                .frame(width: 290)
-                .frame(maxHeight: .infinity)
-                .background(Color(red: 0.07, green: 0.04, blue: 0.13).opacity(0.96).ignoresSafeArea())
-                .overlay(alignment: .leading) { Rectangle().fill(Self.lavender.opacity(0.15)).frame(width: 1).ignoresSafeArea() }
-                .transition(.move(edge: .trailing))
-                .accessibilityAddTraits(.isModal)
-                .accessibilityAction(.escape) { nav.toggleMenu() }
+                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
             }
         }
     }
+
+    private func panel(width: CGFloat, height: CGFloat) -> some View {
+        let u = width / 979   // one pixel of the frame image
+        return ZStack(alignment: .top) {
+            Image("MenuFrame").resizable().interpolation(.high)
+                .frame(width: width, height: height)
+                .accessibilityHidden(true)
+            VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+                    Button { nav.toggleMenu() } label: {
+                        Image(systemName: "xmark").font(.system(size: 22, weight: .light))
+                            .foregroundStyle(Self.lavender)
+                            .frame(width: 48, height: 48)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Close menu")
+                }
+                .frame(height: 70 * u)
+                .padding(.top, 145 * u)
+                VStack(spacing: 24 * u) {
+                    ForEach(items, id: \.0) { tab, title, icon in
+                        MenuRow(title: title, icon: icon, glowing: tab == .moonChart, height: 150 * u) { nav.go(tab) }
+                    }
+                }
+                .padding(.top, 45 * u)
+                StarDivider()
+                    .padding(.vertical, 38 * u)
+                IdleMusicControls(rowHeight: 140 * u)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 62 * u)
+            .frame(width: width, height: height)
+        }
+        .frame(width: width, height: height)
+        .shadow(color: Theme.accent.opacity(0.35), radius: 24)
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isModal)
+        .accessibilityAction(.escape) { nav.toggleMenu() }
+    }
 }
 
-/// At the bottom of the side menu: the opening loops on or off, and their own volume
+/// One menu row: a soft rounded tile with an icon, a serif title and a chevron.
+private struct MenuRow: View {
+    let title: String
+    let icon: String
+    var glowing = false
+    let height: CGFloat
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 0) {
+                Image(systemName: icon)
+                    .font(.system(size: 26, weight: .light))
+                    .foregroundStyle(glowing ? SideMenu.peach : SideMenu.lavender)
+                    .shadow(color: glowing ? SideMenu.peach.opacity(0.8) : .clear, radius: 6)
+                    .frame(width: 44)
+                Text(title)
+                    .font(.system(size: 24, design: .serif))
+                    .foregroundStyle(SideMenu.lavender)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                    .padding(.leading, 18)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 17, weight: .light))
+                    .foregroundStyle(SideMenu.lavender.opacity(0.85))
+            }
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity, minHeight: max(48, height))
+            .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(SideMenu.lavender.opacity(0.13), lineWidth: 1))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(MenuPressStyle())
+    }
+}
+
+private struct MenuPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .brightness(configuration.isPressed ? 0.08 : 0)
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+    }
+}
+
+/// A thin line with a four-pointed star in the middle.
+private struct StarDivider: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            line(leading: true)
+            Image(systemName: "sparkle").font(.system(size: 14)).foregroundStyle(Theme.accent.opacity(0.9))
+                .shadow(color: Theme.accent.opacity(0.8), radius: 4)
+            line(leading: false)
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func line(leading: Bool) -> some View {
+        Rectangle()
+            .fill(LinearGradient(colors: [SideMenu.lavender.opacity(0), SideMenu.lavender.opacity(0.35)],
+                                 startPoint: leading ? .leading : .trailing, endPoint: leading ? .trailing : .leading))
+            .frame(height: 1)
+    }
+}
+
+/// At the bottom of the menu: the idle (opening) music on or off, and its own volume
 /// (separate from the Dimensions).
-private struct OpeningSoundControls: View {
+private struct IdleMusicControls: View {
+    var rowHeight: CGFloat
     @Environment(EngineController.self) private var engine
     @AppStorage(ThresholdSound.settingKey) private var on = false
     @AppStorage(ThresholdSound.volumeKey) private var volume: Double = 0.55
-    private static let lavender = Color(red: 0.90, green: 0.86, blue: 1)
+    private static let toggleTint = Color(red: 0.55, green: 0.42, blue: 0.95)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(spacing: 0) {
             Toggle(isOn: $on) {
-                Label("Opening sound", systemImage: "music.note")
-                    .font(.system(size: 17, design: .serif))
-                    .foregroundStyle(Self.lavender)
+                HStack(spacing: 18) {
+                    Image(systemName: "music.note").font(.system(size: 26, weight: .light)).frame(width: 44)
+                    Text("Idle Music").font(.system(size: 22, design: .serif))
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                }
+                .foregroundStyle(SideMenu.lavender)
             }
-            .tint(Theme.accent)
+            .tint(Self.toggleTint)
             .onChange(of: on) { _, isOn in
                 if isOn { engine.threshold.start(engineAudioRunning: engine.audioRunning) }
                 else { engine.threshold.fadeOut(seconds: 0.5) }
             }
-            HStack(spacing: 10) {
-                Image(systemName: "speaker.fill").font(.caption)
+            .frame(minHeight: max(48, rowHeight))
+            Rectangle().fill(SideMenu.lavender.opacity(0.1)).frame(height: 1)
+            HStack(spacing: 12) {
+                Image(systemName: "speaker.fill").font(.system(size: 17)).frame(width: 30)
                 Slider(value: $volume, in: 0...1)
-                    .tint(Theme.accent)
+                    .tint(Self.toggleTint)
                     .onChange(of: volume) { _, v in engine.threshold.setVolume(Float(v)) }
-                    .accessibilityLabel("Opening sound volume")
-                Image(systemName: "speaker.wave.3.fill").font(.caption)
+                    .accessibilityLabel("Idle music volume")
+                Image(systemName: "speaker.wave.3.fill").font(.system(size: 17))
             }
-            .foregroundStyle(Self.lavender.opacity(0.8))
+            .foregroundStyle(SideMenu.lavender.opacity(0.85))
+            .frame(minHeight: max(44, rowHeight * 0.95))
             .disabled(!on)
-            .opacity(on ? 1 : 0.4)
+            .opacity(on ? 1 : 0.45)
         }
-        .padding(14)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, 18)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(SideMenu.lavender.opacity(0.13), lineWidth: 1))
     }
 }

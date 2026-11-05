@@ -97,12 +97,12 @@ struct SoundPage: View {
                      : "Connect headphones to blend the room in: through a speaker the microphone would hear the music.")
             }
             Section {
-                Toggle("Opening sound", isOn: $openingSound)
+                Toggle("Idle music", isOn: $openingSound)
                     .onChange(of: openingSound) { _, on in
                         if on { engine.threshold.start(engineAudioRunning: engine.audioRunning) } else { engine.threshold.fadeOut(seconds: 0.5) }
                     }
             } footer: {
-                Text("Soft loops from Lunar Promise when Viksen opens. It only plays if nothing else is playing, never interrupts your own music, and fades away when a Dimension starts.")
+                Text("Soft loops from Lunar Promise while no Dimension plays. They only play if nothing else is playing, never interrupt your own music, and fade away when a Dimension starts. Also in the menu, with its own volume.")
             }
             Section {
                 LabeledSlider(title: "Output ceiling", value: $engine.limiterCeilingDb, range: -24...(-1), format: "%.0f dBFS")

@@ -7,7 +7,7 @@ detail: `docs/TECHNICAL_PROPOSAL.md`. Decisions: `docs/DECISIONS.md`.
 
 - [x] Remove the hidden features from the app's code, with the code backed up in docs/HIDDEN_FEATURES.md (owner, 2026-11-05): creator-style sound controls, "Hear the room", level sliders, atmosphere bed, room memory, frequency shift, echo follows steps, arranging instruments, Studio session, Library, own Dimensions, projects, recording. Settings > Sound keeps "Blend the room" and a "Room level" slider.
 
-- [ ] Remove the "VIKSEN" title from the top of the side menu.
+- [x] Remove the "VIKSEN" title from the top of the side menu (done with the new framed menu).
 
 - [ ] Opening (threshold) music per Dimension: The Depths Have Spoken and The Shatter Gardens, from their core songs (waiting for the owner's core songs).
 

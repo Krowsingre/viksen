@@ -244,17 +244,13 @@ private struct NowPlayingCard: View {
             // just under it (owner, 2026-11-05).
             let tallest = cardHeights.values.max() ?? 124
             VStack(spacing: 12) {
-                TabView(selection: Binding(get: { selected }, set: { engine.selectDimension($0) })) {
-                    ForEach(unlocked, id: \.worldID) { w in
-                        DimensionCard(world: w)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeights[w.worldID] = $0 }
-                            .frame(maxHeight: .infinity, alignment: .top)
-                            .padding(.horizontal, 2)
-                            .tag(w.worldID)
-                    }
+                // Swiping past either end loops round to the other (owner, 2026-11-05).
+                LoopingPager(ids: unlocked.map(\.worldID), selected: selected,
+                             select: { engine.selectDimension($0) }) { id in
+                    DimensionCard(world: unlocked.first { $0.worldID == id })
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 2)
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
                 .frame(height: cardHeights[selected] ?? 124)
                 .animation(.easeInOut(duration: 0.25), value: cardHeights[selected])
                 HStack(spacing: 8) {
@@ -284,12 +280,76 @@ private struct NowPlayingCard: View {
     }
 }
 
+/// Pages through the Dimension cards and loops: past the last comes the first, and before
+/// the first the last. The neighbours sit either side and follow the finger.
+private struct LoopingPager<Content: View>: View {
+    let ids: [String]
+    let selected: String
+    let select: (String) -> Void
+    @ViewBuilder let content: (String) -> Content
+    @State private var drag: CGFloat = 0
+    @State private var settling = false
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let n = ids.count
+            let i = ids.firstIndex(of: selected) ?? 0
+            ZStack(alignment: .top) {
+                ForEach([-1, 0, 1], id: \.self) { k in
+                    content(ids[(i + k + n) % n])
+                        .frame(width: w, alignment: .top)
+                        .offset(x: CGFloat(k) * w + drag)
+                        .accessibilityHidden(k != 0)
+                }
+            }
+            .frame(width: w, height: geo.size.height, alignment: .top)
+            .contentShape(Rectangle())
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 14)
+                    .onChanged { v in if !settling { drag = v.translation.width } }
+                    .onEnded { v in
+                        guard !settling else { return }
+                        let t = v.translation.width, p = v.predictedEndTranslation.width
+                        let step = (t < -w * 0.25 || p < -w * 0.5) ? 1 : (t > w * 0.25 || p > w * 0.5) ? -1 : 0
+                        turn(step, width: w)
+                    })
+            .accessibilityAction(named: "Next Dimension") { turn(1, width: w) }
+            .accessibilityAction(named: "Previous Dimension") { turn(-1, width: w) }
+        }
+        .clipped()
+    }
+
+    private func turn(_ step: Int, width: CGFloat) {
+        guard step != 0, ids.count > 1 else {
+            withAnimation(.spring(duration: 0.3)) { drag = 0 }
+            return
+        }
+        let n = ids.count
+        let i = ids.firstIndex(of: selected) ?? 0
+        settling = true
+        withAnimation(.easeOut(duration: 0.22)) {
+            drag = -CGFloat(step) * width
+        } completion: {
+            var t = Transaction()
+            t.disablesAnimations = true
+            withTransaction(t) {
+                select(ids[(i + step + n) % n])
+                drag = 0
+            }
+            settling = false
+        }
+    }
+}
+
 /// One Dimension's card: art, label, title, progress and the album link.
 private struct DimensionCard: View {
     let world: AtmosWorldInfo?
     @Environment(EngineController.self) private var engine
     @Environment(AppNavigator.self) private var nav
     private let lavender = HomeView.lavender
+
+    private var theme: DimensionTheme { .for(world?.worldID) }
 
     var body: some View {
         let st = engine.worldStatus
@@ -329,9 +389,10 @@ private struct DimensionCard: View {
                 AlbumRow(world: world)
             }
         }
-        .background(Color(red: 0.12, green: 0.07, blue: 0.20).opacity(0.55), in: RoundedRectangle(cornerRadius: 26))
+        // Still see-through, tinted with this Dimension's own badge colour.
+        .background(theme.card.opacity(0.55), in: RoundedRectangle(cornerRadius: 26))
         .background(.ultraThinMaterial.opacity(0.35), in: RoundedRectangle(cornerRadius: 26))
-        .overlay(RoundedRectangle(cornerRadius: 26).stroke(lavender.opacity(0.25), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 26).stroke(theme.edge.opacity(0.3), lineWidth: 1))
     }
 }
 
