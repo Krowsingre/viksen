@@ -172,6 +172,7 @@ jobs:
             -authenticationKeyID "$ASC_KEY_ID_CLEAN" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID_CLEAN" \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            MARKETING_VERSION=0.2.${{ github.run_number }} \
             archive
 
       - name: Export and upload to App Store Connect

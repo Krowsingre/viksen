@@ -3,6 +3,10 @@
 The working list for the Viksen app, in the approved order (DECISIONS #46). Design
 detail: `docs/TECHNICAL_PROPOSAL.md`. Decisions: `docs/DECISIONS.md`.
 
+## Queued by the owner (build when the owner says)
+
+- [ ] Opening sound volume slider (Settings > Sound > Opening sound): changes only the opening loops, live.
+
 ## Engine and content (milestone order A)
 - [x] M0 Long-blend stall fix and regression test
 - [ ] M0 Validator v1, offline golden renders, 2-hour stem-sync soak test

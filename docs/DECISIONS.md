@@ -105,3 +105,4 @@
 | 101 | **One download pack per Dimension** (pack id = Dimension id). | Owner |
 | 102 | Opening loops: **B 50 %, A 35 %, C 15 %** of the time (14 % / 6 % chance per B loop to enter A / C, which stay 4–6 loops); B always opens. | Owner |
 | 103 | Freeze fixes from the owner's log: the engine no longer rebuilds when headphones change sample rate (RemoteIO converts), and microphone on/off reconfigures the audio session off the main thread. Background animation is clock-driven (always runs) with a Settings switch. | Owner |
+| 104 | **Version = 0.2.<build number>** (e.g. 0.2.40), set by the TestFlight build. | Owner |
