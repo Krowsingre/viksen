@@ -418,7 +418,7 @@ struct DimensionDetailView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(world.name).font(.title3.weight(.semibold))
                         if !world.artist.isEmpty { Text(world.artist).foregroundStyle(.secondary) }
-                        if !world.album.isEmpty && world.album != world.name {
+                        if !world.album.isEmpty && world.album != world.name && engine.albums.link(for: world) != nil {
                             Text(world.album).font(.footnote).foregroundStyle(.secondary)
                         }
                     }

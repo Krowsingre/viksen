@@ -292,7 +292,8 @@ private struct DimensionCard: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            if let world, !world.album.isEmpty {
+            // Album line only for albums live on Apple Music (owner, 2026-11-05).
+            if let world, !world.album.isEmpty, engine.albums.link(for: world) != nil {
                 Rectangle().fill(lavender.opacity(0.18)).frame(height: 0.6).padding(.horizontal, 16)
                 AlbumRow(world: world)
             }
