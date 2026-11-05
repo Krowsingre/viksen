@@ -35,8 +35,11 @@ struct MoonChartView: View {
         NavigationStack(path: $path) {
             List {
                 Section {
+                    // Square, as wide as the list: the whole ring always fits.
                     ring(found: found, tonight: tonight, dim: dim)
-                        .frame(height: 330)
+                        .aspectRatio(1, contentMode: .fit)
+                        .frame(maxWidth: 440)
+                        .frame(maxWidth: .infinity)
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets())
                 }
@@ -82,6 +85,8 @@ struct MoonChartView: View {
                                 dimensionName: dimensions.first { $0.worldID == dim }?.name ?? "this Dimension")
             }
         }
+        // Always dark (owner, 2026-11-05), whatever the Appearance setting.
+        .environment(\.colorScheme, .dark)
         .preferredColorScheme(.dark)
     }
 
@@ -90,7 +95,7 @@ struct MoonChartView: View {
     private func ring(found: [String: Date], tonight: String, dim: String) -> some View {
         GeometryReader { geo in
             let c = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-            let radius: CGFloat = min(geo.size.width / 2 - 52, 150)
+            let radius: CGFloat = min(geo.size.width / 2 - 50, 160)
             let moon: CGFloat = 62
             ZStack {
                 Circle().stroke(Self.lavender.opacity(0.22), lineWidth: 1)
@@ -110,7 +115,7 @@ struct MoonChartView: View {
                         Image("Moon-\(id)").resizable().scaledToFit()
                             .frame(width: moon, height: moon)
                             .saturation(lit ? 1 : 0.6)
-                            .opacity(lit ? 1 : (id == tonight ? 0.85 : 0.5))
+                            .opacity(lit || id == tonight ? 1 : 0.7)
                             .shadow(color: lit ? Self.lavender.opacity(0.6) : .clear, radius: 8)
                             .overlay(Circle().stroke(Self.violet, lineWidth: id == tonight ? 2 : 0).padding(-6))
                             .shadow(color: id == tonight ? Self.violet : .clear, radius: 10)
