@@ -31,8 +31,8 @@ struct AboutView: View {
 }
 
 enum SiteLinks {
-    static let privacy = URL(string: "https://krowsingre.github.io/viksen/privacy.html")!
-    static let support = URL(string: "https://krowsingre.github.io/viksen/support.html")!
+    static let privacy = URL(string: "https://krowsingre.github.io/viksen-docs/privacy.html")!
+    static let support = URL(string: "https://krowsingre.github.io/viksen-docs/support.html")!
 }
 
 /// Licence texts for third-party software (Steam Audio and its components, PFFFT, JSON).

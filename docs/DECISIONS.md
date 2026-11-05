@@ -125,3 +125,4 @@
 | 121 | **The Moon Chart is a standard page like Settings and Dimensions** (option B): title and X in the bar, the ring of moons as the picture at the top, then the Dimension, the eight phases (each with its own page) and the journey as grouped rows, on a plain dark background. | Owner |
 | 122 | **Sub-pages follow the Appearance setting** (light or dark); none is forced dark. The Moon Chart's ring, text and moons use colours that read on both. | Owner |
 | 123 | **Proprietary license** (LICENSE): Copyright Krowsingre Publishing, all rights reserved; no use, copying, modification, distribution or sale without written permission. Third-party components keep their own licenses. | Owner |
+| 124 | **This repository is private; the website lives in the public Krowsingre/viksen-docs** (GitHub Pages: krowsingre.github.io/viksen-docs/). The app's privacy and support links point there. CI runs on demand only. | Owner |
