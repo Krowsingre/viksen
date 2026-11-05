@@ -198,7 +198,7 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
             ++songs;
         }
     }
-    CHECK(songs == 12);
+    CHECK(songs == 8);   // Viksen (6) + The Depths Have Spoken + The Shatter Gardens
 }
 
 namespace {

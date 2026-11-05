@@ -112,3 +112,4 @@
 | 108 | **Opening sound switch and its own volume slider at the bottom of the side menu** (the loops only; Dimensions unaffected). | Owner |
 | 109 | Album information shows **only for albums live on Apple Music** (Home card line and the Dimension page). | Owner |
 | 110 | Album line only for **Sites Only the Horizon Sees** (The Hinds of Morrow) and **The Depths Have Spoken** (Light of a Distant Sun). Beneath the Listening Sky is a single on Apple Music and **does not count** (marked not live). | Owner |
+| 111 | **For now the app holds Viksen, The Depths Have Spoken (light-of-a-distant-sun) and The Shatter Gardens (steel-steam-and-borrowed-dreams) only.** The Hinds of Morrow, The Quiet Storm and Beneath the Listening Sky are held out (their descriptions kept in docs/dimensions-held; audio and download packs unchanged). | Owner |
