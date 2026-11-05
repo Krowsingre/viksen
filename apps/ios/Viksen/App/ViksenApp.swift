@@ -16,6 +16,8 @@ struct ViksenApp: App {
 
     init() {
         AppLog.info(AppLog.launchBanner())
+        AppLog.launchStarted = Date()
+        HangWatch.start()
         #if os(iOS)
         NotificationCenter.default.addObserver(forName: UIApplication.didReceiveMemoryWarningNotification,
                                                object: nil, queue: .main) { _ in AppLog.warning("Memory warning") }
@@ -39,6 +41,9 @@ struct ViksenApp: App {
             }
             .tint(Theme.accent)
             .onAppear {
+                if let t = AppLog.launchStarted {
+                    AppLog.info(String(format: "Timing: launch to first screen %.0f ms", Date().timeIntervalSince(t) * 1000))
+                }
                 store.onTierChange = { [engine] tier in engine.enforce(tier) }
                 engine.beginRunTracking()
             }

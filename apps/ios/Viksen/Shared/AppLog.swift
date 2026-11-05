@@ -6,6 +6,7 @@ import OSLog
 /// Library/Logs folder, which the user can view and share from Settings.
 /// Privacy: events only. Never audio, health values, location or file contents.
 enum AppLog {
+    nonisolated(unsafe) static var launchStarted: Date?
     private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "app", category: "runtime")
     private static let queue = DispatchQueue(label: "app.log", qos: .utility)
     private static let maxBytes = 512 * 1024
@@ -92,4 +93,43 @@ enum AppBuild {
         return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
         #endif
     }()
+}
+
+/// Records main-thread stalls in the diagnostics log (owner reported freezes): a
+/// background thread pings the main thread every 0.5 s and logs any reply slower than
+/// 250 ms, with how long it took. Cheap, and shares nothing but timing.
+enum HangWatch {
+    private static var started = false
+
+    static func start() {
+        guard !started else { return }
+        started = true
+        let thread = Thread {
+            while true {
+                Thread.sleep(forTimeInterval: 0.5)
+                let sent = Date()
+                let done = DispatchSemaphore(value: 0)
+                DispatchQueue.main.async { done.signal() }
+                if done.wait(timeout: .now() + 0.25) == .timedOut {
+                    done.wait()
+                    let ms = Int(Date().timeIntervalSince(sent) * 1000)
+                    AppLog.warning("Main thread stalled \(ms) ms")
+                }
+            }
+        }
+        thread.name = "HangWatch"
+        thread.qualityOfService = .utility
+        thread.start()
+    }
+}
+
+/// Times a block of work into the log when it takes noticeable time.
+@discardableResult
+func logTiming<T>(_ label: String, threshold: Double = 0.05, _ work: () throws -> T) rethrows -> T {
+    let start = Date()
+    defer {
+        let s = Date().timeIntervalSince(start)
+        if s >= threshold { AppLog.info(String(format: "Timing: %@ %.0f ms", label, s * 1000)) }
+    }
+    return try work()
 }

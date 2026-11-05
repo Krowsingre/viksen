@@ -767,6 +767,7 @@ final class EngineController {
         if studioActive { studioStems = [] }   // a Dimension replaces the Studio session
         if worldStatus.loaded && worldStatus.worldID == world.worldID && worldStatus.playing { return }
         do {
+            let started = Date()
             if world.audioAvailable || world.userMade {
                 try bridge.loadWorld(world.worldID)            // audio inside the app or the user's folder
             } else {
@@ -784,6 +785,7 @@ final class EngineController {
             bridge.clearPanic()
             threshold.fadeOut(seconds: 2.5)   // the opening sound gives way to the Dimension
             bridge.startWorld()
+            AppLog.info(String(format: "Timing: enter Dimension %.0f ms", Date().timeIntervalSince(started) * 1000))
         } catch {
             lastError = error.localizedDescription
             AppLog.error("Enter Dimension \(world.worldID) failed: \(error.localizedDescription)")
