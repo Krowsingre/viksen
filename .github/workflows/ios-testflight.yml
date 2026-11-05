@@ -186,6 +186,12 @@ jobs:
             MARKETING_VERSION=0.2.${{ github.run_number }} \
             archive
 
+      - name: Show the app's signed entitlements (WeatherKit, iCloud, app group)
+        run: |
+          app=$(ls -d "$RUNNER_TEMP/Viksen.xcarchive/Products/Applications/"*.app | head -1)
+          codesign -d --entitlements - "$app" 2>/dev/null || codesign -d --entitlements :- "$app"
+          if codesign -d --entitlements - "$app" 2>/dev/null | grep -q weatherkit; then echo "WeatherKit entitlement: present"; else echo "::warning::WeatherKit entitlement missing from the signed app"; fi
+
       - name: Export and upload to App Store Connect
         working-directory: apps/ios
         env:
