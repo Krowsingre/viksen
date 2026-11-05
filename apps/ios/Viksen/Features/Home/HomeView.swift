@@ -351,7 +351,9 @@ private struct DimensionCard: View {
     @Environment(AppNavigator.self) private var nav
     private let lavender = HomeView.lavender
 
-    private var theme: DimensionTheme { .for(world?.worldID) }
+    /// Every card takes the colour of the active Dimension's badge (the one playing;
+    /// Viksen's purple when none is), owner 2026-11-05, and stays see-through.
+    private var theme: DimensionTheme { .for(engine.activeDimensionID) }
 
     var body: some View {
         let st = engine.worldStatus
@@ -391,10 +393,11 @@ private struct DimensionCard: View {
                 AlbumRow(world: world)
             }
         }
-        // Still see-through, tinted with this Dimension's own badge colour.
+        // Still see-through, tinted with the active Dimension's badge colour.
         .background(theme.card.opacity(0.55), in: RoundedRectangle(cornerRadius: 26))
         .background(.ultraThinMaterial.opacity(0.35), in: RoundedRectangle(cornerRadius: 26))
         .overlay(RoundedRectangle(cornerRadius: 26).stroke(theme.edge.opacity(0.3), lineWidth: 1))
+        .animation(.easeInOut(duration: 1.0), value: theme)
     }
 }
 
