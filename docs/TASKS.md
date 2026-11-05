@@ -5,6 +5,8 @@ detail: `docs/TECHNICAL_PROPOSAL.md`. Decisions: `docs/DECISIONS.md`.
 
 ## Queued by the owner (build when the owner says)
 
+- [ ] Opening (threshold) music per Dimension: The Depths Have Spoken and The Shatter Gardens, from their core songs (waiting for the owner's core songs).
+
 - [x] Opening sound switch and volume slider at the bottom of the side menu (changes only the opening loops, live).
 
 ## Engine and content (milestone order A)

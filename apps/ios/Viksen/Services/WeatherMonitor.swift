@@ -65,11 +65,19 @@ final class WeatherMonitor {
         }
         refreshTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1800))
+                try? await Task.sleep(for: .seconds(900))   // every 15 minutes
                 guard let self, self.isRunning, self.isAuthorized else { continue }
                 self.locationManager.requestLocation()
             }
         }
+    }
+
+    /// Checks again now (e.g. when the app comes back), unless checked in the last 5 minutes.
+    func refreshNow() {
+        guard isRunning, isAuthorized else { return }
+        if let last = lastFetch, Date().timeIntervalSince(last) < 300 { return }
+        lastFetch = nil
+        locationManager.requestLocation()
     }
 
     func stop() {
@@ -83,7 +91,7 @@ final class WeatherMonitor {
     }
 
     private func fetch(for location: CLLocation) async {
-        if let last = lastFetch, Date().timeIntervalSince(last) < 1700, mood != nil { return }
+        if let last = lastFetch, Date().timeIntervalSince(last) < 800, mood != nil { return }
         do {
             let current = try await WeatherService.shared.weather(for: location, including: .current)
             let attribution = try? await WeatherService.shared.attribution

@@ -131,8 +131,14 @@ final class EngineController {
     private var currentIntensity: Double?
 
     let weather = WeatherMonitor()
-    var weatherEnabled = false {
-        didSet { weatherEnabled ? weather.start() : weather.stop() }
+    /// Weather (rain plays a Dimension's storm song). Remembered, and on by default
+    /// (owner, 2026-11-05: rain must work without hunting for a setting); iOS asks once for
+    /// approximate location.
+    var weatherEnabled: Bool = UserDefaults.standard.object(forKey: "weatherEnabled") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(weatherEnabled, forKey: "weatherEnabled")
+            weatherEnabled ? weather.start() : weather.stop()
+        }
     }
     /// Weather colours the atmosphere bed (rain darker and denser, clear days brighter).
     var weatherShapesAtmosphere = false { didSet { applyBed() } }
@@ -158,6 +164,7 @@ final class EngineController {
         nowPlaying.onPlay = { [weak self] in self?.resumeLastDimension() }
         nowPlaying.onPause = { [weak self] in self?.leaveWorld() }
         refreshWorlds()   // once at launch; again only after imports (not on every screen)
+        if weatherEnabled { weather.start() }
         meterTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshMeters() }
         }
@@ -757,6 +764,7 @@ final class EngineController {
         appDidEnterBackground()
     }
     func appWillEnterForeground() {
+        if weatherEnabled { weather.refreshNow() }
         if activeDimensionID == nil && !studioActive { threshold.start(engineAudioRunning: audioRunning) }
         FileManager.default.createFile(atPath: Self.runningFlag.path, contents: nil)
     }
