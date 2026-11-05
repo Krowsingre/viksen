@@ -665,7 +665,7 @@
       "lunarPhase": "waningCrescent",
       "music": {
         "tempo": 109.45,
-        "key": "",
+        "key": "G minor",
         "beatsPerBar": 4,
         "barOffsetSeconds": 0.131,
         "loop": {
