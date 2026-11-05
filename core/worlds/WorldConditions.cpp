@@ -119,6 +119,7 @@ bool ConditionSet::evaluate(const ConditionContext& c) const {
 }
 
 bool ConditionSet::inputsAvailable(const ConditionContext& c) const {
+    if (!c.adaptive) return false;   // the listener turned adaptive music off for this output
     for (const auto& k : all) {
         switch (k.type) {
             case Condition::Type::Quiet:

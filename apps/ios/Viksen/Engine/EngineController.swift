@@ -41,9 +41,13 @@ final class EngineController {
         onHeadphones
         #endif
     }
-    /// 3D only on headphones; speakers get plain stereo.
+    /// Separate settings for headphones and for the device's speaker (owner, 2026-11-05):
+    /// 3D audio and adaptive music, applied for whichever output is in use.
     private func applySpatial(force: Bool = false) {
-        let spatial = dimension3D && headphonesForAudio
+        let phones = headphonesForAudio
+        let adaptive = phones ? adaptiveOnHeadphones : adaptiveOnSpeaker
+        if bridge.adaptive != adaptive { bridge.adaptive = adaptive }
+        let spatial = phones ? dimension3D : spatialOnSpeaker
         guard force || spatial != appliedSpatial else { return }
         appliedSpatial = spatial
         bridge.setDimensionSpatialEnabled(spatial)
@@ -860,6 +864,18 @@ final class EngineController {
         }
     }
     var binauralHRTF: Bool { bridge.binauralHRTF }
+    /// 3D audio on the device's own speaker (off by default: the 3D effect is made for
+    /// headphones; some people like it on speakers anyway).
+    var spatialOnSpeaker: Bool = UserDefaults.standard.bool(forKey: "spatial.speaker") {
+        didSet { UserDefaults.standard.set(spatialOnSpeaker, forKey: "spatial.speaker"); applySpatial(force: true) }
+    }
+    /// Adaptive music (parts and mix following the moment), with headphones and on speaker.
+    var adaptiveOnHeadphones: Bool = UserDefaults.standard.object(forKey: "adaptive.headphones") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(adaptiveOnHeadphones, forKey: "adaptive.headphones"); applySpatial(force: true) }
+    }
+    var adaptiveOnSpeaker: Bool = UserDefaults.standard.object(forKey: "adaptive.speaker") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(adaptiveOnSpeaker, forKey: "adaptive.speaker"); applySpatial(force: true) }
+    }
 
     /// Moves a stem on the spatial canvas and remembers it for this Dimension.
     func moveStem(_ index: Int, azimuth: Float, distance: Float) {

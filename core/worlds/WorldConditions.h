@@ -25,6 +25,10 @@ struct ConditionContext {
     // the 3D presentation and the room blend. Microphone moods (quiet, loud) need the mic,
     // which only runs with headphones, so on speakers they are simply unavailable.
     bool headphones = true;
+    // The listener's "Adaptive music" setting for the current output (separate for
+    // headphones and speakers). Off: songs play their parts and mix as written (day,
+    // night and rain songs still change).
+    bool adaptive = true;
     bool raining = false;              // it is raining where the listener is (weather, when on)                // after dark, by the listener's chosen rule (fixed hours or sunset–sunrise)
     EnvironmentStateSnapshot env;
     double totalListeningSeconds = 0;

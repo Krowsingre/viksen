@@ -485,3 +485,14 @@ TEST_CASE("session/day, night and rain songs: rain wins, then tonight's song, th
     CHECK(songAt(false, true).songTitle == "Storm");
     CHECK(songAt(false, true).songLunarPhase.empty());           // rain does not count toward the Moon Chart
 }
+
+TEST_CASE("worlds/adaptive music off plays parts as written") {
+    auto w = parseWorld(sectionWorld());
+    REQUIRE(w.has_value());
+    ConditionContext ctx;
+    ctx.env.motionAvailable = true;
+    ctx.env.moving = true;
+    CHECK(!chooseSections(w->sections, ctx).composed);
+    ctx.adaptive = false;
+    CHECK(chooseSections(w->sections, ctx).composed);
+}

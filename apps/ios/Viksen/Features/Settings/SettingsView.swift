@@ -68,6 +68,21 @@ struct SettingsView: View {
                     Text("Soft loops from Lunar Promise when Viksen opens, now and then drifting to another part. It only plays if nothing else is playing, never interrupts your own music, and fades away when a Dimension starts.")
                 }
 
+                Section {
+                    Toggle("3D audio", isOn: $engine.dimension3D)
+                    Toggle("Adaptive music", isOn: $engine.adaptiveOnHeadphones)
+                } header: {
+                    Text("With headphones")
+                }
+                Section {
+                    Toggle("3D audio", isOn: $engine.spatialOnSpeaker)
+                    Toggle("Adaptive music", isOn: $engine.adaptiveOnSpeaker)
+                } header: {
+                    Text("On the \(Platform.deviceNoun)'s speaker")
+                } footer: {
+                    Text("Adaptive music moves each song between its parts and shapes its mix with the moment: time, the moon, movement and heart rate (and, with headphones, how quiet or loud it is around you). Off, songs play as written; day, night and rain songs still change. 3D audio places the instruments around you; it is made for headphones.")
+                }
+
                 Section("Hearing safety") {
                     LabeledSlider(title: "Output ceiling", value: $engine.limiterCeilingDb, range: -24...(-1), format: "%.0f dBFS")
                     Text("A safety limiter on the final output never lets the signal exceed this level.")

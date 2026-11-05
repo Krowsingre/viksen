@@ -132,6 +132,8 @@ NSError* makeError(const std::string& msg) {
         _host = std::make_unique<atmos::desktop::MiniaudioHost>(*_session);
 #endif
         _intensity = -1;
+        _adaptive = YES;
+        _headphones = YES;
     }
     return self;
 }
@@ -416,6 +418,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         ctx.night = self.night;
         ctx.headphones = self.headphones;
         ctx.raining = self.raining;
+        ctx.adaptive = self.adaptive;
         _session->updateWorld(dt, ctx);
     }
     const atmos::EngineMeters m = engine.meters();
