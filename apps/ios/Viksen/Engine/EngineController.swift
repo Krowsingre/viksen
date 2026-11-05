@@ -135,6 +135,7 @@ final class EngineController {
         weather.onMood = { [weak self] _, _ in self?.applyBed() }
         nowPlaying.onPlay = { [weak self] in self?.resumeLastDimension() }
         nowPlaying.onPause = { [weak self] in self?.leaveWorld() }
+        refreshWorlds()   // once at launch; again only after imports (not on every screen)
         meterTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshMeters() }
         }
@@ -297,8 +298,14 @@ final class EngineController {
 
     // MARK: Meters / delegate
 
+    private var statusTick = 0
+
+    /// 30 Hz: the meters (only the live meters and the waveform read them). The world
+    /// status, which many views read, refreshes 6 times a second.
     private func refreshMeters() {
         meters = bridge.meters()
+        statusTick += 1
+        guard statusTick % 5 == 0 else { return }
         let previousSong = worldStatus.songTitle
         worldStatus = bridge.worldStatus()
         let active = worldStatus.loaded && worldStatus.playing && worldStatus.worldID != "studio" ? worldStatus.worldID : nil
@@ -653,8 +660,7 @@ final class EngineController {
 
     /// Scene phase hook: going to the background is a clean stop point.
     func appDidEnterBackground() {
-        threshold.fadeOut(seconds: 0.3)
-        autosave()
+        autosave()   // music, and the opening sound, keep playing in the background
         try? FileManager.default.removeItem(at: Self.runningFlag)
     }
     /// The Viksen Dimension, built into the app (its day track is Lunar Promise).
@@ -686,7 +692,7 @@ final class EngineController {
         appDidEnterBackground()
     }
     func appWillEnterForeground() {
-        if activeDimensionID == nil && !studioActive { threshold.start() }
+        if activeDimensionID == nil && !studioActive { threshold.start(engineAudioRunning: audioRunning) }
         FileManager.default.createFile(atPath: Self.runningFlag.path, contents: nil)
     }
 
@@ -785,6 +791,11 @@ final class EngineController {
     func leaveWorld() {
         AppLog.info("Leave Dimension \(worldStatus.worldID)")
         bridge.stopWorld()
+        // Back to the opening loops once the Dimension has faded out (if they are on).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+            guard let self, self.activeDimensionID == nil, !self.studioActive else { return }
+            self.threshold.start(engineAudioRunning: self.audioRunning)
+        }
     }
 
     // MARK: 3D / spatial canvas

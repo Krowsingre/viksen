@@ -3,8 +3,8 @@ import Foundation
 
 /// The optional opening ("threshold") sound (owner, 2026-11-05), cut from Lunar Promise.
 /// Off by default. It never interrupts the listener's own audio: it only starts if nothing
-/// else is playing, and it mixes with other sound. It fades away when a Dimension starts
-/// or the app leaves the screen.
+/// else is playing, and it mixes with other sound. It fades away when a Dimension starts,
+/// returns when the Dimension is stopped, and keeps playing when the app is minimised.
 ///
 /// Three 8-bar loops at 80 BPM: B is home and always opens. At each loop boundary A may
 /// come in (about 1 in 8) or, more rarely, C (about 1 in 25); either stays for 4–6 loops,
@@ -28,13 +28,16 @@ final class ThresholdSound {
     var enabled: Bool { UserDefaults.standard.bool(forKey: Self.settingKey) }
 
     /// Call when the app comes to the screen with nothing playing.
-    func start() {
+    func start(engineAudioRunning: Bool) {
         guard enabled, engine == nil, loadSources() else { return }
         #if os(iOS)
         let session = AVAudioSession.sharedInstance()
         guard !session.isOtherAudioPlaying else { return }   // never interrupt the listener's audio
-        if session.category != .playAndRecord {               // the engine's session, if running, already plays us
-            try? session.setCategory(.ambient, options: [.mixWithOthers])
+        // Never change the session while the music engine runs (its category keeps
+        // Dimensions playing in the background). Otherwise: playback that mixes with
+        // other apps and keeps going when Viksen is minimised.
+        if !engineAudioRunning {
+            try? session.setCategory(.playback, options: [.mixWithOthers])
             try? session.setActive(true)
         }
         #endif

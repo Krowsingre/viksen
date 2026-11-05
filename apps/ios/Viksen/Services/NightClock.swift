@@ -55,13 +55,15 @@ final class NightClock {
     }
 
     func refresh(at date: Date = Date()) {
-        if rule == .sunsetSunrise, let c = coordinate, let night = Self.isDark(at: date, coordinate: c) {
-            isNight = night
-            usingFallback = false
+        // Assigned only on change: views reading these are not redrawn every second.
+        let night: Bool, fallback: Bool
+        if rule == .sunsetSunrise, let c = coordinate, let dark = Self.isDark(at: date, coordinate: c) {
+            night = dark; fallback = false
         } else {
-            isNight = Self.inFixedHours(date)
-            usingFallback = rule == .sunsetSunrise
+            night = Self.inFixedHours(date); fallback = rule == .sunsetSunrise
         }
+        if night != isNight { isNight = night }
+        if fallback != usingFallback { usingFallback = fallback }
     }
 
     private func locate() {

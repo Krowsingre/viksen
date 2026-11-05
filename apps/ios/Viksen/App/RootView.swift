@@ -66,17 +66,24 @@ struct CloseButton: View {
     var compact = false   // in a navigation bar
     var action: () -> Void
     var body: some View {
-        Button(action: action) {
-            Image(systemName: "xmark").font(.system(size: compact ? 15 : 17, weight: .medium))
-                .foregroundStyle(Color(red: 0.62, green: 0.48, blue: 1))
-                .frame(width: compact ? 34 : 44, height: compact ? 34 : 44)
-                .background(Color.white.opacity(0.06), in: Circle())
-                .overlay(Circle().stroke(Color(red: 0.90, green: 0.86, blue: 1).opacity(0.3), lineWidth: 1))
-                .padding(compact ? 5 : 6)
-                .contentShape(Rectangle())
+        if compact {
+            // In a navigation bar iOS 26 already draws a glass circle around the button:
+            // just the X, or the two circles look stacked.
+            Button(action: action) { Image(systemName: "xmark") }
+                .accessibilityLabel("Close")
+        } else {
+            Button(action: action) {
+                Image(systemName: "xmark").font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(Color(red: 0.62, green: 0.48, blue: 1))
+                    .frame(width: 44, height: 44)
+                    .background(Color.white.opacity(0.06), in: Circle())
+                    .overlay(Circle().stroke(Color(red: 0.90, green: 0.86, blue: 1).opacity(0.3), lineWidth: 1))
+                    .padding(6)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close")
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Close")
     }
 }
 

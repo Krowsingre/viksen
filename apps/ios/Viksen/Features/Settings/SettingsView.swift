@@ -62,10 +62,10 @@ struct SettingsView: View {
                 Section {
                     Toggle("Opening sound", isOn: $openingSound)
                         .onChange(of: openingSound) { _, on in
-                            if on { engine.threshold.start() } else { engine.threshold.fadeOut(seconds: 0.5) }
+                            if on { engine.threshold.start(engineAudioRunning: engine.audioRunning) } else { engine.threshold.fadeOut(seconds: 0.5) }
                         }
                 } footer: {
-                    Text("Soft loops from Lunar Promise when Viksen opens, now and then drifting to another part. It only plays if nothing else is playing, never interrupts your own music, follows the silent switch, and fades away when a Dimension starts.")
+                    Text("Soft loops from Lunar Promise when Viksen opens, now and then drifting to another part. It only plays if nothing else is playing, never interrupts your own music, and fades away when a Dimension starts.")
                 }
 
                 Section("Hearing safety") {
@@ -140,7 +140,6 @@ private struct DownloadsSettingsSection: View {
         } footer: {
             Text("Open a Dimension to remove tracks one by one or all at once. Download them again from Dimensions any time.")
         }
-        .onAppear { engine.refreshWorlds() }
     }
 }
 

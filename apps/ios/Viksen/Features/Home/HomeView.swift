@@ -40,7 +40,6 @@ struct HomeView: View {
             MenuButton().padding(.trailing, 18).padding(.top, 4)
         }
         .preferredColorScheme(.dark)
-        .onAppear { engine.refreshWorlds() }
     }
 }
 

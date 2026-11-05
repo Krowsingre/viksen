@@ -37,7 +37,6 @@ struct DimensionsManagerView: View {
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.folder]) { result in
             if case let .success(url) = result { engine.importDimension(from: url) }
         }
-        .onAppear { engine.refreshWorlds() }
     }
 
     private func subtitle(_ w: AtmosWorldInfo) -> String {

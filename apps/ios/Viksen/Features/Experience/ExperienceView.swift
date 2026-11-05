@@ -338,7 +338,6 @@ private struct DimensionPickerSection: View {
         } footer: {
             Text("Open a Dimension to choose which of its tracks to download. A Dimension plays the tracks you have; remove any track to free up space, and download it again any time.")
         }
-        .onAppear { engine.refreshWorlds() }
     }
 
     private func isBundled(_ w: AtmosWorldInfo) -> Bool { w.audioAvailable || w.userMade }
@@ -620,7 +619,6 @@ struct DimensionTracksView: View {
         .navigationTitle(world.name)
         .sheet(isPresented: $showMoonChart) { MoonChartView(initialDimensionID: world.worldID) }
         .inlineNavigationTitle()
-        .onAppear { engine.refreshWorlds() }
         .confirmationDialog("Remove every track of \(world.name) from this \(Platform.deviceNoun)?",
                             isPresented: $confirmRemoveAll, titleVisibility: .visible) {
             Button("Remove All Tracks", role: .destructive) { engine.removeAllTracks(world) }

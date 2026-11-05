@@ -19,8 +19,9 @@ struct SplashView: View {
         }
         .accessibilityLabel("Viksen")
         .task {
-            withAnimation(.easeOut(duration: reduceMotion ? 0 : 0.6)) { visible = true }
-            try? await Task.sleep(for: .milliseconds(1300))
+            // Only covers the first frame while Home is built: no fixed wait.
+            withAnimation(.easeOut(duration: reduceMotion ? 0 : 0.2)) { visible = true }
+            try? await Task.sleep(for: .milliseconds(250))
             onFinished()
         }
     }

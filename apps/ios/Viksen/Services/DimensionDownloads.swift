@@ -34,6 +34,12 @@ final class DimensionDownloads {
     private var tasks: [String: Task<Void, Never>] = [:]
     private var fileMaps: [String: [String: URL]] = [:]
     private var tracksByDimension: [String: [Track]] = [:]
+    /// Tracks the listener removed. iOS may finish deleting an asset pack later (for
+    /// example while its files were in use), so these count as removed until downloaded
+    /// again, and the removal is retried at the next launch.
+    private var removed: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "removedTracks") ?? []) {
+        didSet { UserDefaults.standard.set(Array(removed), forKey: "removedTracks") }
+    }
 
     static func path(_ dimensionID: String, _ file: String) -> String { "Dimensions/\(dimensionID)/\(file)" }
 
@@ -65,6 +71,13 @@ final class DimensionDownloads {
             for t in tracks {
                 if bundled.contains(dimension) { states[t.id] = .installed; continue }
                 if case .downloading = states[t.id] { continue }
+                if removed.contains(t.id) {
+                    states[t.id] = .notInstalled
+                    #if os(iOS)
+                    Task { try? await AssetPackManager.shared.remove(assetPackWithID: t.packID) }   // finish an earlier removal
+                    #endif
+                    continue
+                }
                 #if os(iOS)
                 Task {
                     let map = await self.resolve(t)
@@ -91,6 +104,7 @@ final class DimensionDownloads {
     func download(_ track: Track) {
         #if os(iOS)
         guard tasks[track.id] == nil, state(track.id) != .installed else { return }
+        removed.remove(track.id)
         states[track.id] = .downloading(0)
         AppLog.info("Download track \(track.id)")
         let packID = track.packID
@@ -131,25 +145,27 @@ final class DimensionDownloads {
         states[track.id] = .notInstalled
     }
 
+    /// Removes a track: it is gone from the app at once; iOS deletes the files (now, or
+    /// at the next launch if they were still in use).
     func remove(_ track: Track) {
+        removed.insert(track.id)
+        states[track.id] = .notInstalled
+        sizes[track.id] = nil
+        fileMaps[track.id] = nil
         #if os(iOS)
         Task {
             do {
                 try await AssetPackManager.shared.remove(assetPackWithID: track.packID)
-                self.states[track.id] = .notInstalled
-                self.sizes[track.id] = nil
-                self.fileMaps[track.id] = nil
                 AppLog.info("Track \(track.id) removed from this device")
             } catch {
-                self.states[track.id] = .failed(error.localizedDescription)
-                AppLog.error("Remove track \(track.id) failed: \(error.localizedDescription)")
+                AppLog.warning("Track \(track.id): iOS will finish removing it later (\(error.localizedDescription))")
             }
         }
         #endif
     }
 
     func removeAll(_ dimensionID: String) {
-        for t in tracks(dimensionID) where state(t.id) == .installed { remove(t) }
+        for t in tracks(dimensionID) where state(t.id) == .installed || state(t.id) != .notInstalled { remove(t) }
     }
 
     // MARK: Files

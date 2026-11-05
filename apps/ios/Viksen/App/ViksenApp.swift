@@ -31,7 +31,7 @@ struct ViksenApp: App {
                     .environment(store)
                     .preferredColorScheme(appearance.colorScheme)
                 if showSplash {
-                    SplashView { withAnimation(.easeInOut(duration: 0.4)) { showSplash = false } }
+                    SplashView { withAnimation(.easeInOut(duration: 0.25)) { showSplash = false } }
                         .preferredColorScheme(.dark)
                         .transition(.opacity)
                         .zIndex(1)
