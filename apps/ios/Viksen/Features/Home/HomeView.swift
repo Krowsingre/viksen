@@ -271,9 +271,11 @@ private struct CardProgress: View {
         let phase = engine.moonPhaseID
         let discovered = progress.discoveredPhases(dimensionID).contains(phase)
         let discovering = engine.nightClock.isNight && !discovered
-        let label = discovering ? "TONIGHT'S DISCOVERY" : (discovered && engine.nightClock.isNight ? "DISCOVERED TONIGHT"
-                    : (active && st.playing ? "NOW PLAYING" : dimensionName.uppercased()))
-        let title = active && !st.songTitle.isEmpty ? st.songTitle : dimensionName
+        let playing = active && st.playing
+        // Nothing playing: "DIMENSION" and the Dimension's name (owner, 2026-11-05).
+        let label = !playing ? "DIMENSION"
+            : (discovering ? "TONIGHT'S DISCOVERY" : (discovered && engine.nightClock.isNight ? "DISCOVERED TONIGHT" : "NOW PLAYING"))
+        let title = playing && !st.songTitle.isEmpty ? st.songTitle : dimensionName
         let fraction: Double, detail: String
         if discovering {
             let heard = progress.phaseProgress(dimensionID) * 180
