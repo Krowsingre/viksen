@@ -108,6 +108,8 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 
 /// After dark by the listener's chosen rule: lunar Dimensions play tonight's lunar song.
 @property (nonatomic) BOOL night;
+/// Headphones are in: contextual mixing is on. Without them songs play as written.
+@property (nonatomic) BOOL headphones;
 @property (nonatomic, weak, nullable) id<AtmosEngineBridgeDelegate> delegate;
 @property (nonatomic, readonly) BOOL audioRunning;
 @property (nonatomic, readonly) BOOL micEnabled;

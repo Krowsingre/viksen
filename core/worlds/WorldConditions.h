@@ -20,7 +20,10 @@ struct ConditionContext {
     bool micActive = false;            // mic-derived states are meaningful
     std::optional<double> intensity;   // exercise intensity 0..1 when Health/Watch is on
     double daysSinceUnixEpochUtc = 0;  // current time, for the moon phase
-    bool night = false;                // after dark, by the listener's chosen rule (fixed hours or sunset–sunrise)
+    bool night = false;
+    // Contextual mixing is a headphones experience (owner, 2026-11-05): without them every
+    // song plays straight through as written (no reactive parts or mix rules).
+    bool headphones = true;                // after dark, by the listener's chosen rule (fixed hours or sunset–sunrise)
     EnvironmentStateSnapshot env;
     double totalListeningSeconds = 0;
     int consecutiveWorlds = 0;

@@ -166,7 +166,8 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
         {"the-quiet-storm/the-silent-alley", 355.37},
         {"the-quiet-storm/in-different-times", 436.65},
         {"the-listening-sky/dance-of-the-dragonfly", 871.53},
-        {"viksen/lunar-promise", 364.57}};
+        {"viksen/lunar-promise", 364.57},
+        {"viksen/lunar-dark-promise", 279.57}};
     int songs = 0;
     for (const auto& dir : fs::directory_iterator(root)) {
         std::ifstream in(dir.path() / "world.json");
@@ -193,7 +194,7 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
             ++songs;
         }
     }
-    CHECK(songs == 7);
+    CHECK(songs == 8);
 }
 
 namespace {
@@ -427,4 +428,15 @@ TEST_CASE("session/lunar Dimension: day track by day, tonight's lunar song after
     REQUIRE(s.loadDimension(*d, decode, &err));
     CHECK(s.worldStatus().songTitle == "Song C");
     s.unloadWorld();
+}
+
+TEST_CASE("worlds/without headphones every song plays as written") {
+    auto w = parseWorld(sectionWorld());
+    REQUIRE(w.has_value());
+    ConditionContext ctx;
+    ctx.env.motionAvailable = true;
+    ctx.env.moving = true;
+    CHECK(!chooseSections(w->sections, ctx).composed);   // headphones: the moving part is chosen
+    ctx.headphones = false;
+    CHECK(chooseSections(w->sections, ctx).composed);    // speaker: straight through
 }

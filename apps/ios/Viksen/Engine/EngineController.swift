@@ -319,6 +319,12 @@ final class EngineController {
             lastProgressTick = Date()
             nightClock.refresh()
             if bridge.night != nightClock.isNight { bridge.night = nightClock.isNight }
+            #if os(macOS)
+            let adaptive = true   // a Mac cannot tell headphones from speakers
+            #else
+            let adaptive = onHeadphones
+            #endif
+            if bridge.headphones != adaptive { bridge.headphones = adaptive }
             let audible = worldStatus.playing && masterGain > 0.001 && busGains[BusLevel.music.rawValue] > 0.001
             // Only tonight's lunar song, after dark, counts. TestFlight-only check of the
             // counter: any song counts, at any hour.

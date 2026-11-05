@@ -178,7 +178,9 @@ bool LiveSession::startFeeder(int64_t fromFrame, std::string* error) {
         // scratch memory grows with length x stems.
         crossfade = static_cast<int64_t>(std::llround(std::min(6.0, beat * world_->crossfadeBeats) * rate));
         planner_->setChoice(lastChoice_);
-        planner_->setStopAtSongEnd(dimension_ && dimension_->songs.size() > 1);
+        // Multi-song Dimensions hand over at a song's end; lunar Dimensions instead loop the
+        // current song (day track or tonight's song) until dusk or dawn changes it.
+        planner_->setStopAtSongEnd(dimension_ && dimension_->songs.size() > 1 && !hasLunarSongs());
     }
     feeder_ = std::make_unique<WorldFeeder>(engine_->worldPlayer(), std::move(decoders), loopStart, loopEnd, planner_, crossfade);
     if (planner_) {
@@ -246,6 +248,13 @@ bool LiveSession::loadDimension(const DimensionManifest& d, StemFileDecoder deco
 // Lunar Dimensions (owner, 2026-11-04): by day the Dimension plays its day track (its
 // first song without a lunar phase); after dark it plays the song for the moon's current
 // phase. Returns -1 when the Dimension has no lunar songs.
+bool LiveSession::hasLunarSongs() const {
+    if (!dimension_) return false;
+    for (const auto& s : dimension_->songs)
+        if (s.lunarPhase) return true;
+    return false;
+}
+
 int LiveSession::lunarTarget(const ConditionContext& c) const {
     if (!dimension_) return -1;
     const auto& songs = dimension_->songs;
