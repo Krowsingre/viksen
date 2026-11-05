@@ -92,25 +92,6 @@ private struct DimensionRow: View {
     }
 }
 
-/// The level sliders with live meters: their own view, so only they redraw with the meters.
-struct BusSliders: View {
-    @Environment(EngineController.self) private var engine
-
-    var body: some View {
-        @Bindable var engine = engine
-        ForEach(EngineController.BusLevel.allCases) { bus in
-            BusSlider(title: bus.title,
-                      color: Theme.color(for: bus),
-                      value: Binding(get: { engine.busGains[bus.rawValue] },
-                                     set: { engine.setGain($0, for: bus) }),
-                      peak: engine.meters.busPeaks.indices.contains(bus.rawValue)
-                          ? engine.meters.busPeaks[bus.rawValue].floatValue : 0)
-        }
-        BusSlider(title: "Master", color: .primary, value: $engine.masterGain,
-                  peak: max(engine.meters.outputPeakLeft, engine.meters.outputPeakRight))
-    }
-}
-
 struct StatusSection: View {
     @Environment(EngineController.self) private var engine
 
@@ -220,40 +201,14 @@ struct SensesSection: View {
     }
 }
 
-/// Optional: hear the surroundings, transformed, under the music.
+/// How loud the blended room is (each song sets its colour). Shown while it is on.
 struct BlendSection: View {
     @Environment(EngineController.self) private var engine
 
     var body: some View {
         @Bindable var engine = engine
-        if !engine.onHeadphones {
-            Label("Connect headphones to blend the room into the music.", systemImage: "headphones")
-                .font(.footnote).foregroundStyle(.secondary)
-        }
-        Toggle("Hear the room", isOn: $engine.hearRoom)
-            .disabled(!engine.onHeadphones)
-        if engine.hearRoom && !engine.micEnabled {
-            Text("Turn on \u{201C}Listen to the room\u{201D} above to hear it.")
-                .font(.footnote).foregroundStyle(.secondary)
-        }
-        if engine.hearRoom && engine.micEnabled && engine.onHeadphones {
-            LabeledSlider(title: "Tone", value: $engine.micToneHz, range: 200...12000, format: "%.0f Hz")
-            LabeledSlider(title: "Echo time", value: $engine.micEchoSeconds, range: 0.05...1.5, format: "%.2f s")
-            LabeledSlider(title: "Echo feedback", value: $engine.micFeedback, range: 0...0.9, format: "%.2f")
-            LabeledSlider(title: "Effect mix", value: $engine.micWet, range: 0...1, format: "%.2f")
-            Gated(feature: .frequencyShift, title: "Frequency shift") {
-                LabeledSlider(title: "Frequency shift", value: $engine.micShiftHz, range: -600...600, format: "%.0f Hz")
-                LabeledSlider(title: "Shift amount", value: $engine.micShiftMix, range: 0...1, format: "%.2f")
-            }
-            Gated(feature: .roomMemory, title: "Room memory") {
-                Toggle("Room memory", isOn: $engine.roomMemoryEnabled)
-            }
-            if engine.roomMemoryEnabled {
-                Text("Replays the last few seconds of your surroundings, slowed and faded, as a drifting texture. Held in memory only and erased when the microphone turns off.")
-                    .font(.footnote).foregroundStyle(.secondary)
-                LabeledSlider(title: "Memory level", value: $engine.roomMemoryLevel, range: 0...1, format: "%.2f")
-                LabeledSlider(title: "Memory pitch", value: $engine.roomMemoryPitch, range: -12...12, format: "%.0f st")
-            }
+        if engine.roomBlendOn {
+            LabeledSlider(title: "Room level", value: $engine.roomLevel, range: 0...1, format: "%.0f%%", scale: 100)
         }
     }
 }
@@ -263,13 +218,14 @@ struct LabeledSlider: View {
     @Binding var value: Float
     var range: ClosedRange<Float>
     var format: String
+    var scale: Float = 1
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
                 Text(title).font(.subheadline)
                 Spacer()
-                Text(String(format: format, value)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                Text(String(format: format, value * scale)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
             Slider(value: $value, in: range).accessibilityLabel(title)
         }
@@ -324,7 +280,6 @@ struct BodyMotionSection: View {
                             .font(.footnote.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
-                    Toggle("Echo follows your steps", isOn: $engine.echoFollowsSteps)
                 }
             }
         }
@@ -343,7 +298,6 @@ struct BodyMotionSection: View {
                             .font(.footnote.monospacedDigit()).foregroundStyle(.secondary)
                     }
                 }
-                Toggle("Intensity shapes the atmosphere", isOn: $engine.intensityShapesAtmosphere)
                 Text("Live heart rate comes from the Viksen app on Apple Watch during a workout. Without it, Health readings may arrive minutes late.")
                     .font(.footnote).foregroundStyle(.secondary)
                 if let error = health.lastError {
@@ -373,7 +327,6 @@ struct WeatherSection: View {
                     Spacer()
                     if let t = weather.temperatureText { Text(t).foregroundStyle(.secondary) }
                 }
-                Toggle("Weather shapes the atmosphere", isOn: $engine.weatherShapesAtmosphere)
             } else if let error = weather.lastError {
                 Text(error).font(.footnote).foregroundStyle(Theme.danger)
             } else {

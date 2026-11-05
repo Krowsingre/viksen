@@ -470,10 +470,10 @@ private struct RestoreCard: View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Viksen closed unexpectedly", systemImage: "arrow.counterclockwise.circle")
                 .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-            Text("Restore your last session? The microphone stays off until you turn it on.")
+            Text("Play your last Dimension again? The microphone stays off until you turn it on.")
                 .font(.caption).foregroundStyle(.white.opacity(0.7))
             HStack {
-                Button("Restore") { engine.restoreAutosave(); nav.go(.experience) }
+                Button("Play again") { engine.restoreLastSession() }
                     .buttonStyle(.borderedProminent)
                 Button("Not now") { engine.dismissRestore() }
                     .buttonStyle(.bordered)

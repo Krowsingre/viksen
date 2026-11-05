@@ -19,18 +19,14 @@ enum Tier: Int, Comparable, CaseIterable {
 /// to change what each tier includes (owner's tier plan, docs/DECISIONS.md #19).
 enum Feature: CaseIterable {
     // Free: basic augmented audio
-    case atmosphereBed, liveMicBasic, motionSensing
-    // Experience: full listening experience, environmental transformations
-    case frequencyShift, roomMemory, headTracking, activity, health, weather, expandedWorlds, spatialCanvas
-    // Studio: music and stem imports, spatial composition, advanced effects, automation, export
-    case musicImport, stemImport, spatialComposition, advancedEffects, automation, export
+    case liveMicBasic, motionSensing, weather
+    // Experience: the full listening experience
+    case headTracking, activity, health, expandedWorlds
 
     var requiredTier: Tier {
         switch self {
-        case .atmosphereBed, .liveMicBasic, .motionSensing, .weather: .free   // rain plays storm songs on every tier
-        // Free keeps 3D audio itself ("limited spatial controls"); arranging it is Experience.
-        case .frequencyShift, .roomMemory, .headTracking, .activity, .health, .expandedWorlds, .spatialCanvas: .experience
-        case .musicImport, .stemImport, .spatialComposition, .advancedEffects, .automation, .export: .studio
+        case .liveMicBasic, .motionSensing, .weather: .free   // rain plays storm songs on every tier
+        case .headTracking, .activity, .health, .expandedWorlds: .experience
         }
     }
 }

@@ -6,10 +6,8 @@
 
 #include <algorithm>
 #include <memory>
-#include <set>
 #include <string>
 
-#include "core/assets/ClipPreparation.h"
 #include "core/session/LiveSession.h"
 #if TARGET_OS_IOS
 #include "platform/ios/IOSAudioIO.h"
@@ -18,11 +16,8 @@
 #else
 #include "platform/desktop/MiniaudioHost.h"
 #endif
-#include "platform/ios/IOSMediaDecoder.h"
 #include "platform/ios/IOSStemDecoder.h"
 #include "core/worlds/WorldManifest.h"
-#include "core/projects/ProjectPackage.h"
-#include "core/session/SessionDocument.h"
 #include "core/worlds/WorldConditions.h"
 
 using atmos::Bus;
@@ -117,7 +112,6 @@ NSError* makeError(const std::string& msg) {
     // Mac: Core Audio through miniaudio. The host rebuilds the engine for the device rate.
     std::unique_ptr<atmos::desktop::MiniaudioHost> _host;
 #endif
-    NSString *_loadedTrackName;
     CFTimeInterval _lastMeterTime;
     double _intensity;
 }
@@ -155,7 +149,6 @@ NSError* makeError(const std::string& msg) {
 - (BOOL)audioRunning { return _io && _io->isRunning(); }
 - (BOOL)micEnabled { return _session->settings().micEnabled; }
 - (double)sampleRate { return _session->sampleRate(); }
-- (NSString *)loadedTrackName { return _loadedTrackName; }
 - (AtmosRouteInfo *)route { return [_audioSession currentRoute]; }
 - (AtmosMicPermission)micPermission { return [_audioSession micPermission]; }
 
@@ -222,7 +215,6 @@ NSError* makeError(const std::string& msg) {
 - (BOOL)audioRunning { return _host && _host->running(); }
 - (BOOL)micEnabled { return _session->settings().micEnabled; }
 - (double)sampleRate { return _session->sampleRate(); }
-- (NSString *)loadedTrackName { return _loadedTrackName; }
 
 - (AtmosRouteInfo *)route {
     AtmosRouteInfo *info = [AtmosRouteInfo new];
@@ -273,52 +265,12 @@ NSError* makeError(const std::string& msg) {
 
 #endif
 
-// ------------------------------------------------------------------ track
-
-- (void)loadTrackAtURL:(NSURL *)url completion:(void (^)(BOOL, NSString *_Nullable))completion {
-    const double rate = _session->sampleRate();
-    NSString *name = url.lastPathComponent;
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
-        const BOOL scoped = [url startAccessingSecurityScopedResource];
-        auto decoded = std::make_shared<atmos::AudioClip>();
-        atmos::core::AudioFileInfo info;
-        std::string error;
-        const bool ok = atmos::ios::decodeAudioFile(url, *decoded, info, error);
-        if (scoped) [url stopAccessingSecurityScopedResource];
-        // Resample off the main thread; LiveSession redoes it if the rate changed meanwhile.
-        atmos::ClipPtr prepared = ok ? atmos::core::prepareClipForEngine(*decoded, rate) : nullptr;
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if (!ok) { completion(NO, @(error.c_str())); return; }
-            if (!self->_session->setTrack(decoded, prepared, rate)) { completion(NO, @"The engine rejected this file."); return; }
-            self->_loadedTrackName = name;
-            completion(YES, nil);
-        });
-    });
-}
-
-- (void)unloadTrack {
-    _session->clearTrack();
-    _loadedTrackName = nil;
-}
-
-- (void)play { _session->engine().play(); }
-- (void)pause { _session->engine().pause(); }
-- (void)seekToSeconds:(double)s { _session->engine().seek(static_cast<int64_t>(s * _session->sampleRate())); }
-- (void)setLooping:(BOOL)looping { _session->setLooping(looping); }
-
 // ------------------------------------------------------------------ mix
 
 static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses; }
 
 - (void)setGain:(float)gain forBus:(AtmosBusId)bus { if (validBus(bus)) _session->setBusGain(static_cast<Bus>(bus), gain); }
-- (float)gainForBus:(AtmosBusId)bus { return validBus(bus) ? _session->settings().busGain[bus] : 0.0f; }
-- (void)setMuted:(BOOL)muted forBus:(AtmosBusId)bus { if (validBus(bus)) _session->setBusMuted(static_cast<Bus>(bus), muted); }
-- (void)setMasterGain:(float)g { _session->setMasterGain(g); }
 - (void)setLimiterCeilingDb:(float)db { _session->setLimiterCeilingDb(db); }
-
-- (void)setAtmosphereBedEnabled:(BOOL)e { _session->setBedEnabled(e); }
-- (void)setAtmosphereBedLevel:(float)l { _session->setBedLevel(l); }
-- (void)setAtmosphereBedColourHz:(float)hz { _session->setBedColourHz(hz); }
 
 // ------------------------------------------------------------------ microphone
 
@@ -372,16 +324,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     }
 }
 
-- (void)setMicToneHz:(float)v { _session->setMicToneHz(v); }
-- (void)setMicEchoSeconds:(float)v { _session->setMicEchoSeconds(v); }
-- (void)setMicFeedback:(float)v { _session->setMicFeedback(v); }
-- (void)setMicWet:(float)v { _session->setMicWet(v); }
-- (void)setMicShiftHz:(float)v { _session->setMicShiftHz(v); }
-- (void)setMicShiftMix:(float)v { _session->setMicShiftMix(v); }
 
-- (void)setRoomMemoryEnabled:(BOOL)e { _session->setRoomMemoryEnabled(e); }
-- (void)setRoomMemoryLevel:(float)v { _session->setRoomMemoryLevel(v); }
-- (void)setRoomMemoryPitch:(float)v { _session->setRoomMemoryPitch(v); }
 
 // ------------------------------------------------------------------ motion
 
@@ -466,7 +409,6 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     s.motionAvailable = st.motionAvailable;
     s.loudness = st.loudness;
     s.activity = st.activity;
-    s.roomMemoryVoices = engine.roomMemory().activeVoices();
     const double days = [NSDate date].timeIntervalSince1970 / 86400.0;
     s.moonPhaseId = @(atmos::core::moonPhaseId(atmos::core::moonPhaseName(days)));
     s.lunarDay = atmos::core::lunarDay(days);
@@ -517,21 +459,6 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         return [a.name compare:b.name];
     }];
     return out;
-}
-
-- (NSString *)validateDimensionFolder:(NSURL *)folder {
-    std::string err;
-    auto w = readWorld(folder, &err);
-    if (!w) return [NSString stringWithFormat:@"Not a Dimension: %s", err.c_str()];
-    if (!stemsPresent(folder, *w)) return @"Some of this Dimension's audio files are missing.";
-    unsigned long long total = 0;
-    for (const auto &song : w->songs)
-        for (const auto &s : song.stems) {
-            NSDictionary *a = [[NSFileManager defaultManager] attributesOfItemAtPath:[folder URLByAppendingPathComponent:@(s.file.c_str())].path error:nil];
-            total += [a fileSize];
-        }
-    if (total > 2ull * 1024 * 1024 * 1024) return @"This Dimension is larger than 2 GB.";
-    return nil;
 }
 
 - (BOOL)loadWorld:(NSString *)worldID error:(NSError **)error {
@@ -595,169 +522,6 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 - (void)unloadWorld { _session->unloadWorld(); }
 - (void)setExerciseIntensity:(double)intensity { _intensity = intensity; }
 - (void)setDimensionSpatialEnabled:(BOOL)enabled { _session->setWorldSpatialEnabled(enabled); }
-- (void)moveStem:(NSInteger)index azimuth:(float)az elevation:(float)el distance:(float)d {
-    _session->setWorldStemPosition(static_cast<int>(index), az, el, d);
-}
-- (BOOL)startRecordingMode:(AtmosRecordMode)mode toURL:(NSURL *)url error:(NSError **)error {
-    std::string err;
-    if (!_session->startRecording(url.fileSystemRepresentation, static_cast<atmos::CaptureMode>(mode), &err)) {
-        if (error) *error = makeError(err.empty() ? "Could not start recording" : err);
-        return NO;
-    }
-    return YES;
-}
-- (double)stopRecording { return _session->stopRecording(); }
-- (BOOL)recording { return _session->recording(); }
-- (double)recordingSeconds { return _session->recordingSeconds(); }
-- (uint64_t)recordingDroppedBlocks { return _session->recordingDroppedBlocks(); }
-- (BOOL)takeRecordingInterrupted { return _session->takeRecordingInterrupted(); }
-
-- (BOOL)saveProjectAtURL:(NSURL *)packageURL name:(NSString *)name songURL:(NSURL *)songURL
-             dimensionID:(NSString *)dimensionID stems:(NSArray<NSDictionary<NSString *, id> *> *)stemList
-                   error:(NSError **)error {
-    namespace fs = std::filesystem;
-    using namespace atmos::core;
-    const fs::path pkg(packageURL.fileSystemRepresentation);
-    std::error_code ec;
-    fs::create_directories(pkg / "assets" / "audio", ec);
-    // Files already in the package (same name and size) are reused; everything else is copied in.
-    ProjectManifest old;
-    std::vector<std::string> keep;
-    std::set<std::string> oldPaths;
-    if (ProjectPackage::load(pkg, old).ok)
-        for (const auto &src : old.sources) oldPaths.insert(src.path);
-    auto importOrReuse = [&](NSURL *url, std::string &rel) -> bool {
-        const fs::path src(url.fileSystemRepresentation);
-        for (const auto &p : oldPaths) {
-            if (fs::path(p).filename() == src.filename() && fs::exists(pkg / p, ec) &&
-                fs::file_size(pkg / p, ec) == fs::file_size(src, ec)) { rel = p; return true; }
-        }
-        if (fs::equivalent(src.parent_path(), pkg / "assets" / "audio", ec)) {  // already inside this package
-            rel = (fs::path("assets") / "audio" / src.filename()).generic_string();
-            return true;
-        }
-        const auto r = ProjectPackage::importAsset(pkg, src, rel);
-        if (!r.ok && error) *error = makeError(r.error);
-        return r.ok;
-    };
-    auto mediaOf = [](NSURL *url) {
-        MediaInfo media;
-        if (AVAudioFile *f = [[AVAudioFile alloc] initForReading:url error:nil]) {
-            media.sampleRate = f.fileFormat.sampleRate;
-            media.channels = static_cast<int>(f.fileFormat.channelCount);
-            media.frames = f.length;
-        }
-        return media;
-    };
-    std::optional<SessionTrack> track;
-    if (songURL) {
-        std::string rel;
-        if (!importOrReuse(songURL, rel)) return NO;
-        keep.push_back(rel);
-        track = SessionTrack{rel, songURL.lastPathComponent.UTF8String, mediaOf(songURL)};
-    }
-    std::vector<SessionStem> stems;
-    for (NSDictionary *d in stemList) {
-        NSURL *u = d[@"url"];
-        if (![u isKindOfClass:[NSURL class]]) continue;
-        std::string rel;
-        if (!importOrReuse(u, rel)) return NO;
-        keep.push_back(rel);
-        stems.push_back({SessionTrack{rel, u.lastPathComponent.UTF8String, mediaOf(u)},
-                         [d[@"gainDb"] floatValue], static_cast<bool>([d[@"muted"] boolValue])});
-    }
-    // Drop audio no longer referenced (e.g. a replaced song).
-    for (auto &e : fs::directory_iterator(pkg / "assets" / "audio", ec)) {
-        const std::string rel = (fs::path("assets") / "audio" / e.path().filename()).generic_string();
-        if (std::find(keep.begin(), keep.end(), rel) == keep.end()) fs::remove(e.path(), ec);
-    }
-    auto m = makeSessionProject(name.UTF8String, _session->settings(), track,
-                                dimensionID ? dimensionID.UTF8String : "", _session->sampleRate(), stems);
-    const auto r = ProjectPackage::save(pkg, m);
-    if (!r.ok) { if (error) *error = makeError(r.error); return NO; }
-    return YES;
-}
-
-- (NSDictionary<NSString *, id> *)openProjectAtURL:(NSURL *)packageURL error:(NSError **)error {
-    using namespace atmos::core;
-    const std::filesystem::path pkg(packageURL.fileSystemRepresentation);
-    ProjectManifest m;
-    const auto r = ProjectPackage::load(pkg, m);
-    if (!r.ok) { if (error) *error = makeError(r.error); return nil; }
-    const auto restore = readSessionProject(m, _session->settings());
-    _session->applyAllSettings(restore.settings);
-    NSMutableDictionary *out = [@{ @"name": @(m.name.c_str()) } mutableCopy];
-    if (restore.track) {
-        const auto file = pkg / restore.track->packagedPath;
-        if (std::filesystem::exists(file)) out[@"song"] = [NSURL fileURLWithPath:@(file.c_str())];
-    }
-    if (!restore.dimensionId.empty()) out[@"dimension"] = @(restore.dimensionId.c_str());
-    NSMutableArray *stems = [NSMutableArray array];
-    for (const auto &st : restore.stems) {
-        const auto file = pkg / st.file.packagedPath;
-        if (!std::filesystem::exists(file)) continue;
-        [stems addObject:@{ @"url": [NSURL fileURLWithPath:@(file.c_str())], @"gainDb": @(st.gainDb), @"muted": @(st.muted) }];
-    }
-    out[@"stems"] = stems;
-    return out;
-}
-
-- (NSDictionary<NSString *, NSNumber *> *)currentSettings {
-    const auto &s = _session->settings();
-    return @{
-        @"busGain0": @(s.busGain[0]), @"busGain1": @(s.busGain[1]), @"busGain2": @(s.busGain[2]), @"busGain3": @(s.busGain[3]),
-        @"masterGain": @(s.masterGain), @"limiterCeilingDb": @(s.limiterCeilingDb),
-        @"bedEnabled": @(s.bedEnabled), @"bedLevel": @(s.bedLevel), @"bedColourHz": @(s.bedColourHz),
-        @"micToneHz": @(s.micToneHz), @"micEchoSeconds": @(s.micEchoSeconds), @"micFeedback": @(s.micFeedback),
-        @"micWet": @(s.micWet), @"micShiftHz": @(s.micShiftHz), @"micShiftMix": @(s.micShiftMix),
-        @"roomMemoryEnabled": @(s.roomMemoryEnabled), @"roomMemoryLevel": @(s.roomMemoryLevel),
-        @"roomMemoryPitch": @(s.roomMemoryPitch), @"looping": @(s.looping),
-    };
-}
-
-- (BOOL)loadStudioStems:(NSArray<NSURL *> *)urls error:(NSError **)error {
-    using namespace atmos::core;
-    if (urls.count == 0 || urls.count > 8) { if (error) *error = makeError("Choose between 1 and 8 stems."); return NO; }
-    WorldManifest w;
-    w.id = "studio";
-    w.name = "Studio";
-    w.tier = "studio";
-    w.fadeSeconds = 0.25f;   // mixer moves are near-immediate
-    std::vector<NSURL *> files;
-    const float n = static_cast<float>(urls.count);
-    for (NSUInteger i = 0; i < urls.count; ++i) {
-        WorldStem st;
-        st.id = "stem" + std::to_string(i);
-        st.file = urls[i].lastPathComponent.UTF8String;
-        st.title = [urls[i].lastPathComponent stringByDeletingPathExtension].UTF8String;
-        // Spread across a frontal arc by default; the canvas can move them.
-        st.azimuthDeg = n > 1 ? -70.0f + 140.0f * static_cast<float>(i) / (n - 1) : 0.0f;
-        st.distanceM = 1.6f;
-        st.widthDeg = 40.0f;
-        w.stems.push_back(st);
-        files.push_back(urls[i]);
-    }
-    StemDecoderFactory factory = [files](double rate, std::string &e) {
-        std::vector<std::unique_ptr<StemDecoder>> v;
-        for (NSURL *u : files) {
-            auto d = atmos::ios::makeStemDecoder(u, rate, e);
-            if (!d) return std::vector<std::unique_ptr<StemDecoder>>{};
-            v.push_back(std::move(d));
-        }
-        return v;
-    };
-    std::string err;
-    if (!_session->loadWorld(w, factory, &err)) { if (error) *error = makeError(err); return NO; }
-    return YES;
-}
-- (void)studioPlay { _session->startWorld(true); }
-- (void)studioPause { _session->stopWorld(true); }
-- (void)studioSeekToSeconds:(double)seconds { _session->seekWorld(seconds); }
-- (void)setStem:(NSInteger)index gainDb:(float)gainDb muted:(BOOL)muted {
-    _session->setWorldStemLevel(static_cast<int>(index), gainDb, muted);
-}
-
-- (void)resetStemPositions { _session->resetWorldStemPositions(); }
 - (BOOL)binauralHRTF { return _session->engine().worldPlayer().hrtfActive(); }
 
 - (AtmosWorldStatus *)worldStatus {

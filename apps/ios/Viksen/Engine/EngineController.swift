@@ -7,19 +7,6 @@ import Observation
 @MainActor
 @Observable
 final class EngineController {
-    enum BusLevel: Int, CaseIterable, Identifiable {
-        case music = 0, atmosphere, micRaw, micTransformed
-        var id: Int { rawValue }
-        var title: String {
-            switch self {
-            case .music: "Music"
-            case .atmosphere: "Atmosphere"
-            case .micRaw: "Raw mic"
-            case .micTransformed: "Transformed mic"
-            }
-        }
-    }
-
     private let bridge = AtmosEngineBridge()
     let headTracker = HeadTracker()
     let activity = ActivityMonitor()
@@ -60,9 +47,6 @@ final class EngineController {
     // Mirrors of engine state (source of truth for the UI).
     private(set) var audioRunning = false
     private(set) var micEnabled = false
-    private(set) var trackName: String?
-    private(set) var trackURL: URL?
-    private(set) var isLoadingTrack = false
     private(set) var meters = AtmosMeterSnapshot()
     private(set) var worldStatus = AtmosWorldStatus()
     // Slow-changing values, set only when they change, so views that need just these do
@@ -80,32 +64,12 @@ final class EngineController {
     private var loggedUnderruns: UInt64 = 0
     private var lastUnderrunLog = Date.distantPast
 
-    var busGains: [Float] = [1.0, 0.5, 0.0, 0.5]
-    /// The microphone normally only lets the music sense the room. With this on, the room
-    /// itself (transformed) is also heard under the music, at the mic bus levels.
-    var hearRoom: Bool = UserDefaults.standard.bool(forKey: "hearRoom") {
-        didSet {
-            UserDefaults.standard.set(hearRoom, forKey: "hearRoom")
-            applyRoomBlend()
-            AppLog.info("Hear the room \(hearRoom ? "on" : "off")")
-        }
-    }
-    var masterGain: Float = 0.7 { didSet { bridge.setMasterGain(masterGain) } }
-    var looping = false { didSet { bridge.setLooping(looping) } }
-    var bedEnabled = false { didSet { bridge.setAtmosphereBedEnabled(bedEnabled) } }
-    /// The user's own bed settings; reactions (intensity, weather) are applied on top.
-    var bedLevel: Float = 0.25 { didSet { applyBed() } }
-    var bedColourHz: Float = 900 { didSet { applyBed() } }
-    var micToneHz: Float = 1800 { didSet { bridge.setMicToneHz(micToneHz) } }
-    var micEchoSeconds: Float = 0.38 { didSet { bridge.setMicEchoSeconds(micEchoSeconds) } }
-    var micFeedback: Float = 0.45 { didSet { bridge.setMicFeedback(micFeedback) } }
-    var micWet: Float = 0.6 { didSet { bridge.setMicWet(micWet) } }
     var limiterCeilingDb: Float = -1 { didSet { bridge.setLimiterCeilingDb(limiterCeilingDb) } }
-    var micShiftHz: Float = -180 { didSet { bridge.setMicShiftHz(micShiftHz) } }
-    var micShiftMix: Float = 0 { didSet { bridge.setMicShiftMix(micShiftMix) } }
-    var roomMemoryEnabled = false { didSet { bridge.setRoomMemoryEnabled(roomMemoryEnabled) } }
-    var roomMemoryLevel: Float = 0.6 { didSet { bridge.setRoomMemoryLevel(roomMemoryLevel) } }
-    var roomMemoryPitch: Float = -12 { didSet { bridge.setRoomMemoryPitch(roomMemoryPitch) } }
+    /// How loud the room is under the music while "Blend the room" is on (0...1). Each
+    /// song sets the room's colour (echo, reverb, tone) itself.
+    var roomLevel: Float = UserDefaults.standard.object(forKey: "roomLevel") as? Float ?? 0.5 {
+        didSet { UserDefaults.standard.set(roomLevel, forKey: "roomLevel"); applyRoomBlend() }
+    }
     var motionSensing = false { didSet { bridge.setMotionSensingEnabled(motionSensing) } }
     var motionSensingAvailable: Bool { bridge.motionSensingAvailable }
 
@@ -116,19 +80,13 @@ final class EngineController {
     var activityEnabled = false {
         didSet { activityEnabled ? activity.start() : activity.stop() }
     }
-    /// Echo time follows the listener's step rhythm (one echo per step).
-    var echoFollowsSteps = false { didSet { applyCadence(activity.cadenceStepsPerMinute) } }
-    private var echoBeforeStepSync: Float?
 
     var healthEnabled = false {
         didSet {
             healthEnabled ? health.start() : health.stop()
-            if !healthEnabled { currentIntensity = nil; bridge.setExerciseIntensity(-1); applyBed() }
+            if !healthEnabled { bridge.setExerciseIntensity(-1) }
         }
     }
-    /// Exercise intensity brightens and thickens the atmosphere bed.
-    var intensityShapesAtmosphere = false { didSet { applyBed() } }
-    private var currentIntensity: Double?
 
     let weather = WeatherMonitor()
     /// Weather (rain plays a Dimension's storm song). Remembered, and on by default
@@ -140,27 +98,18 @@ final class EngineController {
             weatherEnabled ? weather.start() : weather.stop()
         }
     }
-    /// Weather colours the atmosphere bed (rain darker and denser, clear days brighter).
-    var weatherShapesAtmosphere = false { didSet { applyBed() } }
 
     init() {
         delegateProxy.onChange = { [weak self] reason in self?.bridgeStateDidChange(reason) }
         bridge.delegate = delegateProxy
-        for bus in BusLevel.allCases { busGains[bus.rawValue] = bridge.gain(for: AtmosBusId(rawValue: bus.rawValue)!) }
         applyRoomBlend()
         route = bridge.route
         headTracker.onYaw = { [weak self] yaw in self?.bridge.setListenerYawDegrees(Float(yaw)) }
         applySpatial(force: true)
-        activity.onCadence = { [weak self] spm in self?.applyCadence(spm) }
         watch.onHeartRate = { [weak self] bpm, date in self?.health.ingestLiveHeartRate(bpm, at: date) }
         watch.activate()
-        health.onIntensity = { [weak self] i in
-            self?.currentIntensity = i
-            self?.bridge.setExerciseIntensity(i)
-            self?.applyBed()
-        }
+        health.onIntensity = { [weak self] i in self?.bridge.setExerciseIntensity(i) }
         worlds = bridge.availableWorlds()
-        weather.onMood = { [weak self] _, _ in self?.applyBed() }
         nowPlaying.onPlay = { [weak self] in self?.resumeLastDimension() }
         nowPlaying.onPause = { [weak self] in self?.leaveWorld() }
         refreshWorlds()   // once at launch; again only after imports (not on every screen)
@@ -178,7 +127,7 @@ final class EngineController {
     var onHeadphones: Bool { route.kind == .wired || route.kind == .bluetooth }
 
     /// What was on when headphones were removed, so plugging them back in returns to it.
-    private var augmentedResume: (dimension: String?, mic: Bool)?
+    private var augmentedResume: (dimension: String?, mic: Bool, blend: Bool)?
     var isOnBluetooth: Bool { route.kind == .bluetooth }
 
     // MARK: Transport
@@ -203,56 +152,13 @@ final class EngineController {
         AppLog.info("Audio stopped")
     }
 
-    func togglePlay() {
-        if !audioRunning { startAudio() }
-        if meters.playing { bridge.pause() } else { bridge.clearPanic(); bridge.play() }
-    }
-
-    func seek(to seconds: Double) { bridge.seek(toSeconds: seconds) }
-
-    /// Immediate silence: stops playback and every output path.
-    func panic() {
-        AppLog.warning("Stop all sound pressed")
-        bridge.panic()
-        statusMessage = "Output stopped. Press Start to resume."
-    }
-
     // MARK: Mix
 
-    func setGain(_ gain: Float, for bus: BusLevel) {
-        busGains[bus.rawValue] = gain
-        if bus == .micRaw || bus == .micTransformed { applyRoomBlend(); return }
-        bridge.setGain(gain, for: AtmosBusId(rawValue: bus.rawValue)!)
-    }
-
-    /// Mic buses reach the ears only while "Hear the room" is on.
+    /// The room reaches the ears only while "Blend the room" is on, at the room level
+    /// (transformed only: the raw microphone is never played).
     private func applyRoomBlend() {
-        for bus in [BusLevel.micRaw, .micTransformed] {
-            bridge.setGain(hearRoom ? busGains[bus.rawValue] : 0, for: AtmosBusId(rawValue: bus.rawValue)!)
-        }
-    }
-
-    // MARK: Media
-
-    func loadTrack(url: URL) {
-        isLoadingTrack = true
-        bridge.loadTrack(at: url) { [weak self] ok, error in
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                self.isLoadingTrack = false
-                if ok {
-                    self.trackName = self.bridge.loadedTrackName
-                    self.trackURL = url
-                    AppLog.info("Song loaded (\(url.pathExtension.lowercased()))")
-                } else { self.lastError = error }
-            }
-        }
-    }
-
-    func unloadTrack() {
-        bridge.unloadTrack()
-        trackName = nil
-        trackURL = nil
+        bridge.setGain(0, for: .micRaw)
+        bridge.setGain(roomBlendOn ? roomLevel : 0, for: .micTransformed)
     }
 
     // MARK: Microphone
@@ -266,6 +172,7 @@ final class EngineController {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 self.micEnabled = ok ? enabled : false
+                if !self.micEnabled && self.roomBlendOn { self.roomBlendOn = false; self.micOnForBlend = false }
                 if !ok { self.lastError = error } else { AppLog.info("Microphone \(enabled ? "on" : "off")") }
                 self.audioRunning = self.bridge.audioRunning
                 self.route = self.bridge.route
@@ -277,18 +184,16 @@ final class EngineController {
     /// song's beat and reverberated, under the music. Needs headphones (a speaker would
     /// feed back into the microphone). Turning it off also turns the microphone off if
     /// the blend turned it on.
-    var roomBlendOn: Bool { hearRoom && micEnabled }
+    private(set) var roomBlendOn = false { didSet { applyRoomBlend(); AppLog.info("Room blend \(roomBlendOn ? "on" : "off")") } }
     private var micOnForBlend = false
 
     func setRoomBlend(_ on: Bool) {
         if on {
             guard onHeadphones else { statusMessage = "Connect headphones to blend the room in."; return }
             if !micEnabled { micOnForBlend = true; setMicEnabled(true) }
-            hearRoom = true
-            // The room needs a level to be heard; give it a gentle default the first time.
-            if busGains[BusLevel.micTransformed.rawValue] < 0.05 { setGain(0.5, for: .micTransformed) }
+            roomBlendOn = true
         } else {
-            hearRoom = false
+            roomBlendOn = false
             if micOnForBlend { micOnForBlend = false; setMicEnabled(false) }
         }
     }
@@ -298,51 +203,10 @@ final class EngineController {
     /// Switches off anything the current tier no longer includes (e.g. after a refund).
     func enforce(_ tier: Tier) {
         AppLog.info("Edition: \(tier.title)")
-        if tier < Feature.roomMemory.requiredTier { roomMemoryEnabled = false }
-        if tier < Feature.frequencyShift.requiredTier { micShiftMix = 0 }
         if tier < Feature.headTracking.requiredTier { headTrackingEnabled = false }
-        if tier < Feature.activity.requiredTier { echoFollowsSteps = false; activityEnabled = false }
-        if tier < Feature.health.requiredTier { intensityShapesAtmosphere = false; healthEnabled = false }
-        if tier < Feature.weather.requiredTier { weatherShapesAtmosphere = false; weatherEnabled = false }
-        if tier < Feature.musicImport.requiredTier, trackName != nil { unloadTrack() }
-    }
-
-    // MARK: Body & motion
-
-    private func applyCadence(_ spm: Double?) {
-        guard echoFollowsSteps, let spm else {
-            if let saved = echoBeforeStepSync { micEchoSeconds = saved; echoBeforeStepSync = nil }
-            return
-        }
-        if echoBeforeStepSync == nil { echoBeforeStepSync = micEchoSeconds }
-        let seconds = Float(min(1.5, max(0.2, 60.0 / spm)))
-        // Ignore tiny cadence wobbles so the echo does not constantly re-tune.
-        if abs(seconds - micEchoSeconds) / micEchoSeconds > 0.03 { micEchoSeconds = seconds }
-    }
-
-    /// Effective bed = user settings + enabled reactions. The sliders keep showing
-    /// the user's own values; only what is sent to the engine changes.
-    private func applyBed() {
-        var level = bedLevel
-        var colour = bedColourHz
-        if intensityShapesAtmosphere, let i = currentIntensity {
-            level += 0.15 * Float(i)
-            colour += 3000 * Float(i)
-        }
-        if weatherShapesAtmosphere, let mood = weather.mood {
-            switch mood {
-            case .storm: level += 0.12; colour *= 0.45
-            case .rain: level += 0.08; colour *= 0.6
-            case .snow: level += 0.04; colour *= 0.5
-            case .fog: colour *= 0.7
-            case .wind: level += 0.06; colour *= 1.2
-            case .cloudy: colour *= 0.9
-            case .clear: colour *= weather.isDaylight ? 1.4 : 1.0
-            }
-            if !weather.isDaylight { colour *= 0.8 }
-        }
-        bridge.setAtmosphereBedLevel(min(0.6, max(0, level)))
-        bridge.setAtmosphereBedColourHz(min(8000, max(120, colour)))
+        if tier < Feature.activity.requiredTier { activityEnabled = false }
+        if tier < Feature.health.requiredTier { healthEnabled = false }
+        if tier < Feature.weather.requiredTier { weatherEnabled = false }
     }
 
     // MARK: Meters / delegate
@@ -357,9 +221,9 @@ final class EngineController {
         guard statusTick % 5 == 0 else { return }
         let previousSong = worldStatus.songTitle
         worldStatus = bridge.worldStatus()
-        let active = worldStatus.loaded && worldStatus.playing && worldStatus.worldID != "studio" ? worldStatus.worldID : nil
+        let active = worldStatus.loaded && worldStatus.playing ? worldStatus.worldID : nil
         if active != activeDimensionID { activeDimensionID = active }
-        let loadedID = worldStatus.loaded && worldStatus.worldID != "studio" ? worldStatus.worldID : nil
+        let loadedID = worldStatus.loaded ? worldStatus.worldID : nil
         if loadedID != loadedDimensionID { loadedDimensionID = loadedID }
         if meters.micActive != micLive { micLive = meters.micActive }
         let limit = meters.limiterGain < 0.98
@@ -368,7 +232,6 @@ final class EngineController {
         if meters.lunarDay != lunarDay { lunarDay = meters.lunarDay }
         if worldStatus.loaded && worldStatus.songCount > 1 && worldStatus.songTitle != previousSong && !previousSong.isEmpty {
             AppLog.info("Dimension \(worldStatus.worldID): now \(worldStatus.songTitle)")
-            applySavedPositions(worldStatus.worldID)   // the new song has its own stems
         }
         // Phase discovery: once a second, credit audible listening to the Dimension heard.
         if Date().timeIntervalSince(lastProgressTick) >= 1 {
@@ -392,7 +255,7 @@ final class EngineController {
                 transitionCue.play(time == "day" ? .bells : .drone)
             }
             songTime = activeDimensionID == nil ? nil : time
-            let audible = worldStatus.playing && masterGain > 0.001 && busGains[BusLevel.music.rawValue] > 0.001
+            let audible = worldStatus.playing
             // Only tonight's lunar song, after dark, counts. TestFlight-only check of the
             // counter: any song counts, at any hour.
             let testing = AppBuild.isTestFlight && UserDefaults.standard.bool(forKey: "test.anySongIsLunar")
@@ -410,108 +273,7 @@ final class EngineController {
         }
     }
 
-    // MARK: Studio (the user's own stems)
-
-    struct StudioStem: Identifiable, Equatable {
-        let id = UUID()
-        let url: URL
-        var title: String { url.deletingPathExtension().lastPathComponent }
-        var gainDb: Float = 0
-        var muted = false
-        var solo = false
-        var lengthSeconds: Double = 0
-    }
-
-    private(set) var studioStems: [StudioStem] = []
-    var studioActive: Bool { worldStatus.loaded && worldStatus.worldID == "studio" }
-    var studioPlaying: Bool { studioActive && worldStatus.playing }
-    /// Stems differ in length by more than half a second (they stay aligned at their start).
-    var studioLengthsDiffer: Bool {
-        guard let a = studioStems.map(\.lengthSeconds).min(), let b = studioStems.map(\.lengthSeconds).max() else { return false }
-        return b - a > 0.5
-    }
-
-    static var studioFolder: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Studio", isDirectory: true)
-    }
-
-    /// Copies the picked files (originals untouched) and loads them as one synchronised session.
-    func importStudioStems(_ picked: [URL]) {
-        let folder = Self.studioFolder.appendingPathComponent(
-            ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-"), isDirectory: true)
-        var copies: [URL] = []
-        do {
-            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            for src in picked.prefix(8) {
-                let scoped = src.startAccessingSecurityScopedResource()
-                defer { if scoped { src.stopAccessingSecurityScopedResource() } }
-                let dest = folder.appendingPathComponent(src.lastPathComponent)
-                try FileManager.default.copyItem(at: src, to: dest)
-                copies.append(dest)
-            }
-        } catch {
-            lastError = error.localizedDescription
-            return
-        }
-        loadStudio(copies.map { StudioStem(url: $0) })
-        if picked.count > 8 { statusMessage = "Studio uses the first 8 stems." }
-    }
-
-    func loadStudio(_ stems: [StudioStem]) {
-        do {
-            try bridge.loadStudioStems(stems.map(\.url))
-            if trackName != nil { bridge.pause() }
-            applySpatial(force: true)
-            studioStems = stems.map { st in
-                var s = st
-                if let f = try? AVAudioFile(forReading: st.url) { s.lengthSeconds = Double(f.length) / f.fileFormat.sampleRate }
-                return s
-            }
-            applyStudioMix()
-            AppLog.info("Studio: \(stems.count) stems loaded")
-        } catch {
-            lastError = error.localizedDescription
-        }
-    }
-
-    func studioTogglePlay() {
-        guard studioActive else { return }
-        if studioPlaying { bridge.studioPause() } else {
-            if !audioRunning { startAudio() }
-            bridge.clearPanic()
-            bridge.studioPlay()
-        }
-    }
-
-    func studioSeek(_ seconds: Double) { bridge.studioSeek(toSeconds: seconds) }
-
-    func setStudioStem(_ id: UUID, gainDb: Float? = nil, muted: Bool? = nil, solo: Bool? = nil) {
-        guard let i = studioStems.firstIndex(where: { $0.id == id }) else { return }
-        if let gainDb { studioStems[i].gainDb = gainDb }
-        if let muted { studioStems[i].muted = muted }
-        if let solo { studioStems[i].solo = solo }
-        applyStudioMix()
-    }
-
-    /// Solo: when any stem is soloed, every non-soloed stem is silent.
-    private func applyStudioMix() {
-        let anySolo = studioStems.contains { $0.solo }
-        for (i, st) in studioStems.enumerated() {
-            bridge.setStem(i, gainDb: st.gainDb, muted: st.muted || (anySolo && !st.solo))
-        }
-    }
-
-    private var studioStemDictionaries: [[String: Any]] {
-        studioActive ? studioStems.map { ["url": $0.url, "gainDb": $0.gainDb, "muted": $0.muted] } : []
-    }
-
-    // MARK: User-made Dimensions (create, import, export, delete)
-
-    static var userDimensionsFolder: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Dimensions", isDirectory: true)
-    }
+    // MARK: Dimensions on this device
 
     func refreshWorlds() {
         worlds = bridge.availableWorlds()
@@ -537,22 +299,10 @@ final class EngineController {
         return set.contains(phase)
     }
 
-    /// Removes one downloaded track (it can be downloaded again). If its Dimension is
-    /// playing, the Dimension stops first so the audio can go.
-    func removeTrack(_ track: DimensionDownloads.Track) {
-        stopIfPlaying(track.dimensionID)
-        downloads.remove(track)
-    }
-
     /// Removes every downloaded track of a Dimension.
     func removeAllTracks(_ world: AtmosWorldInfo) {
         stopIfPlaying(world.worldID)
         downloads.removeAll(world.worldID)
-    }
-
-    /// Song titles of a Dimension (for Dimensions whose audio ships with the app).
-    func bridgeSongTitles(_ world: AtmosWorldInfo) -> [String] {
-        bridge.songs(forWorld: world.worldID).compactMap { $0["title"] as? String }
     }
 
     private func stopIfPlaying(_ dimensionID: String) {
@@ -562,177 +312,35 @@ final class EngineController {
         }
     }
 
-    private static func slug(_ name: String) -> String {
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-"))
-        let base = name.lowercased().replacingOccurrences(of: " ", with: "-")
-            .unicodeScalars.filter { allowed.contains($0) }.map(String.init).joined()
-        return "user-" + (base.isEmpty ? "dimension" : String(base.prefix(40)))
-    }
+    // MARK: Crash recovery
 
-    /// Turns the current Studio session into a Dimension of your own (stems copied,
-    /// current levels and 3D layout kept).
-    func saveStudioAsDimension(named name: String) {
-        guard studioActive, !studioStems.isEmpty else { return }
-        let fm = FileManager.default
-        var id = Self.slug(name), n = 2
-        while fm.fileExists(atPath: Self.userDimensionsFolder.appendingPathComponent(id).path) { id = Self.slug(name) + "-\(n)"; n += 1 }
-        let folder = Self.userDimensionsFolder.appendingPathComponent(id, isDirectory: true)
-        do {
-            try fm.createDirectory(at: folder, withIntermediateDirectories: true)
-            var stems: [[String: Any]] = []
-            for (i, st) in studioStems.enumerated() {
-                let file = String(format: "%02d-", i) + st.url.lastPathComponent
-                try fm.copyItem(at: st.url, to: folder.appendingPathComponent(file))
-                let pos = worldStatus.stems.indices.contains(i) ? worldStatus.stems[i] : nil
-                stems.append(["id": "stem\(i)", "file": file, "title": st.title,
-                              "baseGainDb": st.muted ? -60 : Double(st.gainDb),
-                              "spatial": ["azimuth": Double(pos?.azimuth ?? 0), "elevation": Double(pos?.elevation ?? 0),
-                                          "distance": Double(pos?.distance ?? 1.6), "width": Double(pos?.width ?? 40)]])
-            }
-            let json: [String: Any] = ["format": "atmos.world", "schemaVersion": 1, "id": id, "name": name,
-                                       "artist": "", "tier": "free", "fadeSeconds": 4,
-                                       "music": ["tempo": 0, "key": "", "loop": ["fromSeconds": 0]],   // unknown tempo
-                                       "stems": stems, "rules": []]
-            let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
-            try data.write(to: folder.appendingPathComponent("world.json"))
-            refreshWorlds()
-            statusMessage = "Saved Dimension \u{201C}\(name)\u{201D}"
-            AppLog.info("User Dimension created")
-        } catch {
-            try? fm.removeItem(at: folder)
-            lastError = error.localizedDescription
-        }
-    }
-
-    /// Imports a Dimension folder (world.json + audio) chosen in Files.
-    func importDimension(from picked: URL) {
-        let scoped = picked.startAccessingSecurityScopedResource()
-        defer { if scoped { picked.stopAccessingSecurityScopedResource() } }
-        if let problem = bridge.validateDimensionFolder(picked) { lastError = problem; return }
-        guard let data = try? Data(contentsOf: picked.appendingPathComponent("world.json")),
-              var json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
-            lastError = "Not a Dimension."; return
-        }
-        let fm = FileManager.default
-        var id = Self.slug((json["name"] as? String) ?? "dimension"), n = 2
-        while fm.fileExists(atPath: Self.userDimensionsFolder.appendingPathComponent(id).path) { id = Self.slug((json["name"] as? String) ?? "dimension") + "-\(n)"; n += 1 }
-        json["id"] = id          // user Dimensions get their own id (never a built-in's)
-        let dest = Self.userDimensionsFolder.appendingPathComponent(id, isDirectory: true)
-        do {
-            try fm.createDirectory(at: Self.userDimensionsFolder, withIntermediateDirectories: true)
-            try fm.copyItem(at: picked, to: dest)
-            let out = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
-            try out.write(to: dest.appendingPathComponent("world.json"))
-            refreshWorlds()
-            statusMessage = "Imported \u{201C}\((json["name"] as? String) ?? id)\u{201D}"
-            AppLog.info("Dimension imported")
-        } catch {
-            try? fm.removeItem(at: dest)
-            lastError = error.localizedDescription
-        }
-    }
-
-    func deleteDimension(_ info: AtmosWorldInfo) {
-        guard info.userMade, let folder = info.folderURL else { return }   // built-ins can never be deleted
-        if worldStatus.loaded && worldStatus.worldID == info.worldID { bridge.unloadWorld() }
-        try? FileManager.default.removeItem(at: folder)
-        refreshWorlds()
-        AppLog.info("User Dimension deleted")
-    }
-
-    /// Zips a user-made Dimension for sharing. Built-in Dimensions are never exportable.
-    func exportDimension(_ info: AtmosWorldInfo) -> URL? {
-        guard info.userMade, let folder = info.folderURL else { return nil }
-        var result: URL?
-        var coordError: NSError?
-        NSFileCoordinator().coordinate(readingItemAt: folder, options: .forUploading, error: &coordError) { zipped in
-            let dest = FileManager.default.temporaryDirectory.appendingPathComponent(info.name + ".zip")
-            try? FileManager.default.removeItem(at: dest)
-            if (try? FileManager.default.copyItem(at: zipped, to: dest)) != nil { result = dest }
-        }
-        if let coordError { lastError = coordError.localizedDescription }
-        if result != nil { AppLog.info("Dimension exported") }
-        return result
-    }
-
-    // MARK: Projects, autosave, crash recovery
-
-    static var projectsFolder: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Projects", isDirectory: true)
-    }
     private static var supportFolder: URL {
         let u = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
         return u
     }
-    static var autosaveURL: URL { supportFolder.appendingPathComponent("Autosave.viksen", isDirectory: true) }
     private static var runningFlag: URL { supportFolder.appendingPathComponent("session.running") }
 
-    /// True when the previous run ended without going to the background first (crash or kill).
+    /// True when the previous run ended without going to the background first (crash or
+    /// kill) while a Dimension had been chosen: Home offers to play it again.
     private(set) var previousRunEndedUnexpectedly = false
-    var hasAutosave: Bool { FileManager.default.fileExists(atPath: Self.autosaveURL.appendingPathComponent("manifest.json").path) }
-    private var autosaveTimer: Timer?
-    private var lastAutosaveSignature = ""
+    private var runTracking = false
 
-    private var currentDimensionID: String? { worldStatus.loaded && worldStatus.worldID != "studio" ? worldStatus.worldID : nil }
-
-    func saveProject(named name: String) {
-        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
-        guard !clean.isEmpty else { return }
-        let url = Self.projectsFolder.appendingPathComponent(clean + ".viksen", isDirectory: true)
-        do {
-            try FileManager.default.createDirectory(at: Self.projectsFolder, withIntermediateDirectories: true)
-            try bridge.saveProject(at: url, name: clean, song: trackURL, dimension: currentDimensionID,
-                                   stems: studioStemDictionaries)
-            statusMessage = "Saved project \u{201C}\(clean)\u{201D}"
-            AppLog.info("Project saved")
-        } catch {
-            lastError = error.localizedDescription
-        }
-    }
-
-    func openProject(_ url: URL) {
-        do {
-            let info = try bridge.openProject(at: url)   // throws when the package cannot be read
-            syncSettingsFromEngine()
-            if let song = info["song"] as? URL { loadTrack(url: song) } else if trackName != nil { unloadTrack() }
-            if let stems = info["stems"] as? [[String: Any]], !stems.isEmpty {
-                loadStudio(stems.compactMap { d in
-                    guard let u = d["url"] as? URL else { return nil }
-                    var st = StudioStem(url: u)
-                    st.gainDb = (d["gainDb"] as? NSNumber)?.floatValue ?? 0
-                    st.muted = (d["muted"] as? NSNumber)?.boolValue ?? false
-                    return st
-                })
-            } else if let dim = info["dimension"] as? String, let world = worlds.first(where: { $0.worldID == dim }) {
-                try? bridge.loadWorld(world.worldID)       // selected, not auto-played
-                applySpatial(force: true)
-                applySavedPositions(world.worldID)
-            }
-            statusMessage = "Opened \u{201C}\((info["name"] as? String) ?? url.deletingPathExtension().lastPathComponent)\u{201D}"
-            AppLog.info("Project opened")
-        } catch {
-            lastError = error.localizedDescription
-        }
-    }
+    private var currentDimensionID: String? { worldStatus.loaded ? worldStatus.worldID : nil }
 
     /// Called once at launch.
     func beginRunTracking() {
-        guard autosaveTimer == nil else { return }   // once per launch
+        guard !runTracking else { return }   // once per launch
+        runTracking = true
         let fm = FileManager.default
-        previousRunEndedUnexpectedly = fm.fileExists(atPath: Self.runningFlag.path) && hasAutosave
-        if previousRunEndedUnexpectedly { AppLog.warning("Previous session ended unexpectedly; autosave available") }
+        previousRunEndedUnexpectedly = fm.fileExists(atPath: Self.runningFlag.path) && lastDimensionID != nil
+        if previousRunEndedUnexpectedly { AppLog.warning("Previous session ended unexpectedly") }
         fm.createFile(atPath: Self.runningFlag.path, contents: nil)
-        autosaveTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.autosave() }
-        }
     }
 
     /// Scene phase hook: going to the background is a clean stop point.
     func appDidEnterBackground() {
-        autosave()   // music, and the opening sound, keep playing in the background
+        // Music, and the opening sound, keep playing in the background.
         try? FileManager.default.removeItem(at: Self.runningFlag)
     }
     /// The Viksen Dimension, built into the app (its day track is Lunar Promise).
@@ -747,7 +355,7 @@ final class EngineController {
 
     private func updateNowPlaying() {
         let st = worldStatus
-        let loaded = st.loaded && st.worldID != "studio"
+        let loaded = st.loaded
         let id = loaded ? st.worldID : lastDimensionID
         guard let info = worlds.first(where: { $0.worldID == id }) else {
             nowPlaying.update(dimension: nil, song: "", artist: "", playing: false, position: 0, length: 0)
@@ -765,60 +373,17 @@ final class EngineController {
     }
     func appWillEnterForeground() {
         if weatherEnabled { weather.refreshNow() }
-        if activeDimensionID == nil && !studioActive { threshold.start(engineAudioRunning: audioRunning) }
+        if activeDimensionID == nil { threshold.start(engineAudioRunning: audioRunning) }
         FileManager.default.createFile(atPath: Self.runningFlag.path, contents: nil)
     }
 
-    func restoreAutosave() {
-        openProject(Self.autosaveURL)
+    /// After an unexpected close: play the last Dimension again.
+    func restoreLastSession() {
         previousRunEndedUnexpectedly = false
+        resumeLastDimension()
     }
 
     func dismissRestore() { previousRunEndedUnexpectedly = false }
-
-    /// Saves only when something changed since the last autosave.
-    private func autosave() {
-        let signature = [String(describing: busGains), "\(masterGain)", "\(bedEnabled)\(bedLevel)\(bedColourHz)",
-                         "\(micToneHz)\(micEchoSeconds)\(micFeedback)\(micWet)\(micShiftHz)\(micShiftMix)",
-                         "\(roomMemoryEnabled)\(roomMemoryLevel)\(roomMemoryPitch)\(looping)\(limiterCeilingDb)",
-                         trackURL?.path ?? "-", currentDimensionID ?? "-",
-                         studioStems.map { "\($0.url.lastPathComponent)\($0.gainDb)\($0.muted)" }.joined()].joined(separator: "|")
-        guard signature != lastAutosaveSignature else { return }
-        do {
-            try bridge.saveProject(at: Self.autosaveURL, name: "Autosave", song: trackURL, dimension: currentDimensionID,
-                                   stems: studioStemDictionaries)
-            lastAutosaveSignature = signature
-        } catch {
-            AppLog.error("Autosave failed: \(error.localizedDescription)")
-        }
-    }
-
-    /// After a project is applied in the engine, mirror its values into the UI state.
-    /// (didSet handlers re-send the same values, which is harmless.)
-    private func syncSettingsFromEngine() {
-        let s = bridge.currentSettings()
-        let engineGains = (0..<4).map { Float(truncating: s["busGain\($0)"] ?? 0) }
-        // While the room is not heard the engine's mic buses read 0: keep the user's levels.
-        busGains = engineGains.indices.map { i in
-            (!hearRoom && (i == BusLevel.micRaw.rawValue || i == BusLevel.micTransformed.rawValue)) ? busGains[i] : engineGains[i]
-        }
-        applyRoomBlend()
-        masterGain = Float(truncating: s["masterGain"] ?? 0.7)
-        limiterCeilingDb = Float(truncating: s["limiterCeilingDb"] ?? -1)
-        bedEnabled = (s["bedEnabled"]?.boolValue) ?? false
-        bedLevel = Float(truncating: s["bedLevel"] ?? 0.25)
-        bedColourHz = Float(truncating: s["bedColourHz"] ?? 900)
-        micToneHz = Float(truncating: s["micToneHz"] ?? 1800)
-        micEchoSeconds = Float(truncating: s["micEchoSeconds"] ?? 0.38)
-        micFeedback = Float(truncating: s["micFeedback"] ?? 0.45)
-        micWet = Float(truncating: s["micWet"] ?? 0.6)
-        micShiftHz = Float(truncating: s["micShiftHz"] ?? -180)
-        micShiftMix = Float(truncating: s["micShiftMix"] ?? 0)
-        roomMemoryEnabled = (s["roomMemoryEnabled"]?.boolValue) ?? false
-        roomMemoryLevel = Float(truncating: s["roomMemoryLevel"] ?? 0.6)
-        roomMemoryPitch = Float(truncating: s["roomMemoryPitch"] ?? -12)
-        looping = (s["looping"]?.boolValue) ?? false
-    }
 
     // MARK: Worlds
 
@@ -841,7 +406,6 @@ final class EngineController {
     func enterWorld(_ world: AtmosWorldInfo) {
         lastDimensionID = world.worldID
         UserDefaults.standard.set(world.worldID, forKey: "lastDimension")
-        if studioActive { studioStems = [] }   // a Dimension replaces the Studio session
         if worldStatus.loaded && worldStatus.worldID == world.worldID && worldStatus.playing { return }
         do {
             let started = Date()
@@ -855,9 +419,7 @@ final class EngineController {
                 try bridge.loadWorld(world.worldID, audioFiles: files)
             }
             applySpatial(force: true)
-            applySavedPositions(world.worldID)
             AppLog.info("Enter Dimension \(world.worldID) (3D \(dimension3D), HRTF \(bridge.binauralHRTF))")
-            if trackName != nil { bridge.pause() }   // one music source at a time
             if !audioRunning { startAudio() }
             bridge.clearPanic()
             threshold.fadeOut(seconds: 2.5)   // the opening sound gives way to the Dimension
@@ -875,12 +437,12 @@ final class EngineController {
         bridge.stopWorld()
         // Back to the opening loops once the Dimension has faded out (if they are on).
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
-            guard let self, self.activeDimensionID == nil, !self.studioActive else { return }
+            guard let self, self.activeDimensionID == nil else { return }
             self.threshold.start(engineAudioRunning: self.audioRunning)
         }
     }
 
-    // MARK: 3D / spatial canvas
+    // MARK: 3D audio and adaptive music
 
     /// Binaural 3D for Dimension stems (headphones). On by default.
     var dimension3D: Bool = UserDefaults.standard.object(forKey: "dimension3D") as? Bool ?? true {
@@ -904,38 +466,6 @@ final class EngineController {
         didSet { UserDefaults.standard.set(adaptiveOnSpeaker, forKey: "adaptive.speaker"); applySpatial(force: true) }
     }
 
-    /// Moves a stem on the spatial canvas and remembers it for this Dimension.
-    func moveStem(_ index: Int, azimuth: Float, distance: Float) {
-        guard worldStatus.loaded, index < worldStatus.stems.count else { return }
-        let elevation = worldStatus.stems[index].elevation
-        bridge.moveStem(index, azimuth: azimuth, elevation: elevation, distance: distance)
-        var saved = savedPositions(worldStatus.worldID)
-        // Keyed by instrument, so a move carries across the songs of a Dimension.
-        saved[worldStatus.stems[index].title] = [Double(azimuth), Double(elevation), Double(distance)]
-        UserDefaults.standard.set(saved, forKey: "positions." + worldStatus.worldID)
-    }
-
-    /// Forgets canvas moves for a Dimension and restores its authored layout
-    /// immediately, without interrupting the music.
-    func resetPositions(_ worldID: String) {
-        UserDefaults.standard.removeObject(forKey: "positions." + worldID)
-        AppLog.info("Reset 3D layout for \(worldID)")
-        if worldStatus.loaded && worldStatus.worldID == worldID { bridge.resetStemPositions() }
-    }
-
-    private func savedPositions(_ worldID: String) -> [String: [Double]] {
-        UserDefaults.standard.dictionary(forKey: "positions." + worldID) as? [String: [Double]] ?? [:]
-    }
-
-    private func applySavedPositions(_ worldID: String) {
-        let saved = savedPositions(worldID)
-        guard !saved.isEmpty else { return }
-        for (i, stem) in bridge.worldStatus().stems.enumerated() {
-            guard let v = saved[stem.title], v.count == 3 else { continue }
-            bridge.moveStem(i, azimuth: Float(v[0]), elevation: Float(v[1]), distance: Float(v[2]))
-        }
-    }
-
     private func bridgeStateDidChange(_ reason: String) {
         AppLog.info("\(reason) (output: \(bridge.route.outputName))")
         let wasOnHeadphones = onHeadphones
@@ -949,11 +479,10 @@ final class EngineController {
     /// Headphones out: a gentle step back to regular reality. The microphone paths were
     /// silenced at once by the bridge; the mic turns off and the Dimension fades out.
     private func leaveAugmentedReality() {
-        let playingDimension = worldStatus.playing && worldStatus.worldID != "studio" ? worldStatus.worldID : nil
-        augmentedResume = (playingDimension, micEnabled)
+        let playingDimension = worldStatus.playing ? worldStatus.worldID : nil
+        augmentedResume = (playingDimension, micEnabled, roomBlendOn)
         if micEnabled { setMicEnabled(false) }
         if playingDimension != nil { bridge.stopWorld() }   // fades out
-        applyRoomBlend()                                    // restore the user's mic levels for later
         statusMessage = "Headphones disconnected: back to regular reality"
         AppLog.info("Left augmented reality (Dimension \(playingDimension ?? "none"), mic \(augmentedResume?.mic == true))")
     }
@@ -968,7 +497,8 @@ final class EngineController {
         if let id = resume.dimension, let world = worlds.first(where: { $0.worldID == id }) {
             enterWorld(world)
         }
-        if resume.mic && micPermission == .granted { setMicEnabled(true) }
+        if resume.blend && micPermission == .granted { setRoomBlend(true) }
+        else if resume.mic && micPermission == .granted { setMicEnabled(true) }
         statusMessage = "Headphones connected: back in augmented reality"
         AppLog.info("Returned to augmented reality")
     }

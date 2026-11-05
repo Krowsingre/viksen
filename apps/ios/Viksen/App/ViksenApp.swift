@@ -8,7 +8,6 @@ import AppKit
 @main
 struct ViksenApp: App {
     @State private var engine = EngineController()
-    @State private var library = MediaLibrary()
     @State private var store = Store()
     @AppStorage("appearance") private var appearance: Appearance = .dark
     @State private var showSplash = true
@@ -29,7 +28,6 @@ struct ViksenApp: App {
             ZStack {
                 RootView()
                     .environment(engine)
-                    .environment(library)
                     .environment(store)
                     .preferredColorScheme(appearance.colorScheme)
                 if showSplash {

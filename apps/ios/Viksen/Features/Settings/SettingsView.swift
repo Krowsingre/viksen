@@ -93,7 +93,7 @@ struct SoundPage: View {
                 BlendSection()
             } header: { Text("Room blend") } footer: {
                 Text(engine.onHeadphones
-                     ? "Your surroundings, echoed on the song's beat and reverberated, under the music. Nothing is recorded, saved or uploaded."
+                     ? "Your surroundings, echoed on the song's beat and reverberated, under the music. Each song sets how the room sounds. Nothing is recorded, saved or uploaded."
                      : "Connect headphones to blend the room in: through a speaker the microphone would hear the music.")
             }
             Section {
@@ -103,14 +103,6 @@ struct SoundPage: View {
                     }
             } footer: {
                 Text("Soft loops from Lunar Promise when Viksen opens. It only plays if nothing else is playing, never interrupts your own music, and fades away when a Dimension starts.")
-            }
-            Section("Atmosphere") {
-                Toggle("Atmosphere bed", isOn: $engine.bedEnabled)
-                if engine.bedEnabled {
-                    LabeledSlider(title: "Density", value: $engine.bedLevel, range: 0...0.6, format: "%.2f")
-                    LabeledSlider(title: "Colour", value: $engine.bedColourHz, range: 150...6000, format: "%.0f Hz")
-                }
-                BusSliders()
             }
             Section {
                 LabeledSlider(title: "Output ceiling", value: $engine.limiterCeilingDb, range: -24...(-1), format: "%.0f dBFS")
