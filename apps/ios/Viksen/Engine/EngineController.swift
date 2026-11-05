@@ -649,10 +649,14 @@ final class EngineController {
         autosave()
         try? FileManager.default.removeItem(at: Self.runningFlag)
     }
+    /// The Viksen Dimension, built into the app (its day track is Lunar Promise).
+    static let coreDimensionID = "viksen"
+
     /// Lock screen / Control Center: play starts the last Dimension again.
     func resumeLastDimension() {
         let playable = worlds.filter(isPlayable)
-        if let w = playable.first(where: { $0.worldID == lastDimensionID }) ?? playable.first { enterWorld(w) }
+        if let w = playable.first(where: { $0.worldID == lastDimensionID })
+            ?? playable.first(where: { $0.worldID == Self.coreDimensionID }) ?? playable.first { enterWorld(w) }
     }
 
     private func updateNowPlaying() {

@@ -100,7 +100,8 @@ private struct HomeFoxRing: View {
     /// The Dimension the play fox starts: the last one entered, else the first playable.
     private var target: AtmosWorldInfo? {
         let playable = engine.worlds.filter(engine.isPlayable)
-        return playable.first { $0.worldID == engine.lastDimensionID } ?? playable.first
+        return playable.first { $0.worldID == engine.lastDimensionID }
+            ?? playable.first { $0.worldID == EngineController.coreDimensionID } ?? playable.first
     }
 
     var body: some View {

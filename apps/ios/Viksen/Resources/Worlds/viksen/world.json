@@ -1,0 +1,149 @@
+{
+  "format": "atmos.world",
+  "schemaVersion": 1,
+  "id": "viksen",
+  "name": "Viksen",
+  "artist": "Krowsingre",
+  "tier": "free",
+  "core": true,
+  "songs": [
+    {
+      "id": "lunar-promise",
+      "title": "Lunar Promise",
+      "music": {
+        "tempo": 83,
+        "key": "",
+        "beatsPerBar": 4,
+        "barOffsetSeconds": 0,
+        "loop": {
+          "fromSeconds": 0,
+          "toSeconds": 364.155792
+        }
+      },
+      "fadeSeconds": 3,
+      "stems": [
+        {
+          "id": "lead-vocals",
+          "file": "lunar-promise-lead-vocals.m4a",
+          "title": "Lead Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 0,
+            "distance": 1.5,
+            "width": 20
+          }
+        },
+        {
+          "id": "backing-vocals",
+          "file": "lunar-promise-backing-vocals.m4a",
+          "title": "Backing Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 10,
+            "distance": 2.2,
+            "width": 100
+          }
+        },
+        {
+          "id": "drums",
+          "file": "lunar-promise-drums.m4a",
+          "title": "Drums",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -5,
+            "distance": 2.0,
+            "width": 60
+          }
+        },
+        {
+          "id": "bass",
+          "file": "lunar-promise-bass.m4a",
+          "title": "Bass",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -10,
+            "distance": 1.4,
+            "width": 20
+          }
+        },
+        {
+          "id": "guitar",
+          "file": "lunar-promise-guitar.m4a",
+          "title": "Guitar",
+          "spatial": {
+            "azimuth": 55,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 30
+          }
+        },
+        {
+          "id": "keyboard",
+          "file": "lunar-promise-keyboard.m4a",
+          "title": "Keyboard",
+          "spatial": {
+            "azimuth": -40,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 40
+          }
+        },
+        {
+          "id": "percussion",
+          "file": "lunar-promise-percussion.m4a",
+          "title": "Percussion",
+          "spatial": {
+            "azimuth": -25,
+            "elevation": 5,
+            "distance": 1.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "strings",
+          "file": "lunar-promise-strings.m4a",
+          "title": "Strings",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 15,
+            "distance": 2.6,
+            "width": 140
+          }
+        },
+        {
+          "id": "synth",
+          "file": "lunar-promise-synth.m4a",
+          "title": "Synth",
+          "spatial": {
+            "azimuth": 180,
+            "elevation": 25,
+            "distance": 3.0,
+            "width": 90
+          }
+        },
+        {
+          "id": "other",
+          "file": "lunar-promise-other.m4a",
+          "title": "Other",
+          "spatial": {
+            "azimuth": 120,
+            "elevation": 10,
+            "distance": 2.5,
+            "width": 60
+          }
+        },
+        {
+          "id": "woodwinds",
+          "file": "lunar-promise-woodwinds.m4a",
+          "title": "Woodwinds",
+          "spatial": {
+            "azimuth": -60,
+            "elevation": 10,
+            "distance": 2.0,
+            "width": 30
+          }
+        }
+      ]
+    }
+  ]
+}

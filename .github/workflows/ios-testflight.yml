@@ -121,6 +121,25 @@ jobs:
           python3 tools/asc_ci_certs.py prune || echo "::warning::could not prune old certificates"
           python3 tools/asc_ci_certs.py snapshot "$RUNNER_TEMP/certs-before.json" || echo "::warning::certificate snapshot failed"
 
+      # The Viksen Dimension's theme (Lunar Promise) ships inside the app. The owner's
+      # music lives only in the private assets repository; it is copied into the build
+      # here and never committed to this repository (.gitignore excludes it).
+      - name: Bundle the Viksen Dimension's audio (private assets)
+        env:
+          ASSETS_TOKEN: ${{ secrets.ASSETS_TOKEN }}
+        run: |
+          [ -n "$ASSETS_TOKEN" ] || { echo "::error::ASSETS_TOKEN is not set"; exit 1; }
+          git clone --depth 1 --filter=blob:none --sparse \
+            "https://x-access-token:${ASSETS_TOKEN}@github.com/Krowsingre/viksen-assets.git" "$RUNNER_TEMP/assets"
+          git -C "$RUNNER_TEMP/assets" sparse-checkout set theme/lunar-promise
+          dest=apps/ios/Viksen/Resources/Worlds/viksen
+          for f in "$RUNNER_TEMP/assets/theme/lunar-promise/"*.m4a; do
+            cp "$f" "$dest/lunar-promise-$(basename "$f")"
+          done
+          ls -la "$dest"
+          n=$(ls "$dest"/*.m4a | wc -l); [ "$n" -eq 11 ] || { echo "::error::expected 11 stems, found $n"; exit 1; }
+          rm -rf "$RUNNER_TEMP/assets"
+
       - name: Archive (signed, build number = run number)
         working-directory: apps/ios
         env:

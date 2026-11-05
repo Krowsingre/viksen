@@ -165,7 +165,8 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
         {"hinds-of-morrow", 561.4}, {"light-of-a-distant-sun", 425.97}, {"steel-steam-and-borrowed-dreams", 683.55},
         {"the-quiet-storm/the-silent-alley", 355.37},
         {"the-quiet-storm/in-different-times", 436.65},
-        {"the-listening-sky/dance-of-the-dragonfly", 871.53}};
+        {"the-listening-sky/dance-of-the-dragonfly", 871.53},
+        {"viksen/lunar-promise", 364.57}};   // the core theme: plays as composed (no sections yet)
     int songs = 0;
     for (const auto& dir : fs::directory_iterator(root)) {
         std::ifstream in(dir.path() / "world.json");
@@ -177,7 +178,7 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
         CHECK(d->id == dir.path().filename().string());
         CHECK(d->artist == "Krowsingre");
         for (const auto& w : d->songs) {
-            CHECK(!w.sections.empty());
+            CHECK((!w.sections.empty() || w.id == "viksen/lunar-promise"));
             CHECK(w.stems.size() <= 16);
             const auto len = lengths.find(w.id);
             if (len == lengths.end()) std::printf("unknown song %s\n", w.id.c_str());
@@ -192,7 +193,7 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
             ++songs;
         }
     }
-    CHECK(songs == 6);
+    CHECK(songs == 7);
 }
 
 namespace {
