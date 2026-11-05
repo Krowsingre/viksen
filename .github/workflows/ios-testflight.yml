@@ -131,7 +131,7 @@ jobs:
           [ -n "$ASSETS_TOKEN" ] || { echo "::error::ASSETS_TOKEN is not set"; exit 1; }
           git clone --depth 1 --filter=blob:none --sparse \
             "https://x-access-token:${ASSETS_TOKEN}@github.com/Krowsingre/viksen-assets.git" "$RUNNER_TEMP/assets"
-          git -C "$RUNNER_TEMP/assets" sparse-checkout set theme/lunar-promise theme/lunar-dark-promise theme/lunar-storm-promise theme/threshold ambience/weather
+          git -C "$RUNNER_TEMP/assets" sparse-checkout set theme/lunar-promise theme/lunar-dark-promise theme/lunar-storm-promise theme/threshold ambience/weather ambience/transitions
           dest=apps/ios/Viksen/Resources/Worlds/viksen
           for f in "$RUNNER_TEMP/assets/theme/lunar-promise/"*.m4a; do
             cp "$f" "$dest/lunar-promise-$(basename "$f")"
@@ -154,6 +154,7 @@ jobs:
           # Rain and thunder ambience (plays under the music while it rains).
           mkdir -p apps/ios/Viksen/Resources/Worlds/_ambience
           cp "$RUNNER_TEMP/assets/ambience/weather/"*.wav "$RUNNER_TEMP/assets/ambience/weather/"*.caf apps/ios/Viksen/Resources/Worlds/_ambience/
+          cp "$RUNNER_TEMP/assets/ambience/transitions/"*.caf apps/ios/Viksen/Resources/Worlds/_ambience/
           ls -la apps/ios/Viksen/Resources/Worlds/_ambience
           rm -rf "$RUNNER_TEMP/assets"
 

@@ -119,7 +119,6 @@ bool ConditionSet::evaluate(const ConditionContext& c) const {
 }
 
 bool ConditionSet::inputsAvailable(const ConditionContext& c) const {
-    if (!c.headphones) return false;   // contextual mixing only with headphones
     for (const auto& k : all) {
         switch (k.type) {
             case Condition::Type::Quiet:

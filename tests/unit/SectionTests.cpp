@@ -431,15 +431,18 @@ TEST_CASE("session/lunar Dimension: day track by day, tonight's lunar song after
     s.unloadWorld();
 }
 
-TEST_CASE("worlds/without headphones every song plays as written") {
+TEST_CASE("worlds/the music adapts on speakers too; mic moods need the mic") {
     auto w = parseWorld(sectionWorld());
     REQUIRE(w.has_value());
     ConditionContext ctx;
+    ctx.headphones = false;                               // a speaker
     ctx.env.motionAvailable = true;
     ctx.env.moving = true;
-    CHECK(!chooseSections(w->sections, ctx).composed);   // headphones: the moving part is chosen
-    ctx.headphones = false;
-    CHECK(chooseSections(w->sections, ctx).composed);    // speaker: straight through
+    CHECK(!chooseSections(w->sections, ctx).composed);   // motion still steers the song
+    ctx.env.motionAvailable = false;
+    ctx.micActive = false;
+    ctx.env.quiet = true;                                // without the mic, "quiet" is unknown
+    CHECK(chooseSections(w->sections, ctx).composed);    // nothing to go on: as written
 }
 
 TEST_CASE("session/day, night and rain songs: rain wins, then tonight's song, then the night song") {

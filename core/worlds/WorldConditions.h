@@ -21,8 +21,9 @@ struct ConditionContext {
     std::optional<double> intensity;   // exercise intensity 0..1 when Health/Watch is on
     double daysSinceUnixEpochUtc = 0;  // current time, for the moon phase
     bool night = false;
-    // Contextual mixing is a headphones experience (owner, 2026-11-05): without them every
-    // song plays straight through as written (no reactive parts or mix rules).
+    // Headphones in. The music adapts on every output (owner, 2026-11-05); headphones add
+    // the 3D presentation and the room blend. Microphone moods (quiet, loud) need the mic,
+    // which only runs with headphones, so on speakers they are simply unavailable.
     bool headphones = true;
     bool raining = false;              // it is raining where the listener is (weather, when on)                // after dark, by the listener's chosen rule (fixed hours or sunset–sunrise)
     EnvironmentStateSnapshot env;

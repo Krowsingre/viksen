@@ -32,6 +32,23 @@ final class EngineController {
     private let nowPlaying = NowPlaying()
     let threshold = ThresholdSound()
     private let rainAmbience = RainAmbience()
+    private let transitionCue = TransitionCue()
+    private var appliedSpatial: Bool?
+    private var headphonesForAudio: Bool {
+        #if os(macOS)
+        true   // a Mac cannot tell headphones from speakers
+        #else
+        onHeadphones
+        #endif
+    }
+    /// 3D only on headphones; speakers get plain stereo.
+    private func applySpatial(force: Bool = false) {
+        let spatial = dimension3D && headphonesForAudio
+        guard force || spatial != appliedSpatial else { return }
+        appliedSpatial = spatial
+        bridge.setDimensionSpatialEnabled(spatial)
+    }
+    private var songTime: String?   // "day", "night" or "rain": what the Dimension plays now
     private var lastProgressTick = Date.distantPast
     private let delegateProxy = BridgeDelegateProxy()
     private var meterTimer: Timer?
@@ -123,7 +140,7 @@ final class EngineController {
         applyRoomBlend()
         route = bridge.route
         headTracker.onYaw = { [weak self] yaw in self?.bridge.setListenerYawDegrees(Float(yaw)) }
-        bridge.setDimensionSpatialEnabled(dimension3D)
+        applySpatial(force: true)
         activity.onCadence = { [weak self] spm in self?.applyCadence(spm) }
         watch.onHeartRate = { [weak self] bpm, date in self?.health.ingestLiveHeartRate(bpm, at: date) }
         watch.activate()
@@ -347,17 +364,23 @@ final class EngineController {
             lastProgressTick = Date()
             nightClock.refresh()
             if bridge.night != nightClock.isNight { bridge.night = nightClock.isNight }
-            #if os(macOS)
-            let adaptive = true   // a Mac cannot tell headphones from speakers
-            #else
-            let adaptive = onHeadphones
-            #endif
-            if bridge.headphones != adaptive { bridge.headphones = adaptive }
+            // The music adapts on every output; the headphone 3D (HRTF) effect is only for
+            // headphones, so speakers get plain stereo.
+            if bridge.headphones != headphonesForAudio { bridge.headphones = headphonesForAudio }
+            applySpatial()
             // Rain plays a Dimension's storm song, on every tier (needs Weather on).
             let raining = weatherEnabled && (weather.mood == .rain || weather.mood == .storm)
             if bridge.raining != raining { bridge.raining = raining }
             // Rain and thunder under the music while it rains and a Dimension plays.
             rainAmbience.update(!raining || activeDimensionID == nil ? .none : (weather.mood == .storm ? .storm : .rain))
+            // Transition effects when a day-and-night Dimension changes song: the drone
+            // into night or rain, the bells back into day.
+            let time = raining ? "rain" : (nightClock.isNight ? "night" : "day")
+            if let id = activeDimensionID, (worlds.first { $0.worldID == id }?.songCount ?? 1) > 1,
+               let previous = songTime, previous != time {
+                transitionCue.play(time == "day" ? .bells : .drone)
+            }
+            songTime = activeDimensionID == nil ? nil : time
             let audible = worldStatus.playing && masterGain > 0.001 && busGains[BusLevel.music.rawValue] > 0.001
             // Only tonight's lunar song, after dark, counts. TestFlight-only check of the
             // counter: any song counts, at any hour.
@@ -428,7 +451,7 @@ final class EngineController {
         do {
             try bridge.loadStudioStems(stems.map(\.url))
             if trackName != nil { bridge.pause() }
-            bridge.setDimensionSpatialEnabled(dimension3D)
+            applySpatial(force: true)
             studioStems = stems.map { st in
                 var s = st
                 if let f = try? AVAudioFile(forReading: st.url) { s.lengthSeconds = Double(f.length) / f.fileFormat.sampleRate }
@@ -662,7 +685,7 @@ final class EngineController {
                 })
             } else if let dim = info["dimension"] as? String, let world = worlds.first(where: { $0.worldID == dim }) {
                 try? bridge.loadWorld(world.worldID)       // selected, not auto-played
-                bridge.setDimensionSpatialEnabled(dimension3D)
+                applySpatial(force: true)
                 applySavedPositions(world.worldID)
             }
             statusMessage = "Opened \u{201C}\((info["name"] as? String) ?? url.deletingPathExtension().lastPathComponent)\u{201D}"
@@ -800,7 +823,7 @@ final class EngineController {
                 }
                 try bridge.loadWorld(world.worldID, audioFiles: files)
             }
-            bridge.setDimensionSpatialEnabled(dimension3D)
+            applySpatial(force: true)
             applySavedPositions(world.worldID)
             AppLog.info("Enter Dimension \(world.worldID) (3D \(dimension3D), HRTF \(bridge.binauralHRTF))")
             if trackName != nil { bridge.pause() }   // one music source at a time
@@ -831,7 +854,7 @@ final class EngineController {
     /// Binaural 3D for Dimension stems (headphones). On by default.
     var dimension3D: Bool = UserDefaults.standard.object(forKey: "dimension3D") as? Bool ?? true {
         didSet {
-            bridge.setDimensionSpatialEnabled(dimension3D)
+            applySpatial(force: true)
             UserDefaults.standard.set(dimension3D, forKey: "dimension3D")
             AppLog.info("3D audio \(dimension3D ? "on" : "off")")
         }
