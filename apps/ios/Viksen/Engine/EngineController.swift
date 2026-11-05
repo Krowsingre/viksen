@@ -31,6 +31,7 @@ final class EngineController {
     let nightClock = NightClock()
     private let nowPlaying = NowPlaying()
     let threshold = ThresholdSound()
+    private let rainAmbience = RainAmbience()
     private var lastProgressTick = Date.distantPast
     private let delegateProxy = BridgeDelegateProxy()
     private var meterTimer: Timer?
@@ -335,6 +336,8 @@ final class EngineController {
             // Rain plays a Dimension's storm song, on every tier (needs Weather on).
             let raining = weatherEnabled && (weather.mood == .rain || weather.mood == .storm)
             if bridge.raining != raining { bridge.raining = raining }
+            // Rain and thunder under the music while it rains and a Dimension plays.
+            rainAmbience.update(!raining || activeDimensionID == nil ? .none : (weather.mood == .storm ? .storm : .rain))
             let audible = worldStatus.playing && masterGain > 0.001 && busGains[BusLevel.music.rawValue] > 0.001
             // Only tonight's lunar song, after dark, counts. TestFlight-only check of the
             // counter: any song counts, at any hour.
