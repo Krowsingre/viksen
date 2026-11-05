@@ -10,6 +10,9 @@ enum AppTab: Hashable { case home, experience, moonChart, settings }
 final class AppNavigator {
     var tab: AppTab = .home
     var menuOpen = false
+    /// Bottom of Home's header (the wordmark block), in screen points: the menu opens
+    /// below it so the header is never covered (owner, 2026-11-05).
+    var headerBottom: CGFloat = 0
 
     /// Pages change instantly (owner: transitions felt slow); only the menu slides.
     func go(_ t: AppTab) {
@@ -112,11 +115,14 @@ struct SideMenu: View {
                     .accessibilityAddTraits(.isButton)
                     .transition(.opacity)
                 GeometryReader { geo in
-                    let width = min(geo.size.width - 32, 380)
+                    // Below Home's header; shrinks a little if the screen is short.
+                    let top = max(8, nav.headerBottom - geo.frame(in: .global).minY + 4)
+                    let room = max(300, geo.size.height - top - 8)
+                    let width = min(geo.size.width - 32, 380, room * Self.frameAspect)
                     let height = width / Self.frameAspect
                     panel(width: width, height: height)
                         .frame(maxWidth: .infinity)
-                        .padding(.top, max(8, min(40, (geo.size.height - height) / 3)))
+                        .padding(.top, top)
                 }
                 .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
             }

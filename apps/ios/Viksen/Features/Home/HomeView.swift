@@ -9,6 +9,7 @@ import SwiftUI
 /// redraw the waveform and the card, never the whole page.
 struct HomeView: View {
     @Environment(EngineController.self) private var engine
+    @Environment(AppNavigator.self) private var nav
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     private var wide: Bool { sizeClass == .regular }
@@ -24,6 +25,7 @@ struct HomeView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: wide ? 24 : 12)
                     HomeWordmark(wide: wide)
+                        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { nav.headerBottom = $0 }
                     Spacer(minLength: 10)
                     HomeFoxRing(width: ringWidth)
                     Spacer(minLength: 10)
