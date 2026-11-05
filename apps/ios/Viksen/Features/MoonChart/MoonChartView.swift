@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// The Moon Chart (P-3), after the owner's concept (2026-11-04): the eight lunar phases of
-/// one Dimension in a ring of real moons on the night sky. Discovered phases shine; tonight's
-/// is ringed and shows how much of its 3 minutes has been heard. Progress is per Dimension.
-/// Global Secrets show a count only, never a total.
+/// The Moon Chart (P-3), laid out like Settings and Dimensions (owner, 2026-11-05):
+/// a standard page with the ring of moons at the top as its picture, then the Dimension,
+/// the eight phases and the journey as grouped rows on a plain dark background. Tapping a
+/// moon or a phase opens that phase's page. Progress is per Dimension; Global Secrets show
+/// a count only, never a total.
 struct MoonChartView: View {
     var initialDimensionID: String?
     var onClose: (() -> Void)? = nil
@@ -11,7 +12,7 @@ struct MoonChartView: View {
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var dimensionID: String?
-    @State private var selected: String?
+    @State private var path: [String] = []
 
     static let lavender = Color(red: 0.90, green: 0.86, blue: 1)
     static let violet = Color(red: 0.62, green: 0.48, blue: 1)
@@ -20,7 +21,6 @@ struct MoonChartView: View {
     /// Only the Dimensions this listener has access to.
     private var dimensions: [AtmosWorldInfo] {
         engine.worlds.filter { w in
-            guard w.worldID != "studio" else { return false }
             let need: Tier = w.tier == "studio" ? .studio : w.tier == "experience" ? .experience : .free
             return need <= store.tier
         }
@@ -32,93 +32,62 @@ struct MoonChartView: View {
             ?? dimensions.first?.worldID ?? ""
         let found = progress.discoveryDates(dim)
         let tonight = progress.currentPhaseID
-        let phase = selected ?? tonight
-        ZStack(alignment: .top) {
-            GeometryReader { geo in
-                Image("MoonChartSky").resizable().scaledToFill()
-                    .frame(width: geo.size.width, height: geo.size.height).clipped()
-            }
-            .ignoresSafeArea()
-            .accessibilityHidden(true)
-            ScrollView {
-                VStack(spacing: 18) {
-                    header
-                    dimensionPicker(dim)
-                    ring(found: found, tonight: tonight, selected: phase, dim: dim)
+        NavigationStack(path: $path) {
+            List {
+                Section {
+                    ring(found: found, tonight: tonight, dim: dim)
                         .frame(height: 330)
-                    VStack(spacing: 14) {
-                        if let done = progress.journeyCompletedAt(dim) { completeCard(done) }
-                        detailCard(phase: phase, found: found, tonight: tonight, dim: dim)
-                        HStack(spacing: 14) {
-                            journeyCard(found: found)
-                            secretsCard(dim: dim)
-                        }
-                        if progress.globalSecretsFound > 0 { globalCard }
-                    }
-                    .padding(.horizontal, 20)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets())
                 }
-                .padding(.bottom, 32)
+                Section {
+                    if dimensions.count > 1 {
+                        Picker("Dimension", selection: Binding(get: { dim }, set: { dimensionID = $0 })) {
+                            ForEach(dimensions, id: \.worldID) { d in Text(d.name).tag(d.worldID) }
+                        }
+                        .pickerStyle(.menu)
+                    } else {
+                        LabeledContent("Dimension", value: dimensions.first?.name ?? "")
+                    }
+                }
+                Section {
+                    ForEach(Lunar.order, id: \.self) { id in
+                        NavigationLink(value: id) { PhaseRow(phase: id, found: found, tonight: tonight, dim: dim) }
+                    }
+                } header: { Text("Phases") } footer: {
+                    Text("Listen to a Dimension for 3 minutes after dark during a phase to discover it. The minutes do not need to be continuous.")
+                }
+                Section {
+                    if let done = progress.journeyCompletedAt(dim) {
+                        Label("Complete, \(done.formatted(date: .abbreviated, time: .omitted))", systemImage: "moon.stars.fill")
+                            .foregroundStyle(Theme.gold)
+                    }
+                    LabeledContent("Lunar Journey", value: "\(found.count) of 8 phases")
+                    LabeledContent("Secrets", value: "\(progress.secretsFound(dim)) of 5 found")
+                    if progress.globalSecretsFound > 0 {
+                        LabeledContent("Global Secrets", value: "\(progress.globalSecretsFound) found")
+                    }
+                } header: { Text("Journey") } footer: {
+                    if progress.globalSecretsFound > 0 { Text("Global Secrets are found across every Dimension.") }
+                }
             }
-            .scrollIndicators(.hidden)
-        }
-        .overlay(alignment: .topTrailing) {
-            CloseButton { if let onClose { onClose() } else { dismiss() } }
-                .padding(.trailing, 12).padding(.top, 0)
+            .navigationTitle("Moon Chart")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    CloseButton(compact: true) { if let onClose { onClose() } else { dismiss() } }
+                }
+            }
+            .navigationDestination(for: String.self) { id in
+                PhaseDetailView(phase: id, dimensionID: dim,
+                                dimensionName: dimensions.first { $0.worldID == dim }?.name ?? "this Dimension")
+            }
         }
         .preferredColorScheme(.dark)
     }
 
-    // MARK: Header
-
-    private var header: some View {
-        VStack(spacing: 2) {
-            ZStack {
-                Circle().trim(from: 0.62, to: 0.88)
-                    .stroke(Self.lavender.opacity(0.7), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
-                    .frame(width: 130, height: 130)
-                    .offset(y: 46)
-                    .shadow(color: Self.violet, radius: 4)
-                Image(systemName: "sparkle").font(.system(size: 9)).foregroundStyle(Self.lavender)
-                    .offset(y: 4)
-            }
-            .frame(height: 40)
-            .clipped()
-            .accessibilityHidden(true)
-            Text("Moon Chart")
-                .font(.system(size: 44, weight: .regular, design: .serif))
-                .foregroundStyle(Self.lavender)
-                .shadow(color: Self.violet.opacity(0.5), radius: 8)
-                .accessibilityAddTraits(.isHeader)
-        }
-        .padding(.top, 10)
-    }
-
-    private func dimensionPicker(_ current: String) -> some View {
-        Menu {
-            Picker("Dimension", selection: Binding(get: { current },
-                                                   set: { dimensionID = $0; selected = nil })) {
-                ForEach(dimensions, id: \.worldID) { d in Text(d.name).tag(d.worldID) }
-            }
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "moon").font(.title3).foregroundStyle(Self.lavender)
-                Text(dimensions.first { $0.worldID == current }?.name ?? "Dimension")
-                    .font(.system(size: 18, design: .serif))
-                    .lineLimit(1).minimumScaleFactor(0.8)
-                Image(systemName: "chevron.down").font(.footnote.weight(.semibold))
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 22).frame(minHeight: 50)
-            .background(Color(red: 0.14, green: 0.09, blue: 0.24).opacity(0.6), in: Capsule())
-            .overlay(Capsule().stroke(Self.violet.opacity(0.55), lineWidth: 1))
-        }
-        .accessibilityLabel("Dimension")
-        .padding(.horizontal, 20)
-    }
-
     // MARK: Ring
 
-    private func ring(found: [String: Date], tonight: String, selected: String, dim: String) -> some View {
+    private func ring(found: [String: Date], tonight: String, dim: String) -> some View {
         GeometryReader { geo in
             let c = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
             let radius: CGFloat = min(geo.size.width / 2 - 52, 150)
@@ -137,15 +106,14 @@ struct MoonChartView: View {
                     let a = (-90.0 + Double(i) * 45.0) * Double.pi / 180
                     let ca: Double = cos(a), sa: Double = sin(a)
                     let lit = found[id] != nil
-                    Button { self.selected = id } label: {
+                    Button { path.append(id) } label: {
                         Image("Moon-\(id)").resizable().scaledToFit()
                             .frame(width: moon, height: moon)
                             .saturation(lit ? 1 : 0.6)
                             .opacity(lit ? 1 : (id == tonight ? 0.85 : 0.5))
                             .shadow(color: lit ? Self.lavender.opacity(0.6) : .clear, radius: 8)
-                            .overlay(Circle().stroke(Self.violet, lineWidth: id == selected ? 2.5 : 0).padding(-6))
-                            .shadow(color: id == selected ? Self.violet : .clear, radius: 10)
-                            .overlay(Circle().stroke(Self.lavender.opacity(id == tonight && id != selected ? 0.6 : 0), lineWidth: 1).padding(-6))
+                            .overlay(Circle().stroke(Self.violet, lineWidth: id == tonight ? 2 : 0).padding(-6))
+                            .shadow(color: id == tonight ? Self.violet : .clear, radius: 10)
                             .frame(width: moon + 16, height: moon + 16)
                             .contentShape(Circle())
                     }
@@ -206,120 +174,101 @@ struct MoonChartView: View {
         .multilineTextAlignment(.center)
     }
 
-    // MARK: Cards
-
-    private func glass<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        content()
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(red: 0.13, green: 0.08, blue: 0.22).opacity(0.55), in: RoundedRectangle(cornerRadius: 22))
-            .background(.ultraThinMaterial.opacity(0.3), in: RoundedRectangle(cornerRadius: 22))
-            .overlay(RoundedRectangle(cornerRadius: 22).stroke(Self.violet.opacity(0.35), lineWidth: 1))
-    }
-
-    private func detailCard(phase: String, found: [String: Date], tonight: String, dim: String) -> some View {
-        let name = Lunar.phaseName(phase)
-        let tag: String, tagColor: Color, line1: String, line2: String
-        if let at = found[phase] {
-            tag = "Discovered \(at.formatted(.dateTime.month(.abbreviated).day()))"
-            tagColor = Self.lavender
-            line1 = "Heard in \(dimensions.first { $0.worldID == dim }?.name ?? "this Dimension")."
-            line2 = "Its song returns here after dark with every \(name)."
-        } else if !engine.phaseHasSong(dim, phase) {
-            tag = "Still to come"; tagColor = Self.lavender.opacity(0.7)
-            line1 = "The \(name)'s song for this Dimension is still being written."
-            line2 = "It will be discoverable once it arrives."
-        } else if phase == tonight {
-            let left = max(0, Int(180 - progress.phaseProgress(dim) * 180))
-            tag = "Tonight"; tagColor = Theme.gold
-            line1 = left < 180 ? "Keep listening after dark: \(left / 60) min \(left % 60) s to go."
-                               : "Listen to this Dimension for 3 minutes after dark while it lasts to discover it."
-            line2 = "The minutes do not need to be continuous."
-        } else {
-            tag = "Not yet discovered"; tagColor = Self.lavender.opacity(0.7)
-            line1 = "Listen to this Dimension for 3 minutes after dark during the next \(name)."
-            if let w = progress.nextWindow(phase) {
-                let f = Date.FormatStyle.dateTime.month(.abbreviated).day()
-                line2 = "Next: \(w.start.formatted(f)) – \(w.end.formatted(f))"
-            } else { line2 = "" }
-        }
-        return glass {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(name).font(.system(size: 24, design: .serif)).foregroundStyle(.white)
-                    Spacer()
-                    Text(tag).font(.system(size: 15, design: .serif)).foregroundStyle(tagColor)
-                }
-                Text(line1).font(.system(size: 16, design: .serif)).foregroundStyle(Self.lavender.opacity(0.95))
-                if !line2.isEmpty {
-                    Text(line2).font(.system(size: 14, design: .serif)).italic().foregroundStyle(Self.lavender.opacity(0.7))
-                }
-            }
-        }
-    }
-
-    private func completeCard(_ at: Date) -> some View {
-        glass {
-            HStack(spacing: 14) {
-                Image(systemName: "moon.stars.fill").font(.title2).foregroundStyle(Theme.gold)
-                    .frame(width: 52, height: 52).overlay(Circle().stroke(Theme.gold, lineWidth: 1.5))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Lunar Journey complete").font(.system(size: 18, design: .serif)).foregroundStyle(.white)
-                    Text("Every phase heard in this Dimension").font(.system(size: 14, design: .serif))
-                        .foregroundStyle(Self.lavender.opacity(0.75))
-                }
-                Spacer()
-            }
-        }
-    }
-
-    private func statCard<Extra: View>(title: String, value: String, suffix: String,
-                                       @ViewBuilder extra: () -> Extra) -> some View {
-        glass {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(title).font(.system(size: 12, design: .serif)).tracking(2.5).foregroundStyle(Self.lavender.opacity(0.8))
-                (Text(value).font(.system(size: 30, design: .serif)).foregroundColor(.white)
-                 + Text(" \(suffix)").font(.system(size: 19, design: .serif)).foregroundColor(Self.lavender))
-                    .lineLimit(1).minimumScaleFactor(0.7)
-                extra()
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private func journeyCard(found: [String: Date]) -> some View {
-        statCard(title: "LUNAR JOURNEY", value: "\(found.count)", suffix: "of 8 phases") {
-            HStack(spacing: 5) {
-                ForEach(Lunar.order, id: \.self) { id in
-                    Circle().fill(found[id] != nil ? Self.lavender : .clear)
-                        .overlay(Circle().stroke(Self.violet.opacity(0.8), lineWidth: 1))
-                        .frame(width: 11, height: 11)
-                }
-            }
-        }
-    }
-
-    private func secretsCard(dim: String) -> some View {
-        let n = progress.secretsFound(dim)
-        return statCard(title: "SECRETS", value: "\(n)", suffix: "of 5 found") {
-            HStack(spacing: 8) {
-                ForEach(0..<5, id: \.self) { k in
-                    Rectangle().fill(k < n ? Theme.gold : .clear)
-                        .overlay(Rectangle().stroke(Self.violet.opacity(0.8), lineWidth: 1))
-                        .frame(width: 10, height: 10).rotationEffect(.degrees(45))
-                }
-            }
-        }
-    }
-
-    private var globalCard: some View {
-        statCard(title: "GLOBAL SECRETS", value: "\(progress.globalSecretsFound)", suffix: "found") {
-            Text("Across every Dimension").font(.system(size: 13, design: .serif)).foregroundStyle(Self.lavender.opacity(0.7))
-        }
-    }
-
     static func clock(_ seconds: Double) -> String {
         let s = Int(seconds)
         return "\(s / 60):" + String(format: "%02d", s % 60)
+    }
+}
+
+/// One phase in the list: its moon, its name, and where it stands.
+private struct PhaseRow: View {
+    let phase: String
+    let found: [String: Date]
+    let tonight: String
+    let dim: String
+    @Environment(EngineController.self) private var engine
+
+    var body: some View {
+        let lit = found[phase] != nil
+        HStack(spacing: 14) {
+            Image("Moon-\(phase)").resizable().scaledToFit()
+                .frame(width: 36, height: 36)
+                .saturation(lit ? 1 : 0.6)
+                .opacity(lit || phase == tonight ? 1 : 0.55)
+            Text(Lunar.phaseName(phase))
+            Spacer()
+            Text(status).font(.subheadline).foregroundStyle(phase == tonight && !lit ? Theme.gold : .secondary)
+        }
+    }
+
+    private var status: String {
+        if let at = found[phase] { return "Discovered \(at.formatted(.dateTime.month(.abbreviated).day()))" }
+        if !engine.phaseHasSong(dim, phase) { return "Still to come" }
+        if phase == tonight { return "Tonight" }
+        return "Not yet"
+    }
+}
+
+/// One phase's page: its moon, where it stands, and how to discover it.
+struct PhaseDetailView: View {
+    let phase: String
+    let dimensionID: String
+    let dimensionName: String
+    @Environment(EngineController.self) private var engine
+    private var progress: ProgressStore { engine.progress }
+
+    var body: some View {
+        let name = Lunar.phaseName(phase)
+        let found = progress.discoveryDates(dimensionID)
+        let tonight = progress.currentPhaseID
+        let f = Date.FormatStyle.dateTime.month(.abbreviated).day()
+        List {
+            Section {
+                VStack(spacing: 10) {
+                    Image("Moon-\(phase)").resizable().scaledToFit()
+                        .frame(width: 120, height: 120)
+                        .saturation(found[phase] != nil ? 1 : 0.6)
+                        .shadow(color: MoonChartView.lavender.opacity(found[phase] != nil ? 0.6 : 0), radius: 12)
+                        .accessibilityHidden(true)
+                    Text(name).font(.system(size: 26, design: .serif))
+                    Text(dimensionName).font(.subheadline).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .listRowBackground(Color.clear)
+            }
+            Section {
+                if let at = found[phase] {
+                    LabeledContent("Discovered", value: at.formatted(date: .abbreviated, time: .omitted))
+                    Text("Its song returns here after dark with every \(name).")
+                } else if !engine.phaseHasSong(dimensionID, phase) {
+                    LabeledContent("Status", value: "Still to come")
+                    Text("The \(name)'s song for this Dimension is still being written. It can be discovered once it arrives.")
+                } else if phase == tonight {
+                    LabeledContent("Status") { Text("Tonight").foregroundStyle(Theme.gold) }
+                    if let w = progress.nextWindow(phase) { LabeledContent("Until", value: w.end.formatted(f)) }
+                    TimelineView(.periodic(from: .now, by: 1)) { _ in
+                        let p = progress.phaseProgress(dimensionID)
+                        VStack(alignment: .leading, spacing: 8) {
+                            ProgressView(value: p).tint(MoonChartView.violet)
+                            Text("\(MoonChartView.clock(p * 180)) of 3:00 heard")
+                                .font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                } else {
+                    LabeledContent("Status", value: "Not yet discovered")
+                    if let w = progress.nextWindow(phase) {
+                        LabeledContent("Next", value: "\(w.start.formatted(f)) – \(w.end.formatted(f))")
+                    }
+                }
+            } footer: {
+                if found[phase] == nil && engine.phaseHasSong(dimensionID, phase) {
+                    Text("Listen to \(dimensionName) for 3 minutes after dark during the \(name) to discover it. The minutes do not need to be continuous.")
+                }
+            }
+        }
+        .navigationTitle(name)
+        .inlineNavigationTitle()
     }
 }
