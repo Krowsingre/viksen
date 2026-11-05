@@ -127,3 +127,48 @@ TEST_CASE("spatial/interim panner centre is balanced and distance attenuates") {
     CHECK(lf < l * 0.5);
     (void)rf;
 }
+
+#include "engine/environment/MicTransform.h"
+
+TEST_CASE("dsp/room blend: echo on the beat ping-pongs, reverb is stereo and bounded") {
+    const double sr = 48000;
+    atmos::MicTransform m;
+    m.prepare(sr, 512);
+    m.cutoffHz.set(18000.0f);
+    m.echoSeconds.set(0.5f);
+    m.feedback.set(0.5f);
+    m.wet.set(1.0f);
+    m.reverbMix.set(0.0f);
+    for (auto* p : {&m.cutoffHz, &m.echoSeconds, &m.feedback, &m.wet, &m.reverbMix}) p->resetTo(p->get());
+    const int n = static_cast<int>(sr * 1.2);
+    std::vector<float> in(n, 0.0f), l(n), r(n);
+    in[100] = 1.0f;
+    for (int off = 0; off < n; off += 512) {
+        const int k = std::min(512, n - off);
+        m.process(in.data() + off, l.data() + off, r.data() + off, k);
+    }
+    auto peakNear = [&](const std::vector<float>& x, int at) {
+        float p = 0; for (int i = at - 400; i < at + 400; ++i) p = std::max(p, std::fabs(x[i])); return p; };
+    const int beat = static_cast<int>(0.5 * sr);
+    CHECK(peakNear(l, 100 + beat) > 0.1f);              // first echo on the left, one beat later
+    CHECK(peakNear(r, 100 + beat) < 0.05f);              // ...not yet on the right
+    CHECK(peakNear(r, 100 + 2 * beat) > 0.05f);          // the right answers a beat after
+    // Reverb on: wet, stereo (left and right differ), finite and bounded.
+    m.reverbMix.set(0.8f); m.reverbMix.resetTo(0.8f);
+    m.roomSize.set(1.0f); m.roomSize.resetTo(1.0f);
+    std::vector<float> noise(n);
+    uint32_t seed = 1;
+    for (auto& v : noise) { seed = seed * 1664525u + 1013904223u; v = (static_cast<float>(seed >> 8) / 16777216.0f - 0.5f) * 0.5f; }
+    double diff = 0, maxAbs = 0;
+    for (int off = 0; off < n; off += 512) {
+        const int k = std::min(512, n - off);
+        m.process(noise.data() + off, l.data() + off, r.data() + off, k);
+    }
+    for (int i = 0; i < n; ++i) {
+        CHECK(std::isfinite(l[i]));
+        diff += std::fabs(l[i] - r[i]);
+        maxAbs = std::max<double>(maxAbs, std::max(std::fabs(l[i]), std::fabs(r[i])));
+    }
+    CHECK(diff / n > 1e-3);
+    CHECK(maxAbs < 4.0);
+}

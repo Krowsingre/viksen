@@ -20,6 +20,7 @@ void AudioEngine::prepare(const EngineConfig& config) {
     mix_.setSize(2, config_.maxBlockSize);
     micMono_.assign(static_cast<size_t>(config_.maxBlockSize), 0.0f);
     micWet_.assign(static_cast<size_t>(config_.maxBlockSize), 0.0f);
+    micWetR_.assign(static_cast<size_t>(config_.maxBlockSize), 0.0f);
 
     for (auto& l : layers_) l.gain.prepare(sr);
     for (auto& b : buses_) b.gain.prepare(sr);
@@ -196,9 +197,9 @@ void AudioEngine::renderMic(const float* const* inputs, int numInputs, int numFr
     AudioBuffer& raw = busBuffers_[static_cast<int>(Bus::MicRaw)];
     for (int i = 0; i < numFrames; ++i) { raw.channel(0)[i] += mono[i]; raw.channel(1)[i] += mono[i]; }
 
-    micTransform_.process(mono, micWet_.data(), numFrames);
+    micTransform_.process(mono, micWet_.data(), micWetR_.data(), numFrames);
     AudioBuffer& wet = busBuffers_[static_cast<int>(Bus::MicTransformed)];
-    for (int i = 0; i < numFrames; ++i) { wet.channel(0)[i] += micWet_[i]; wet.channel(1)[i] += micWet_[i]; }
+    for (int i = 0; i < numFrames; ++i) { wet.channel(0)[i] += micWet_[i]; wet.channel(1)[i] += micWetR_[i]; }
 
     roomMemory_.capture(mono, numFrames);
     roomMemory_.renderAdd(wet, numFrames);
@@ -209,14 +210,29 @@ void AudioEngine::sumToMaster(int numFrames) noexcept {
     const CaptureMode cmode = capture_.mode();
     const bool partial = cmode == CaptureMode::WithoutMic || cmode == CaptureMode::AtmosphereOnly || cmode == CaptureMode::MicOnly;
     if (partial) captureMix_.clear(numFrames);
+    // How loud the music is this block (as heard), for ducking the room under it:
+    // fast attack, slow release; ducking starts at -30 dBFS and is full by -6 dBFS.
+    float duck = 1.0f;
+    {
+        const AudioBuffer& music = busBuffers_[static_cast<int>(Bus::Music)];
+        double sum = 0.0;
+        for (int i = 0; i < numFrames; ++i) sum += music.channel(0)[i] * music.channel(0)[i] + music.channel(1)[i] * music.channel(1)[i];
+        const float g = buses_[static_cast<int>(Bus::Music)].gain.current();
+        const float db = 10.0f * std::log10(static_cast<float>(sum / std::max(1, 2 * numFrames)) * g * g + 1e-9f);
+        const float coeff = db > duckEnvDb_ ? 0.5f : 0.02f;
+        duckEnvDb_ += coeff * (db - duckEnvDb_);
+        const float amount = std::clamp((duckEnvDb_ + 30.0f) / 24.0f, 0.0f, 1.0f);
+        duck = 1.0f - roomDuckDepth_.load(std::memory_order_relaxed) * amount;
+    }
     for (int b = 0; b < kNumBuses; ++b) {
         BusState& bs = buses_[b];
         const bool muted = bs.muted.load(std::memory_order_relaxed);
         bs.gain.beginBlock();
         AudioBuffer& src = busBuffers_[b];
         float peak = 0.0f;
+        const float busDuck = (b == static_cast<int>(Bus::MicRaw) || b == static_cast<int>(Bus::MicTransformed)) ? duck : 1.0f;
         for (int i = 0; i < numFrames; ++i) {
-            const float g = bs.gain.next() * (muted ? 0.0f : 1.0f);
+            const float g = bs.gain.next() * (muted ? 0.0f : 1.0f) * busDuck;
             const float l = src.channel(0)[i] * g;
             const float r = src.channel(1)[i] * g;
             mix_.channel(0)[i] += l;

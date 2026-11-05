@@ -173,7 +173,13 @@ private:
 
     std::array<AudioBuffer, kNumBuses> busBuffers_;
     AudioBuffer mix_;
-    std::vector<float> micMono_, micWet_;
+    std::vector<float> micMono_, micWet_, micWetR_;
+    // Room blend ducking: the room steps back under loud music (0 = never, 1 = deeply).
+    std::atomic<float> roomDuckDepth_{0.6f};
+    float duckEnvDb_ = -90.0f;
+public:
+    void setRoomDuckDepth(float d) noexcept { roomDuckDepth_.store(d, std::memory_order_relaxed); }
+private:
 
     SpscQueue<Command, 256> commands_;
     SpscQueue<const AudioClip*, 512> retired_;

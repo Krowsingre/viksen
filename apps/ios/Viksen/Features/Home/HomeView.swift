@@ -31,6 +31,7 @@ struct HomeView: View {
                     NowPlayingCard()
                         .frame(maxWidth: wide ? 640 : .infinity)
                         .padding(.horizontal, wide ? 48 : 20)
+                    RoomBlendToggle().padding(.top, 10)
                     Spacer(minLength: wide ? 24 : 12)
                 }
                 .frame(maxWidth: .infinity)
@@ -337,6 +338,34 @@ private struct AlbumRow: View {
         .buttonStyle(.plain)
         .disabled(url == nil)
         .accessibilityLabel(url != nil ? "From \(world.album). Open in Apple Music" : "From \(world.album)")
+    }
+}
+
+// MARK: Room blend
+
+/// "Blend the room": shown only with headphones in.
+private struct RoomBlendToggle: View {
+    @Environment(EngineController.self) private var engine
+    private let lavender = HomeView.lavender
+
+    var body: some View {
+        if engine.onHeadphones {
+            let on = engine.roomBlendOn
+            Button { engine.setRoomBlend(!on) } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: on ? "waveform.and.mic" : "mic.slash")
+                    Text(on ? "Room blended in" : "Blend the room")
+                        .font(.system(size: 15, design: .serif))
+                }
+                .foregroundStyle(on ? .white : lavender.opacity(0.85))
+                .padding(.horizontal, 16).frame(minHeight: 40)
+                .background(on ? Theme.accent.opacity(0.35) : Color.white.opacity(0.06), in: Capsule())
+                .overlay(Capsule().stroke(lavender.opacity(on ? 0.6 : 0.3), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Blend the room in")
+            .accessibilityValue(on ? "On" : "Off")
+        }
     }
 }
 

@@ -245,6 +245,26 @@ final class EngineController {
         }
     }
 
+    /// The room blend on Home (owner, 2026-11-05): the room around you, echoed on the
+    /// song's beat and reverberated, under the music. Needs headphones (a speaker would
+    /// feed back into the microphone). Turning it off also turns the microphone off if
+    /// the blend turned it on.
+    var roomBlendOn: Bool { hearRoom && micEnabled }
+    private var micOnForBlend = false
+
+    func setRoomBlend(_ on: Bool) {
+        if on {
+            guard onHeadphones else { statusMessage = "Connect headphones to blend the room in."; return }
+            if !micEnabled { micOnForBlend = true; setMicEnabled(true) }
+            hearRoom = true
+            // The room needs a level to be heard; give it a gentle default the first time.
+            if busGains[BusLevel.micTransformed.rawValue] < 0.05 { setGain(0.5, for: .micTransformed) }
+        } else {
+            hearRoom = false
+            if micOnForBlend { micOnForBlend = false; setMicEnabled(false) }
+        }
+    }
+
     // MARK: Tiers
 
     /// Switches off anything the current tier no longer includes (e.g. after a refund).

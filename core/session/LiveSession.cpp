@@ -199,7 +199,25 @@ bool LiveSession::loadWorld(const WorldManifest& world, StemDecoderFactory facto
     return loadSong(world, std::move(factory), error);
 }
 
+// Room blend (owner, 2026-11-05): the room's echo falls on the song's beat (three
+// quarters of a beat unless the song says otherwise) and each song can set its own room
+// colour under "roomBlend": echoBeats, feedback, reverb, tone (Hz), shiftHz, shiftMix,
+// duck (0..1, how far the room steps back under loud music).
+void LiveSession::applyRoomBlend(const WorldManifest& w) {
+    auto& m = engine_->micTransform();
+    const Json rb = w.extra.contains("roomBlend") && w.extra["roomBlend"].is_object() ? w.extra["roomBlend"] : Json::object();
+    const double beat = 60.0 / std::max(30.0, w.tempo);
+    m.echoSeconds.set(static_cast<float>(std::clamp(beat * rb.value("echoBeats", 0.75), 0.05, 1.9)));
+    m.feedback.set(rb.value("feedback", 0.42f));
+    m.reverbMix.set(rb.value("reverb", 0.4f));
+    m.cutoffHz.set(rb.value("tone", 2600.0f));
+    m.shiftHz.set(rb.value("shiftHz", -120.0f));
+    m.shiftMix.set(rb.value("shiftMix", 0.0f));
+    engine_->setRoomDuckDepth(rb.value("duck", 0.6f));
+}
+
 bool LiveSession::loadSong(const WorldManifest& world, StemDecoderFactory factory, std::string* error) {
+    applyRoomBlend(world);
     world_ = world;
     worldAuthored_ = world;
     worldFactory_ = std::move(factory);
@@ -417,6 +435,7 @@ void LiveSession::updateWorld(double dt, const ConditionContext& context) {
     {
         const double illum = 0.5 * (1.0 - std::cos(2.0 * 3.14159265358979 * moonPhase(context.daysSinceUnixEpochUtc)));
         transitionSpace_ = static_cast<float>(0.25 + 0.75 * illum);
+        engine_->micTransform().roomSize.set(static_cast<float>(0.45 + 0.5 * illum));   // the room widens toward the full moon
         if (feeder_) feeder_->setTransitionSpace(transitionSpace_);
     }
     if (!world_->sections.empty()) {

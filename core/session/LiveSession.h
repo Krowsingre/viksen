@@ -197,6 +197,7 @@ private:
     bool haveContext_ = false;
     int lunarTarget(const ConditionContext& c) const;   // -1: the Dimension has no lunar songs
     bool hasLunarSongs() const;
+    void applyRoomBlend(const WorldManifest& w);
     double candidateFor_ = 0, switchFromSeconds_ = 0;
     uint64_t songSwitches_ = 0;
     bool loadSong(const WorldManifest& world, StemDecoderFactory factory, std::string* error);
