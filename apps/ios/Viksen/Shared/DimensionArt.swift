@@ -186,6 +186,8 @@ struct DimensionThumbnail: View {
         var found: Image?
         if id == "viksen" {
             found = Image("ViksenBadge")
+        } else if UIImageCompat.named("Badge-\(id)") != nil {
+            found = Image("Badge-\(id)")   // the owner's badge art for this Dimension
         } else if let worlds = Bundle.main.url(forResource: "Worlds", withExtension: nil) {
             for name in ["art.jpg", "art.png"] {
                 let url = worlds.appendingPathComponent(id).appendingPathComponent(name)

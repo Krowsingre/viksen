@@ -17,8 +17,10 @@ struct HomeView: View {
     var body: some View {
         GeometryReader { geo in
             let ringWidth = min(geo.size.width - 24, wide ? 460 : 420, geo.size.height * 0.46)
+            let theme = DimensionTheme.for(engine.activeDimensionID)
             ZStack(alignment: .top) {
-                HomeSkyBackground().ignoresSafeArea()
+                HomeSkyBackground(theme: theme).ignoresSafeArea()
+                    .animation(.easeInOut(duration: 1.2), value: theme)
                 VStack(spacing: 0) {
                     Spacer(minLength: wide ? 24 : 12)
                     HomeWordmark(wide: wide)
@@ -110,12 +112,15 @@ private struct HomeFoxRing: View {
         let height = width * 1199 / 1312   // the ring artwork's aspect
         let playing = engine.activeDimensionID != nil
         let size = width * 1.08
+        // The fox, its button and the moon ring take the playing Dimension's colour.
+        let theme = DimensionTheme.for(engine.activeDimensionID)
         // Glow and fox are layered on the ring artwork's own frame, so the glow lines up
         // with the ring's moons and the (larger) fox can spill past it.
         Image("MoonRing").resizable()
             .frame(width: width, height: height)
+            .hueRotation(.degrees(theme.hueShift))
             .background {
-                MoonRingPulse(phaseID: engine.moonPhaseID, ringWidth: width, ringHeight: height)
+                MoonRingPulse(phaseID: engine.moonPhaseID, glow: theme.glow, ringWidth: width, ringHeight: height)
                     .frame(width: width, height: height)
             }
             .overlay {
@@ -137,12 +142,14 @@ private struct HomeFoxRing: View {
                         .position(x: size * 491 / 1024, y: size * 535 / 1024)
                     }
                     .frame(width: size, height: size)
+                    .hueRotation(.degrees(theme.hueShift))
                     .contentShape(Circle().scale(0.5))
                 }
                 .buttonStyle(.plain)
                 .offset(y: height * (0.495 - 0.5))
                 .accessibilityLabel(playing ? "Stop" : (target.map { "Play \($0.name)" } ?? "Choose a Dimension"))
             }
+            .animation(.easeInOut(duration: 1.2), value: theme.hueShift)
     }
 }
 
@@ -232,9 +239,11 @@ private struct NowPlayingCard: View {
         if unlocked.count > 1 {
             let selected = engine.lastDimensionID.flatMap { id in unlocked.contains { $0.worldID == id } ? id : nil }
                 ?? core?.worldID ?? ""
+            // Room for the tallest card is kept at all times, so nothing above the card moves
+            // when it changes size; the card hangs from the top of that room and the dots sit
+            // just under it (owner, 2026-11-05).
+            let tallest = cardHeights.values.max() ?? 124
             VStack(spacing: 12) {
-                // The pager takes the height of the card shown, so the dots below always sit
-                // just under it, moving down when a card has the album line (owner, 2026-11-05).
                 TabView(selection: Binding(get: { selected }, set: { engine.selectDimension($0) })) {
                     ForEach(unlocked, id: \.worldID) { w in
                         DimensionCard(world: w)
@@ -255,6 +264,20 @@ private struct NowPlayingCard: View {
                 }
                 .accessibilityHidden(true)
             }
+            .frame(height: tallest + 19, alignment: .top)
+            .background(alignment: .top) {
+                // Measures every card (not just those swiped to), invisibly, so the room for
+                // the tallest is known from the start.
+                ZStack {
+                    ForEach(unlocked, id: \.worldID) { w in
+                        DimensionCard(world: w)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeights[w.worldID] = $0 }
+                    }
+                }
+                .hidden()
+                .accessibilityHidden(true)
+            }
         } else {
             DimensionCard(world: core)
         }
@@ -272,26 +295,34 @@ private struct DimensionCard: View {
         let st = engine.worldStatus
         let active = world != nil && st.loaded && st.worldID == world?.worldID
         VStack(spacing: 0) {
-            Button { nav.go(.experience) } label: {
-                HStack(spacing: 16) {
+            HStack(spacing: 16) {
+                // The badge switches to this Dimension when it is not the one playing
+                // (owner, 2026-11-05); the rest of the card opens Dimensions.
+                Button { switchHere() } label: {
                     DimensionThumbnail(dimensionID: world?.worldID)
                         .frame(width: 84, height: 84)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(lavender.opacity(0.3), lineWidth: 1))
-                    if let world {
-                        CardProgress(dimensionID: world.worldID, dimensionName: world.name, active: active)
-                    } else {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("BEGIN").font(.system(size: 11, design: .serif)).tracking(2.5).foregroundStyle(lavender.opacity(0.75))
-                            Text("Choose a Dimension").font(.system(size: 21, design: .serif)).foregroundStyle(.white)
-                        }
-                    }
-                    Spacer(minLength: 0)
                 }
-                .padding(16)
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityLabel(world.map { engine.activeDimensionID == $0.worldID ? $0.name : "Switch to \($0.name)" } ?? "Choose a Dimension")
+                Button { nav.go(.experience) } label: {
+                    HStack(spacing: 16) {
+                        if let world {
+                            CardProgress(dimensionID: world.worldID, dimensionName: world.name, active: active)
+                        } else {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("BEGIN").font(.system(size: 11, design: .serif)).tracking(2.5).foregroundStyle(lavender.opacity(0.75))
+                                Text("Choose a Dimension").font(.system(size: 21, design: .serif)).foregroundStyle(.white)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+            .padding(16)
             // Album line only for albums live on Apple Music (owner, 2026-11-05).
             if let world, !world.album.isEmpty, engine.albums.link(for: world) != nil {
                 Rectangle().fill(lavender.opacity(0.18)).frame(height: 0.6).padding(.horizontal, 16)
@@ -301,6 +332,17 @@ private struct DimensionCard: View {
         .background(Color(red: 0.12, green: 0.07, blue: 0.20).opacity(0.55), in: RoundedRectangle(cornerRadius: 26))
         .background(.ultraThinMaterial.opacity(0.35), in: RoundedRectangle(cornerRadius: 26))
         .overlay(RoundedRectangle(cornerRadius: 26).stroke(lavender.opacity(0.25), lineWidth: 1))
+    }
+}
+
+extension DimensionCard {
+    /// Badge tap: play this Dimension if another one (or none) is playing; a Dimension not
+    /// yet downloaded opens Dimensions instead.
+    fileprivate func switchHere() {
+        guard let world else { nav.go(.experience); return }
+        guard engine.activeDimensionID != world.worldID else { return }
+        if engine.isPlayable(world) { engine.selectDimension(world.worldID); engine.enterWorld(world) }
+        else { nav.go(.experience) }
     }
 }
 
