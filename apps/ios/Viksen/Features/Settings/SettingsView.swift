@@ -73,6 +73,7 @@ struct MembershipPage: View {
 struct SoundPage: View {
     @Environment(EngineController.self) private var engine
     @AppStorage(ThresholdSound.settingKey) private var openingSound = false
+    @AppStorage(PictureInPicture.autoKey) private var pipAuto = true
 
     var body: some View {
         @Bindable var engine = engine
@@ -104,6 +105,14 @@ struct SoundPage: View {
             } footer: {
                 Text("Soft loops from Lunar Promise while no Dimension plays. They only play if nothing else is playing, never interrupt your own music, and fade away when a Dimension starts. Also in the menu, with its own volume.")
             }
+            #if os(iOS)
+            Section {
+                Toggle("Start automatically", isOn: $pipAuto)
+                    .onChange(of: pipAuto) { NotificationCenter.default.post(name: PictureInPicture.settingChanged, object: nil) }
+            } header: { Text("Picture in Picture") } footer: {
+                Text("When you leave Viksen while a Dimension plays, a small window with its badge stays on screen: play or pause it, and step to your other downloaded Dimensions.")
+            }
+            #endif
             Section {
                 LabeledSlider(title: "Output ceiling", value: $engine.limiterCeilingDb, range: -24...(-1), format: "%.0f dBFS")
             } header: { Text("Hearing safety") } footer: {

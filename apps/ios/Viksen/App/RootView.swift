@@ -24,9 +24,20 @@ final class AppNavigator {
 
 struct RootView: View {
     @State private var nav = AppNavigator()
+    @Environment(EngineController.self) private var engine
+    @Environment(Store.self) private var store
+    @State private var pip: PictureInPicture?
 
     var body: some View {
         ZStack {
+            #if os(iOS)
+            // The Picture in Picture layer: tiny, under every page (iOS needs it on screen).
+            if let pip {
+                PictureInPictureHost(layer: pip.displayLayer)
+                    .frame(width: 2, height: 2)
+                    .accessibilityHidden(true)
+            }
+            #endif
             // Only the page being shown is built, so hidden pages cost nothing.
             Group {
                 switch nav.tab {
@@ -38,6 +49,21 @@ struct RootView: View {
             SideMenu()
         }
         .environment(nav)
+        .onAppear {
+            guard pip == nil else { return }
+            let p = PictureInPicture(engine: engine)
+            // Unlocked and on this device, in Home's order (Viksen first).
+            p.choices = { [engine, store] in
+                engine.worlds.filter { DimensionAccess.required($0) <= store.tier && engine.isPlayable($0) }
+                    .sorted { ($0.worldID == EngineController.coreDimensionID ? 0 : 1) < ($1.worldID == EngineController.coreDimensionID ? 0 : 1) }
+            }
+            pip = p
+            p.refresh()
+        }
+        .onChange(of: engine.activeDimensionID) { pip?.refresh() }
+        .onChange(of: engine.lastDimensionID) { pip?.refresh() }
+        .onChange(of: store.tier) { pip?.refresh() }
+        .onChange(of: nav.tab) { pip?.refresh() }   // e.g. after downloading on the Dimensions page
         .sheet(isPresented: Binding(get: { nav.tab == .settings }, set: { if !$0 && nav.tab == .settings { nav.tab = .home } })) {
             SettingsView()
         }
