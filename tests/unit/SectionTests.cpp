@@ -162,7 +162,11 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
     const fs::path root = fs::path(ATMOS_SOURCE_DIR) / "apps/ios/Viksen/Resources/Worlds";
     // Song lengths (seconds) of the built-in audio, which lives outside this repository.
     const std::map<std::string, double> lengths = {
-        {"hinds-of-morrow", 561.4}, {"light-of-a-distant-sun", 425.97}, {"steel-steam-and-borrowed-dreams", 683.55},
+        {"hinds-of-morrow", 561.4}, {"light-of-a-distant-sun", 425.97}, 
+        {"steel-steam-and-borrowed-dreams/the-fate-of-the-nine-vikron", 179.97},
+        {"steel-steam-and-borrowed-dreams/steel-steam-and-borrowed-dreams", 683.52},
+        {"steel-steam-and-borrowed-dreams/fallen-of-the-illuminous", 211.65},
+        {"steel-steam-and-borrowed-dreams/tree-of-bones", 212.97},
         {"the-quiet-storm/the-silent-alley", 355.37},
         {"the-quiet-storm/in-different-times", 436.65},
         {"the-listening-sky/dance-of-the-dragonfly", 871.53},
@@ -198,7 +202,7 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
             ++songs;
         }
     }
-    CHECK(songs == 8);   // Viksen (6) + The Depths Have Spoken + The Shatter Gardens
+    CHECK(songs == 11);   // Viksen (6) + The Depths Have Spoken (1) + The Shatter Gardens (4)
 }
 
 namespace {

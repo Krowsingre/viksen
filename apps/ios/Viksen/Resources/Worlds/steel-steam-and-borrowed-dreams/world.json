@@ -5,368 +5,1262 @@
   "name": "Steel, Steam, and Borrowed Dreams",
   "artist": "Krowsingre",
   "tier": "experience",
-  "music": {
-    "tempo": 91.84,
-    "key": "D♭ major",
-    "beatsPerBar": 4,
-    "barOffsetSeconds": 0.49,
-    "loop": {
-      "fromSeconds": 0,
-      "toSeconds": null
+  "album": "The Shatter Gardens",
+  "songs": [
+    {
+      "id": "the-fate-of-the-nine-vikron",
+      "title": "The Fate of the Nine Vikron",
+      "music": {
+        "tempo": 120,
+        "key": "",
+        "beatsPerBar": 4,
+        "barOffsetSeconds": 0.34,
+        "loop": {
+          "fromSeconds": 0,
+          "toSeconds": 179.900063
+        }
+      },
+      "adaptive": {
+        "jumpEveryBars": 4,
+        "minStayBars": 8,
+        "crossfadeBeats": 2
+      },
+      "fadeSeconds": 3,
+      "stems": [
+        {
+          "id": "lead-vocals",
+          "file": "the-fate-of-the-nine-vikron-lead-vocals.m4a",
+          "title": "Lead Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 0,
+            "distance": 1.5,
+            "width": 20
+          }
+        },
+        {
+          "id": "backing-vocals",
+          "file": "the-fate-of-the-nine-vikron-backing-vocals.m4a",
+          "title": "Backing Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 10,
+            "distance": 2.2,
+            "width": 100
+          }
+        },
+        {
+          "id": "drums",
+          "file": "the-fate-of-the-nine-vikron-drums.m4a",
+          "title": "Drums",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -5,
+            "distance": 2.0,
+            "width": 60
+          }
+        },
+        {
+          "id": "bass",
+          "file": "the-fate-of-the-nine-vikron-bass.m4a",
+          "title": "Bass",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -10,
+            "distance": 1.4,
+            "width": 20
+          }
+        },
+        {
+          "id": "guitar",
+          "file": "the-fate-of-the-nine-vikron-guitar.m4a",
+          "title": "Guitar",
+          "spatial": {
+            "azimuth": 55,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 30
+          }
+        },
+        {
+          "id": "keyboard",
+          "file": "the-fate-of-the-nine-vikron-keyboard.m4a",
+          "title": "Keyboard",
+          "spatial": {
+            "azimuth": -40,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 40
+          }
+        },
+        {
+          "id": "percussion",
+          "file": "the-fate-of-the-nine-vikron-percussion.m4a",
+          "title": "Percussion",
+          "spatial": {
+            "azimuth": -25,
+            "elevation": 5,
+            "distance": 1.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "strings",
+          "file": "the-fate-of-the-nine-vikron-strings.m4a",
+          "title": "Strings",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 15,
+            "distance": 2.6,
+            "width": 140
+          }
+        },
+        {
+          "id": "synth",
+          "file": "the-fate-of-the-nine-vikron-synth.m4a",
+          "title": "Synth",
+          "spatial": {
+            "azimuth": 180,
+            "elevation": 25,
+            "distance": 3.0,
+            "width": 90
+          }
+        },
+        {
+          "id": "other",
+          "file": "the-fate-of-the-nine-vikron-other.m4a",
+          "title": "Other",
+          "spatial": {
+            "azimuth": 120,
+            "elevation": 10,
+            "distance": 2.5,
+            "width": 60
+          }
+        },
+        {
+          "id": "brass",
+          "file": "the-fate-of-the-nine-vikron-brass.m4a",
+          "title": "Brass",
+          "spatial": {
+            "azimuth": 70,
+            "elevation": 15,
+            "distance": 2.6,
+            "width": 50
+          }
+        }
+      ],
+      "rules": [
+        {
+          "stem": "lead-vocals",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          },
+          "gainDb": 0,
+          "otherwiseDb": -3,
+          "label": "The voice comes close when you are still"
+        },
+        {
+          "stem": "strings",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "Strings open up in the quiet"
+        },
+        {
+          "stem": "drums",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "The drums rise when you move"
+        },
+        {
+          "stem": "brass",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.6
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "Brass swells with your heart rate"
+        }
+      ],
+      "sections": [
+        {
+          "id": "the-nine-awaken",
+          "title": "The Nine Awaken",
+          "fromSeconds": 0,
+          "toSeconds": 20,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-first-omen",
+          "title": "The First Omen",
+          "fromSeconds": 20,
+          "toSeconds": 42,
+          "label": ""
+        },
+        {
+          "id": "gathering-shadows",
+          "title": "Gathering Shadows",
+          "fromSeconds": 42,
+          "toSeconds": 68,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-hollow-passage",
+          "title": "The Hollow Passage",
+          "fromSeconds": 68,
+          "toSeconds": 84,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-call-to-rise",
+          "title": "The Call to Rise",
+          "fromSeconds": 84,
+          "toSeconds": 104,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-nine-in-motion",
+          "title": "The Nine in Motion",
+          "fromSeconds": 104,
+          "toSeconds": 124,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-gathering-fate",
+          "title": "The Gathering Fate",
+          "fromSeconds": 124,
+          "toSeconds": 150,
+          "label": "Your surroundings are loud",
+          "when": {
+            "all": [
+              {
+                "type": "loud"
+              }
+            ]
+          }
+        },
+        {
+          "id": "after-the-reckoning",
+          "title": "After the Reckoning",
+          "fromSeconds": 150,
+          "toSeconds": 165,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "one-last-flame",
+          "title": "One Last Flame",
+          "fromSeconds": 165,
+          "toSeconds": 175,
+          "label": "Your heart rate is up",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.6
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-unfinished-silence",
+          "title": "The Unfinished Silence",
+          "fromSeconds": 175,
+          "toSeconds": 179.900063,
+          "label": ""
+        }
+      ]
+    },
+    {
+      "id": "steel-steam-and-borrowed-dreams",
+      "title": "Steel, Steam, and Borrowed Dreams",
+      "plays": "night",
+      "lunarPhase": "new",
+      "music": {
+        "tempo": 91.84,
+        "key": "D♭ major",
+        "beatsPerBar": 4,
+        "barOffsetSeconds": 0.49,
+        "loop": {
+          "fromSeconds": 0,
+          "toSeconds": 683.42
+        }
+      },
+      "adaptive": {
+        "jumpEveryBars": 4,
+        "minStayBars": 8,
+        "crossfadeBeats": 1
+      },
+      "fadeSeconds": 4,
+      "stems": [
+        {
+          "id": "lead-vocals",
+          "file": "steel-steam-and-borrowed-dreams-lead-vocals.m4a",
+          "title": "Lead Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 0,
+            "distance": 1.5,
+            "width": 20
+          }
+        },
+        {
+          "id": "backing-vocals",
+          "file": "steel-steam-and-borrowed-dreams-backing-vocals.m4a",
+          "title": "Backing Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 10,
+            "distance": 2.2,
+            "width": 100
+          }
+        },
+        {
+          "id": "drums",
+          "file": "steel-steam-and-borrowed-dreams-drums.m4a",
+          "title": "Drums",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -5,
+            "distance": 2.0,
+            "width": 60
+          }
+        },
+        {
+          "id": "bass",
+          "file": "steel-steam-and-borrowed-dreams-bass.m4a",
+          "title": "Bass",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -10,
+            "distance": 1.4,
+            "width": 20
+          }
+        },
+        {
+          "id": "guitar",
+          "file": "steel-steam-and-borrowed-dreams-guitar.m4a",
+          "title": "Guitar",
+          "spatial": {
+            "azimuth": 55,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 30
+          }
+        },
+        {
+          "id": "keyboard",
+          "file": "steel-steam-and-borrowed-dreams-keyboard.m4a",
+          "title": "Keyboard",
+          "spatial": {
+            "azimuth": -40,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 40
+          }
+        },
+        {
+          "id": "percussion",
+          "file": "steel-steam-and-borrowed-dreams-percussion.m4a",
+          "title": "Percussion",
+          "spatial": {
+            "azimuth": -25,
+            "elevation": 5,
+            "distance": 1.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "strings",
+          "file": "steel-steam-and-borrowed-dreams-strings.m4a",
+          "title": "Strings",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 15,
+            "distance": 2.6,
+            "width": 140
+          }
+        },
+        {
+          "id": "synth",
+          "file": "steel-steam-and-borrowed-dreams-synth.m4a",
+          "title": "Synth",
+          "spatial": {
+            "azimuth": 180,
+            "elevation": 25,
+            "distance": 3.0,
+            "width": 90
+          }
+        },
+        {
+          "id": "other",
+          "file": "steel-steam-and-borrowed-dreams-other.m4a",
+          "title": "Other",
+          "spatial": {
+            "azimuth": 120,
+            "elevation": 10,
+            "distance": 2.5,
+            "width": 60
+          }
+        },
+        {
+          "id": "brass",
+          "file": "steel-steam-and-borrowed-dreams-brass.m4a",
+          "title": "Brass",
+          "spatial": {
+            "azimuth": 70,
+            "elevation": 15,
+            "distance": 2.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "woodwinds",
+          "file": "steel-steam-and-borrowed-dreams-woodwinds.m4a",
+          "title": "Woodwinds",
+          "spatial": {
+            "azimuth": -60,
+            "elevation": 10,
+            "distance": 2.0,
+            "width": 30
+          }
+        }
+      ],
+      "rules": [
+        {
+          "stem": "brass",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.5
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "Brass swells with your heart rate"
+        },
+        {
+          "stem": "strings",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          },
+          "gainDb": 0,
+          "otherwiseDb": -3,
+          "label": "Strings open up in the quiet"
+        },
+        {
+          "stem": "drums",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          },
+          "gainDb": 1,
+          "otherwiseDb": -1,
+          "label": "Drums lock to your stride"
+        }
+      ],
+      "sections": [
+        {
+          "id": "boiler",
+          "title": "Boiler Room",
+          "fromBar": 0,
+          "toBar": 12,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "timeWindow",
+                "from": 21,
+                "to": 5
+              }
+            ]
+          }
+        },
+        {
+          "id": "first-shift",
+          "title": "First Shift",
+          "fromBar": 12,
+          "toBar": 40,
+          "label": ""
+        },
+        {
+          "id": "pistons",
+          "title": "Pistons",
+          "fromBar": 40,
+          "toBar": 52,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "full-steam",
+          "title": "Full Steam",
+          "fromBar": 52,
+          "toBar": 104,
+          "label": "Your surroundings are loud",
+          "when": {
+            "all": [
+              {
+                "type": "loud"
+              }
+            ]
+          }
+        },
+        {
+          "id": "pressure-drop",
+          "title": "Pressure Drop",
+          "fromBar": 104,
+          "toBar": 112,
+          "label": ""
+        },
+        {
+          "id": "iron-road",
+          "title": "Iron Road",
+          "fromBar": 112,
+          "toBar": 144,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "quiet-yard",
+          "title": "Quiet Yard",
+          "fromBar": 144,
+          "toBar": 152,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "moonPhase",
+                "phase": "full"
+              }
+            ]
+          }
+        },
+        {
+          "id": "borrowed-dreams",
+          "title": "Borrowed Dreams",
+          "fromBar": 152,
+          "toBar": 176,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "timeWindow",
+                "from": 21,
+                "to": 5
+              }
+            ]
+          }
+        },
+        {
+          "id": "release-valve",
+          "title": "Release Valve",
+          "fromBar": 176,
+          "toBar": 184,
+          "label": ""
+        },
+        {
+          "id": "overdrive",
+          "title": "Overdrive",
+          "fromBar": 184,
+          "toBar": 220,
+          "label": "Your heart rate is up",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        {
+          "id": "last-whistle",
+          "title": "Last Whistle",
+          "fromBar": 220,
+          "toBar": 261.4,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          },
+          "prefer": {
+            "all": [
+              {
+                "type": "timeWindow",
+                "from": 7,
+                "to": 18
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "fallen-of-the-illuminous",
+      "title": "Fallen of the Illuminous",
+      "lunarPhase": "waningCrescent",
+      "music": {
+        "tempo": 105.05,
+        "key": "",
+        "beatsPerBar": 4,
+        "barOffsetSeconds": 0.33,
+        "loop": {
+          "fromSeconds": 0,
+          "toSeconds": 211.56
+        }
+      },
+      "adaptive": {
+        "jumpEveryBars": 4,
+        "minStayBars": 8,
+        "crossfadeBeats": 2
+      },
+      "fadeSeconds": 3,
+      "stems": [
+        {
+          "id": "lead-vocals",
+          "file": "fallen-of-the-illuminous-lead-vocals.m4a",
+          "title": "Lead Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 0,
+            "distance": 1.5,
+            "width": 20
+          }
+        },
+        {
+          "id": "backing-vocals",
+          "file": "fallen-of-the-illuminous-backing-vocals.m4a",
+          "title": "Backing Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 10,
+            "distance": 2.2,
+            "width": 100
+          }
+        },
+        {
+          "id": "drums",
+          "file": "fallen-of-the-illuminous-drums.m4a",
+          "title": "Drums",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -5,
+            "distance": 2.0,
+            "width": 60
+          }
+        },
+        {
+          "id": "bass",
+          "file": "fallen-of-the-illuminous-bass.m4a",
+          "title": "Bass",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -10,
+            "distance": 1.4,
+            "width": 20
+          }
+        },
+        {
+          "id": "keyboard",
+          "file": "fallen-of-the-illuminous-keyboard.m4a",
+          "title": "Keyboard",
+          "spatial": {
+            "azimuth": -40,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 40
+          }
+        },
+        {
+          "id": "percussion",
+          "file": "fallen-of-the-illuminous-percussion.m4a",
+          "title": "Percussion",
+          "spatial": {
+            "azimuth": -25,
+            "elevation": 5,
+            "distance": 1.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "synth",
+          "file": "fallen-of-the-illuminous-synth.m4a",
+          "title": "Synth",
+          "spatial": {
+            "azimuth": 180,
+            "elevation": 25,
+            "distance": 3.0,
+            "width": 90
+          }
+        },
+        {
+          "id": "other",
+          "file": "fallen-of-the-illuminous-other.m4a",
+          "title": "Other",
+          "spatial": {
+            "azimuth": 120,
+            "elevation": 10,
+            "distance": 2.5,
+            "width": 60
+          }
+        },
+        {
+          "id": "woodwinds",
+          "file": "fallen-of-the-illuminous-woodwinds.m4a",
+          "title": "Woodwinds",
+          "spatial": {
+            "azimuth": -60,
+            "elevation": 10,
+            "distance": 2.0,
+            "width": 30
+          }
+        }
+      ],
+      "rules": [
+        {
+          "stem": "lead-vocals",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          },
+          "gainDb": 0,
+          "otherwiseDb": -3,
+          "label": "The voice comes close when you are still"
+        },
+        {
+          "stem": "synth",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "The synth opens up in the quiet"
+        },
+        {
+          "stem": "drums",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "The drums rise when you move"
+        }
+      ],
+      "sections": [
+        {
+          "id": "a-breath-beneath-the-ash",
+          "title": "A Breath Beneath the Ash",
+          "fromSeconds": 0,
+          "toSeconds": 16,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-quiet-threshold",
+          "title": "The Quiet Threshold",
+          "fromSeconds": 16,
+          "toSeconds": 34,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-fallen-stir",
+          "title": "The Fallen Stir",
+          "fromSeconds": 34,
+          "toSeconds": 50,
+          "label": ""
+        },
+        {
+          "id": "echoes-of-radiance",
+          "title": "Echoes of Radiance",
+          "fromSeconds": 50,
+          "toSeconds": 82,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-weight-of-descent",
+          "title": "The Weight of Descent",
+          "fromSeconds": 82,
+          "toSeconds": 111,
+          "label": "Your surroundings are loud",
+          "when": {
+            "all": [
+              {
+                "type": "loud"
+              }
+            ]
+          }
+        },
+        {
+          "id": "an-opening-in-the-dark",
+          "title": "An Opening in the Dark",
+          "fromSeconds": 111,
+          "toSeconds": 126,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "embers-in-motion",
+          "title": "Embers in Motion",
+          "fromSeconds": 126,
+          "toSeconds": 153,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-last-illumination",
+          "title": "The Last Illumination",
+          "fromSeconds": 153,
+          "toSeconds": 173,
+          "label": "Your heart rate is up",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.6
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-ruins-breathe",
+          "title": "The Ruins Breathe",
+          "fromSeconds": 173,
+          "toSeconds": 190,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-final-reaching",
+          "title": "The Final Reaching",
+          "fromSeconds": 190,
+          "toSeconds": 207,
+          "label": ""
+        },
+        {
+          "id": "ashes-into-silence",
+          "title": "Ashes into Silence",
+          "fromSeconds": 207,
+          "toSeconds": 211.56,
+          "label": ""
+        }
+      ]
+    },
+    {
+      "id": "tree-of-bones",
+      "title": "Tree of Bones",
+      "plays": "rain",
+      "music": {
+        "tempo": 120,
+        "key": "",
+        "beatsPerBar": 4,
+        "barOffsetSeconds": 0.48,
+        "loop": {
+          "fromSeconds": 0,
+          "toSeconds": 212.8
+        }
+      },
+      "adaptive": {
+        "jumpEveryBars": 4,
+        "minStayBars": 8,
+        "crossfadeBeats": 2
+      },
+      "fadeSeconds": 3,
+      "stems": [
+        {
+          "id": "drums",
+          "file": "tree-of-bones-drums.m4a",
+          "title": "Drums",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -5,
+            "distance": 2.0,
+            "width": 60
+          }
+        },
+        {
+          "id": "bass",
+          "file": "tree-of-bones-bass.m4a",
+          "title": "Bass",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -10,
+            "distance": 1.4,
+            "width": 20
+          }
+        },
+        {
+          "id": "keyboard",
+          "file": "tree-of-bones-keyboard.m4a",
+          "title": "Keyboard",
+          "spatial": {
+            "azimuth": -40,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 40
+          }
+        },
+        {
+          "id": "percussion",
+          "file": "tree-of-bones-percussion.m4a",
+          "title": "Percussion",
+          "spatial": {
+            "azimuth": -25,
+            "elevation": 5,
+            "distance": 1.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "synth",
+          "file": "tree-of-bones-synth.m4a",
+          "title": "Synth",
+          "spatial": {
+            "azimuth": 180,
+            "elevation": 25,
+            "distance": 3.0,
+            "width": 90
+          }
+        },
+        {
+          "id": "other",
+          "file": "tree-of-bones-other.m4a",
+          "title": "Other",
+          "spatial": {
+            "azimuth": 120,
+            "elevation": 10,
+            "distance": 2.5,
+            "width": 60
+          }
+        },
+        {
+          "id": "brass",
+          "file": "tree-of-bones-brass.m4a",
+          "title": "Brass",
+          "spatial": {
+            "azimuth": 70,
+            "elevation": 15,
+            "distance": 2.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "woodwinds",
+          "file": "tree-of-bones-woodwinds.m4a",
+          "title": "Woodwinds",
+          "spatial": {
+            "azimuth": -60,
+            "elevation": 10,
+            "distance": 2.0,
+            "width": 30
+          }
+        }
+      ],
+      "rules": [
+        {
+          "stem": "synth",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "The synth opens up in the quiet"
+        },
+        {
+          "stem": "drums",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "The drums rise when you move"
+        },
+        {
+          "stem": "brass",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.6
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "Brass swells with your heart rate"
+        }
+      ],
+      "sections": [
+        {
+          "id": "roots-in-shadow",
+          "title": "Roots in Shadow",
+          "fromSeconds": 0,
+          "toSeconds": 22,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "first-movement",
+          "title": "First Movement",
+          "fromSeconds": 22,
+          "toSeconds": 44,
+          "label": ""
+        },
+        {
+          "id": "beneath-the-bark",
+          "title": "Beneath the Bark",
+          "fromSeconds": 44,
+          "toSeconds": 68,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-hollow-calls",
+          "title": "The Hollow Calls",
+          "fromSeconds": 68,
+          "toSeconds": 93,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "old-bones-remember",
+          "title": "Old Bones Remember",
+          "fromSeconds": 93,
+          "toSeconds": 115,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "a-slow-reckoning",
+          "title": "A Slow Reckoning",
+          "fromSeconds": 115,
+          "toSeconds": 142,
+          "label": ""
+        },
+        {
+          "id": "the-weight-of-years",
+          "title": "The Weight of Years",
+          "fromSeconds": 142,
+          "toSeconds": 171,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-stirring-below",
+          "title": "The Stirring Below",
+          "fromSeconds": 171,
+          "toSeconds": 194,
+          "label": "Your surroundings are loud",
+          "when": {
+            "all": [
+              {
+                "type": "loud"
+              }
+            ]
+          }
+        },
+        {
+          "id": "returning-to-the-roots",
+          "title": "Returning to the Roots",
+          "fromSeconds": 194,
+          "toSeconds": 212.8,
+          "label": ""
+        }
+      ]
     }
-  },
-  "adaptive": {
-    "jumpEveryBars": 4,
-    "minStayBars": 8,
-    "crossfadeBeats": 1
-  },
-  "fadeSeconds": 4,
-  "stems": [
-    {
-      "id": "lead-vocals",
-      "file": "lead-vocals.m4a",
-      "title": "Lead Vocals",
-      "spatial": {
-        "azimuth": 0,
-        "elevation": 5,
-        "distance": 1.2,
-        "width": 20
-      }
-    },
-    {
-      "id": "backing-vocals",
-      "file": "backing-vocals.m4a",
-      "title": "Backing Vocals",
-      "spatial": {
-        "azimuth": 0,
-        "elevation": 10,
-        "distance": 2.2,
-        "width": 150
-      }
-    },
-    {
-      "id": "drums",
-      "file": "drums.m4a",
-      "title": "Drums",
-      "spatial": {
-        "azimuth": 0,
-        "elevation": -5,
-        "distance": 2.0,
-        "width": 70
-      }
-    },
-    {
-      "id": "bass",
-      "file": "bass.m4a",
-      "title": "Bass",
-      "spatial": {
-        "azimuth": 0,
-        "elevation": -10,
-        "distance": 1.4,
-        "width": 20
-      }
-    },
-    {
-      "id": "guitar",
-      "file": "guitar.m4a",
-      "title": "Guitar",
-      "spatial": {
-        "azimuth": 65,
-        "elevation": 0,
-        "distance": 1.8,
-        "width": 30
-      }
-    },
-    {
-      "id": "keyboard",
-      "file": "keyboard.m4a",
-      "title": "Keyboard",
-      "spatial": {
-        "azimuth": -40,
-        "elevation": 0,
-        "distance": 1.8,
-        "width": 60
-      }
-    },
-    {
-      "id": "percussion",
-      "file": "percussion.m4a",
-      "title": "Percussion",
-      "spatial": {
-        "azimuth": -110,
-        "elevation": 0,
-        "distance": 2.2,
-        "width": 50
-      }
-    },
-    {
-      "id": "strings",
-      "file": "strings.m4a",
-      "title": "Strings",
-      "spatial": {
-        "azimuth": 0,
-        "elevation": 20,
-        "distance": 3.0,
-        "width": 160
-      }
-    },
-    {
-      "id": "synth",
-      "file": "synth.m4a",
-      "title": "Synth",
-      "spatial": {
-        "azimuth": 180,
-        "elevation": 25,
-        "distance": 3.0,
-        "width": 100
-      }
-    },
-    {
-      "id": "other",
-      "file": "other.m4a",
-      "title": "Textures",
-      "spatial": {
-        "azimuth": 140,
-        "elevation": 10,
-        "distance": 2.5,
-        "width": 60
-      }
-    },
-    {
-      "id": "brass",
-      "file": "brass.m4a",
-      "title": "Brass",
-      "spatial": {
-        "azimuth": 100,
-        "elevation": 5,
-        "distance": 2.5,
-        "width": 40
-      }
-    },
-    {
-      "id": "woodwinds",
-      "file": "woodwinds.m4a",
-      "title": "Woodwinds",
-      "spatial": {
-        "azimuth": -65,
-        "elevation": 10,
-        "distance": 2.0,
-        "width": 30
-      }
-    }
-  ],
-  "sections": [
-    {
-      "id": "boiler",
-      "title": "Boiler Room",
-      "fromBar": 0,
-      "toBar": 12,
-      "label": "You are still",
-      "when": {
-        "all": [
-          {
-            "type": "still"
-          }
-        ]
-      },
-      "prefer": {
-        "all": [
-          {
-            "type": "timeWindow",
-            "from": 21,
-            "to": 5
-          }
-        ]
-      }
-    },
-    {
-      "id": "first-shift",
-      "title": "First Shift",
-      "fromBar": 12,
-      "toBar": 40,
-      "label": ""
-    },
-    {
-      "id": "pistons",
-      "title": "Pistons",
-      "fromBar": 40,
-      "toBar": 52,
-      "label": "You are moving",
-      "when": {
-        "all": [
-          {
-            "type": "moving"
-          }
-        ]
-      }
-    },
-    {
-      "id": "full-steam",
-      "title": "Full Steam",
-      "fromBar": 52,
-      "toBar": 104,
-      "label": "Your surroundings are loud",
-      "when": {
-        "all": [
-          {
-            "type": "loud"
-          }
-        ]
-      }
-    },
-    {
-      "id": "pressure-drop",
-      "title": "Pressure Drop",
-      "fromBar": 104,
-      "toBar": 112,
-      "label": ""
-    },
-    {
-      "id": "iron-road",
-      "title": "Iron Road",
-      "fromBar": 112,
-      "toBar": 144,
-      "label": "You are moving",
-      "when": {
-        "all": [
-          {
-            "type": "moving"
-          }
-        ]
-      }
-    },
-    {
-      "id": "quiet-yard",
-      "title": "Quiet Yard",
-      "fromBar": 144,
-      "toBar": 152,
-      "label": "You are still",
-      "when": {
-        "all": [
-          {
-            "type": "still"
-          }
-        ]
-      },
-      "prefer": {
-        "all": [
-          {
-            "type": "moonPhase",
-            "phase": "full"
-          }
-        ]
-      }
-    },
-    {
-      "id": "borrowed-dreams",
-      "title": "Borrowed Dreams",
-      "fromBar": 152,
-      "toBar": 176,
-      "label": "It is quiet around you",
-      "when": {
-        "all": [
-          {
-            "type": "quiet"
-          }
-        ]
-      },
-      "prefer": {
-        "all": [
-          {
-            "type": "timeWindow",
-            "from": 21,
-            "to": 5
-          }
-        ]
-      }
-    },
-    {
-      "id": "release-valve",
-      "title": "Release Valve",
-      "fromBar": 176,
-      "toBar": 184,
-      "label": ""
-    },
-    {
-      "id": "overdrive",
-      "title": "Overdrive",
-      "fromBar": 184,
-      "toBar": 220,
-      "label": "Your heart rate is up",
-      "when": {
-        "all": [
-          {
-            "type": "intensityAtLeast",
-            "value": 0.5
-          }
-        ]
-      }
-    },
-    {
-      "id": "last-whistle",
-      "title": "Last Whistle",
-      "fromBar": 220,
-      "toBar": 261.4,
-      "label": "You are moving",
-      "when": {
-        "all": [
-          {
-            "type": "moving"
-          }
-        ]
-      },
-      "prefer": {
-        "all": [
-          {
-            "type": "timeWindow",
-            "from": 7,
-            "to": 18
-          }
-        ]
-      }
-    }
-  ],
-  "rules": [
-    {
-      "stem": "brass",
-      "when": {
-        "all": [
-          {
-            "type": "intensityAtLeast",
-            "value": 0.5
-          }
-        ]
-      },
-      "gainDb": 2,
-      "otherwiseDb": 0,
-      "label": "Brass swells with your heart rate"
-    },
-    {
-      "stem": "strings",
-      "when": {
-        "all": [
-          {
-            "type": "quiet"
-          }
-        ]
-      },
-      "gainDb": 0,
-      "otherwiseDb": -3,
-      "label": "Strings open up in the quiet"
-    },
-    {
-      "stem": "drums",
-      "when": {
-        "all": [
-          {
-            "type": "moving"
-          }
-        ]
-      },
-      "gainDb": 1,
-      "otherwiseDb": -1,
-      "label": "Drums lock to your stride"
-    }
-  ],
-  "album": "The Shatter Gardens"
+  ]
 }
