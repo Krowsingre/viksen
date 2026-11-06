@@ -121,6 +121,10 @@ public:
     void setMicWet(float wet);
     void setMicEnabled(bool enabled);
     void setLooping(bool looping);
+    // Whether the loop point uses the jump transition (echo/reverb wash and sweep) or a
+    // clean short crossfade. On by default; applies at once to the playing Dimension.
+    void setLoopTransitionFx(bool on);
+    bool loopTransitionFx() const { return loopFx_; }
     void setMicShiftHz(float hz);
     void setMicShiftMix(float mix);
     void setRoomMemoryEnabled(bool enabled);
@@ -189,6 +193,7 @@ private:
     std::shared_ptr<SectionPlanner> planner_;
     SectionChoice lastChoice_;
     float transitionSpace_ = 0.5f;
+    bool loopFx_ = true;
     // Multi-song Dimensions.
     std::optional<DimensionManifest> dimension_;
     StemFileDecoder fileDecoder_;

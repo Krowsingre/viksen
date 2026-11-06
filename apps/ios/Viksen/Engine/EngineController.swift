@@ -65,6 +65,15 @@ final class EngineController {
     private var lastUnderrunLog = Date.distantPast
 
     var limiterCeilingDb: Float = -1 { didSet { bridge.setLimiterCeilingDb(limiterCeilingDb) } }
+    /// Testing switch (owner, 2026-11-06): the echo/reverb transition at a song's loop point
+    /// (on) or a clean loop (off). Remembered.
+    var loopTransitionFx: Bool = UserDefaults.standard.object(forKey: "test.loopFx") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(loopTransitionFx, forKey: "test.loopFx")
+            bridge.setLoopTransitionFx(loopTransitionFx)
+            AppLog.info("Loop effect \(loopTransitionFx ? "on" : "off")")
+        }
+    }
     /// How loud the room is under the music while "Blend the room" is on (0...1). Each
     /// song sets the room's colour (echo, reverb, tone) itself.
     var roomLevel: Float = UserDefaults.standard.object(forKey: "roomLevel") as? Float ?? 0.5 {
@@ -103,6 +112,7 @@ final class EngineController {
         delegateProxy.onChange = { [weak self] reason in self?.bridgeStateDidChange(reason) }
         bridge.delegate = delegateProxy
         applyRoomBlend()
+        bridge.setLoopTransitionFx(loopTransitionFx)
         route = bridge.route
         headTracker.onYaw = { [weak self] yaw in self?.bridge.setListenerYawDegrees(Float(yaw)) }
         applySpatial(force: true)

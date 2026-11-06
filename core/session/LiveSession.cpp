@@ -111,6 +111,11 @@ void LiveSession::setBedEnabled(bool e) { settings_.bedEnabled = e; engine_->set
 void LiveSession::setBedLevel(float v) { settings_.bedLevel = v; engine_->atmosphereBed().level.set(v); }
 void LiveSession::setBedColourHz(float v) { settings_.bedColourHz = v; engine_->atmosphereBed().colourHz.set(v); }
 void LiveSession::setMicToneHz(float v) { settings_.micToneHz = v; engine_->micTransform().cutoffHz.set(v); }
+void LiveSession::setLoopTransitionFx(bool on) {
+    loopFx_ = on;
+    if (feeder_) feeder_->setLoopFx(on);
+}
+
 void LiveSession::setMicEchoSeconds(float v) { settings_.micEchoSeconds = v; engine_->micTransform().echoSeconds.set(v); }
 void LiveSession::setMicFeedback(float v) { settings_.micFeedback = v; engine_->micTransform().feedback.set(v); }
 void LiveSession::setMicWet(float v) { settings_.micWet = v; engine_->micTransform().wet.set(v); }
@@ -187,6 +192,7 @@ bool LiveSession::startFeeder(int64_t fromFrame, std::string* error) {
         feeder_->enableTransitionFx(60.0 / std::max(1.0, world_->tempo));
         feeder_->setTransitionSpace(transitionSpace_);
     }
+    feeder_->setLoopFx(loopFx_);
     applyWorldSpatial();
     for (int i = 0; i < static_cast<int>(world_->stems.size()); ++i)
         engine_->worldPlayer().setStemGain(i, director_ ? director_->linearGain(i) * static_cast<float>(lifecycle_ ? lifecycle_->gain() : 0.0) : 0.0f);

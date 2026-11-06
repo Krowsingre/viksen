@@ -2,11 +2,13 @@ import SwiftUI
 
 /// Shows the runtime log and lets the user share it (e.g. with support).
 struct DiagnosticsView: View {
+    @Environment(EngineController.self) private var engine
     @State private var lines: [String] = []
     @State private var confirmClear = false
     @AppStorage("test.anySongIsLunar") private var anySongIsLunar = false
 
     var body: some View {
+        @Bindable var engine = engine
         List {
             Section {
                 ShareLink(item: AppLog.fileURL) { Label("Share log", systemImage: "square.and.arrow.up") }
@@ -19,6 +21,11 @@ struct DiagnosticsView: View {
                     Toggle("Count any song toward tonight's phase", isOn: $anySongIsLunar)
                 } header: { Text("Testing") } footer: {
                     Text("TestFlight only. Lets the Moon Chart's 3-minute counter run with songs that are not lunar songs yet, so it can be tested. Discoveries made this way are real and stay in your progress.")
+                }
+                Section {
+                    Toggle("Echo and reverb at the loop point", isOn: $engine.loopTransitionFx)
+                } footer: {
+                    Text("TestFlight only. On: when a song loops back to its start it uses the same echo and reverb transition as a change of part (this is where the reverbed snap comes from). Off: a clean, very short crossfade. Changes the playing song at its next loop.")
                 }
             }
             AudioRouteSection()

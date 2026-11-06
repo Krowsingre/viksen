@@ -118,6 +118,9 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 
 - (void)setGain:(float)gain forBus:(AtmosBusId)bus NS_SWIFT_NAME(setGain(_:for:));
 - (void)setLimiterCeilingDb:(float)db;
+// The loop point (song end back to its start): YES = the jump transition (echo/reverb
+// wash and sweep), NO = a clean 8 ms crossfade. Applies at once.
+- (void)setLoopTransitionFx:(BOOL)on;
 
 // Requests permission if needed, reconfigures the session and restarts audio I/O.
 - (void)setMicEnabled:(BOOL)enabled completion:(void (^)(BOOL ok, NSString *_Nullable error))completion

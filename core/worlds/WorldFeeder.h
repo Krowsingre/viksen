@@ -69,6 +69,10 @@ public:
     // Call before start(); `space` can change any time (the moon sets it).
     void enableTransitionFx(double beatSeconds) { fxBeat_ = beatSeconds; fxOn_ = true; }
     void setTransitionSpace(float space) { fxSpace_.store(space); }
+    // Whether the loop (song end back to its start) uses the same transition as a jump.
+    // Off: a clean 8 ms crossfade at the loop point, no echo/reverb or sweep, and almost
+    // nothing past the loop end is heard. Can change any time (owner's test switch).
+    void setLoopFx(bool on) { loopFx_.store(on); }
 
 private:
     void run();
@@ -88,6 +92,7 @@ private:
     bool fxOn_ = false;
     double fxBeat_ = 0.5;
     std::atomic<float> fxSpace_{0.5f};
+    std::atomic<bool> loopFx_{true};
     // Map from frames written to the ring (= frames the player will play) to source
     // frames, one entry per contiguous run. Feeder appends, control thread reads.
     mutable std::mutex segMutex_;

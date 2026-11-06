@@ -250,3 +250,40 @@ TEST_CASE("session/Studio transport: quick start/stop, seek, levels, unequal ste
     CHECK(!s.worldStatus().playing);
     CHECK_NEAR(s.worldStatus().positionSeconds, 2.5, 0.3); // position kept for resume
 }
+
+TEST_CASE("worlds/loop effect switch: off gives a clean loop that never plays what lies past the loop end") {
+    // Silence up to the loop end (40000), then a loud tone after it, like the leftovers at
+    // the end of a song file. The loop effect plays some of that into its crossfade and wash;
+    // with it off, only an 8 ms crossfade separates the loop end from the start.
+    auto run = [](bool loopFx) -> double {
+        AudioEngine e;
+        e.setMasterGain(1.0f);
+        e.setLimiterCeilingDb(0.0f);
+        e.prepare({48000, 512});
+        auto clip = std::make_shared<const AudioClip>(test::makeSine(48000, 48000, 440, 0.5f, 2, 40000));
+        std::vector<std::unique_ptr<StemDecoder>> dec;
+        dec.push_back(std::make_unique<ClipStemDecoder>(clip));
+        e.worldPlayer().setStemGain(0, 1.0f);
+        auto planner = std::make_shared<SectionPlanner>(std::vector<std::pair<int64_t, int64_t>>{{0, 40000}}, 40000, 0, 40000, 0);
+        WorldFeeder f(e.worldPlayer(), std::move(dec), 0, 40000, planner, 24000);
+        f.enableTransitionFx(0.5);
+        f.setLoopFx(loopFx);
+        f.start(0);
+        std::vector<float> l(512), r(512);
+        float* outs[2] = {l.data(), r.data()};
+        std::vector<float> all;
+        for (int blk = 0; blk < 150; ++blk) {               // 76800 frames: one loop and more
+            if (!waitBuffered(e.worldPlayer(), 512)) return -1.0;
+            e.process(nullptr, 0, outs, 2, 512);
+            all.insert(all.end(), l.begin(), l.end());
+        }
+        f.stop();
+        double energy = 0;
+        for (size_t i = 40000 + 1000; i < 40000 + 30000; ++i) energy += double(all[i]) * all[i];
+        return energy;
+    };
+    const double withFx = run(true), clean = run(false);
+    CHECK(withFx > 10.0);        // the leftovers past the loop end are heard, washed
+    CHECK(clean >= 0.0);         // streamed without stalling
+    CHECK(clean < 1e-6);         // nothing after the 8 ms crossfade
+}

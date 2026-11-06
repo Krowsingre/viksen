@@ -271,6 +271,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
 
 - (void)setGain:(float)gain forBus:(AtmosBusId)bus { if (validBus(bus)) _session->setBusGain(static_cast<Bus>(bus), gain); }
 - (void)setLimiterCeilingDb:(float)db { _session->setLimiterCeilingDb(db); }
+- (void)setLoopTransitionFx:(BOOL)on { _session->setLoopTransitionFx(on); }
 
 // ------------------------------------------------------------------ microphone
 

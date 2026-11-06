@@ -141,7 +141,12 @@ void WorldFeeder::run() {
             continue;
         }
         const int64_t target = std::clamp<int64_t>(to, loopStart_, loopEnd_ - 1);
-        const int64_t xf = planner_ ? std::min<int64_t>(crossfade_, loopEnd_ - target) : 0;
+        // The loop point itself (end back to the start), with the loop effect switched off:
+        // a clean, very short crossfade instead of the jump transition.
+        const bool cleanLoop = pos >= loopEnd_ && target == loopStart_ && !loopFx_.load();
+        const bool fx = fxOn_ && !cleanLoop;
+        int64_t xf = planner_ ? std::min<int64_t>(crossfade_, loopEnd_ - target) : 0;
+        if (cleanLoop) xf = std::min<int64_t>(static_cast<int64_t>(rate_ * 0.008), loopEnd_ - target);
         if (xf > 0) {
             // Equal-power crossfade: the outgoing part keeps playing past the boundary
             // (its natural tail) while the new part fades in.
@@ -149,7 +154,7 @@ void WorldFeeder::run() {
                 const int got = decoders_[s]->read(tail[s].data(), static_cast<int>(xf));
                 std::fill(tail[s].begin() + 2 * std::max(0, got), tail[s].begin() + 2 * xf, 0.0f);
             }
-            if (fxOn_) {
+            if (fx) {
                 // The outgoing part (summed) feeds one echo/reverb wash that rings on under
                 // the new part; whatever is left of an earlier wash keeps ringing too.
                 washIn.assign(static_cast<size_t>(xf) * 2, 0.0f);
@@ -174,7 +179,7 @@ void WorldFeeder::run() {
                 decoders_[s]->seek(target);
                 const int got2 = decoders_[s]->read(incoming.data(), static_cast<int>(xf));
                 std::fill(incoming.begin() + 2 * std::max(0, got2), incoming.begin() + 2 * xf, 0.0f);
-                if (fxOn_) {
+                if (fx) {
                     submergeCrossfade(tail[s].data(), incoming.data(), static_cast<int>(xf), rate_);
                     addWash(incoming.data(), static_cast<int>(xf));
                 } else {
@@ -185,6 +190,7 @@ void WorldFeeder::run() {
                             incoming[static_cast<size_t>(2 * i + c)] = tail[s][static_cast<size_t>(2 * i + c)] * gOut +
                                                                        incoming[static_cast<size_t>(2 * i + c)] * gIn;
                     }
+                    if (fxOn_) addWash(incoming.data(), static_cast<int>(xf));   // an earlier wash rings on
                 }
             }
             for (int64_t off = 0; off < xf; off += kChunk) {
