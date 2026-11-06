@@ -141,9 +141,10 @@ void WorldFeeder::run() {
             continue;
         }
         const int64_t target = std::clamp<int64_t>(to, loopStart_, loopEnd_ - 1);
-        // The loop point itself (end back to the start), with the loop effect switched off:
-        // a clean, very short crossfade instead of the jump transition.
-        const bool cleanLoop = pos >= loopEnd_ && target == loopStart_ && !loopFx_.load();
+        // The loop point itself (the song's end, back to the start or to whichever part suits
+        // the moment), with the loop effect switched off: a clean, very short crossfade
+        // instead of the jump transition.
+        const bool cleanLoop = pos >= loopEnd_ && !loopFx_.load();
         const bool fx = fxOn_ && !cleanLoop;
         int64_t xf = planner_ ? std::min<int64_t>(crossfade_, loopEnd_ - target) : 0;
         if (cleanLoop) xf = std::min<int64_t>(static_cast<int64_t>(rate_ * 0.008), loopEnd_ - target);

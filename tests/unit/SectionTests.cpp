@@ -202,7 +202,7 @@ TEST_CASE("worlds/built-in Dimensions parse; sections stay inside their songs") 
             ++songs;
         }
     }
-    CHECK(songs == 11);   // Viksen (6) + The Depths Have Spoken (1) + The Shatter Gardens (4)
+    CHECK(songs == 10);   // Viksen (6) + The Shatter Gardens (4); The Depths Have Spoken is held out
 }
 
 namespace {

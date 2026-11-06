@@ -255,7 +255,9 @@ TEST_CASE("worlds/loop effect switch: off gives a clean loop that never plays wh
     // Silence up to the loop end (40000), then a loud tone after it, like the leftovers at
     // the end of a song file. The loop effect plays some of that into its crossfade and wash;
     // with it off, only an 8 ms crossfade separates the loop end from the start.
-    auto run = [](bool loopFx) -> double {
+    // `adaptive`: the song's first part does not suit the moment, so at the song end the
+    // stream goes on to its second part instead of the very start (the loop all the same).
+    auto run = [](bool loopFx, bool adaptive) -> double {
         AudioEngine e;
         e.setMasterGain(1.0f);
         e.setLimiterCeilingDb(0.0f);
@@ -264,7 +266,10 @@ TEST_CASE("worlds/loop effect switch: off gives a clean loop that never plays wh
         std::vector<std::unique_ptr<StemDecoder>> dec;
         dec.push_back(std::make_unique<ClipStemDecoder>(clip));
         e.worldPlayer().setStemGain(0, 1.0f);
-        auto planner = std::make_shared<SectionPlanner>(std::vector<std::pair<int64_t, int64_t>>{{0, 40000}}, 40000, 0, 40000, 0);
+        auto planner = adaptive
+            ? std::make_shared<SectionPlanner>(std::vector<std::pair<int64_t, int64_t>>{{0, 20000}, {20000, 40000}}, 40000, 0, 40000, 0)
+            : std::make_shared<SectionPlanner>(std::vector<std::pair<int64_t, int64_t>>{{0, 40000}}, 40000, 0, 40000, 0);
+        if (adaptive) planner->setChoice(SectionChoice{0b10, 0, false});
         WorldFeeder f(e.worldPlayer(), std::move(dec), 0, 40000, planner, 24000);
         f.enableTransitionFx(0.5);
         f.setLoopFx(loopFx);
@@ -279,11 +284,13 @@ TEST_CASE("worlds/loop effect switch: off gives a clean loop that never plays wh
         }
         f.stop();
         double energy = 0;
-        for (size_t i = 40000 + 1000; i < 40000 + 30000; ++i) energy += double(all[i]) * all[i];
+        for (size_t i = 40000 + 1000; i < 40000 + 18000; ++i) energy += double(all[i]) * all[i];
         return energy;
     };
-    const double withFx = run(true), clean = run(false);
-    CHECK(withFx > 10.0);        // the leftovers past the loop end are heard, washed
-    CHECK(clean >= 0.0);         // streamed without stalling
-    CHECK(clean < 1e-6);         // nothing after the 8 ms crossfade
+    for (bool adaptive : {false, true}) {
+        const double withFx = run(true, adaptive), clean = run(false, adaptive);
+        CHECK(withFx > 10.0);        // the leftovers past the loop end are heard, washed
+        CHECK(clean >= 0.0);         // streamed without stalling
+        CHECK(clean < 1e-6);         // nothing after the 8 ms crossfade
+    }
 }
