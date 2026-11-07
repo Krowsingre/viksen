@@ -3,12 +3,14 @@ import SwiftUI
 /// Shows the runtime log and lets the user share it (e.g. with support).
 struct DiagnosticsView: View {
     @Environment(EngineController.self) private var engine
+    @Environment(Store.self) private var store
     @State private var lines: [String] = []
     @State private var confirmClear = false
     @AppStorage("test.anySongIsLunar") private var anySongIsLunar = false
 
     var body: some View {
         @Bindable var engine = engine
+        @Bindable var store = store
         List {
             Section {
                 ShareLink(item: AppLog.fileURL) { Label("Share log", systemImage: "square.and.arrow.up") }
@@ -21,6 +23,11 @@ struct DiagnosticsView: View {
                     Toggle("Count any song toward tonight's phase", isOn: $anySongIsLunar)
                 } header: { Text("Testing") } footer: {
                     Text("TestFlight only. Lets the Moon Chart's 3-minute counter run with songs that are not lunar songs yet, so it can be tested. Discoveries made this way are real and stay in your progress.")
+                }
+                Section {
+                    Toggle("Unlock all Dimensions", isOn: $store.testUnlockAll)
+                } footer: {
+                    Text("TestFlight only. Every Dimension opens and downloads without buying it, so Dimensions can be tested before their purchases are set up in App Store Connect. Never in the App Store version.")
                 }
                 Section {
                     Toggle("Echo and reverb at the loop point", isOn: $engine.loopTransitionFx)

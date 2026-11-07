@@ -42,7 +42,17 @@ final class Store {
     }
 
     func hasAccess(_ w: AtmosWorldInfo) -> Bool {
-        Edition(tier: w.tier) == .free || subscribed || owned.contains(w.worldID)
+        Edition(tier: w.tier) == .free || subscribed || owned.contains(w.worldID) || testUnlockAll
+    }
+
+    /// TestFlight-only switch (Settings > Diagnostics > Testing): every Dimension plays
+    /// without a purchase, to test before the products exist. Ignored in App Store builds.
+    static let testUnlockKey = "test.unlockAll"
+    var testUnlockAll: Bool = AppBuild.isTestFlight && UserDefaults.standard.bool(forKey: Store.testUnlockKey) {
+        didSet {
+            UserDefaults.standard.set(testUnlockAll, forKey: Self.testUnlockKey)
+            accessVersion += 1
+        }
     }
     func owns(_ w: AtmosWorldInfo) -> Bool { owned.contains(w.worldID) }
 
