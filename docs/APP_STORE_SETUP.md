@@ -27,7 +27,7 @@ My Apps > Viksen > Monetization > **In-App Purchases** > + > **Non-Consumable**.
 | Field | The Shatter Gardens |
 |---|---|
 | Reference Name | The Shatter Gardens |
-| Product ID | `com.krowsingre.viksen.dimension.steel-steam-and-borrowed-dreams` |
+| Product ID | `com.krowsingre.viksen.dimension.the-shatter-gardens` |
 | Price | $4.99 (standard) |
 | Family Sharing | Off |
 | Display name | The Shatter Gardens |

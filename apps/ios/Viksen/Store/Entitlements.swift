@@ -9,7 +9,7 @@ import Foundation
 /// No Family Sharing for now. Everything is tied to the listener's Apple Account.
 enum ProductID {
     static let prefix = "com.krowsingre.viksen"
-    /// One product per Dimension, e.g. com.krowsingre.viksen.dimension.steel-steam-and-borrowed-dreams
+    /// One product per Dimension, e.g. com.krowsingre.viksen.dimension.the-shatter-gardens
     static func dimension(_ dimensionID: String) -> String { "\(prefix).dimension.\(dimensionID)" }
     static func dimensionID(for productID: String) -> String? {
         let p = "\(prefix).dimension."

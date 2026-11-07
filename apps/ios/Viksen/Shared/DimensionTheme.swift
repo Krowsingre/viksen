@@ -28,8 +28,8 @@ struct DimensionTheme: Equatable {
                                   petal: Color(red: 0.72, green: 0.84, blue: 1),
                                   card: Color(red: 0.03, green: 0.11, blue: 0.22),
                                   edge: Color(red: 0.55, green: 0.86, blue: 1))
-        case "steel-steam-and-borrowed-dreams":   // The Shatter Gardens: crimson and smoke
-            return DimensionTheme(sky: "Sky-steel-steam-and-borrowed-dreams", hueShift: 80,
+        case "the-shatter-gardens":   // The Shatter Gardens: crimson and smoke
+            return DimensionTheme(sky: "Sky-the-shatter-gardens", hueShift: 80,
                                   glow: Color(red: 1, green: 0.32, blue: 0.42),
                                   petal: Color(red: 1, green: 0.38, blue: 0.46),
                                   card: Color(red: 0.22, green: 0.04, blue: 0.08),
