@@ -208,17 +208,6 @@ final class EngineController {
         }
     }
 
-    // MARK: Tiers
-
-    /// Switches off anything the current tier no longer includes (e.g. after a refund).
-    func enforce(_ tier: Tier) {
-        AppLog.info("Edition: \(tier.title)")
-        if tier < Feature.headTracking.requiredTier { headTrackingEnabled = false }
-        if tier < Feature.activity.requiredTier { activityEnabled = false }
-        if tier < Feature.health.requiredTier { healthEnabled = false }
-        if tier < Feature.weather.requiredTier { weatherEnabled = false }
-    }
-
     // MARK: Meters / delegate
 
     private var statusTick = 0

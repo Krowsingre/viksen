@@ -22,8 +22,7 @@ struct MoonChartView: View {
     /// Only the Dimensions this listener has access to.
     private var dimensions: [AtmosWorldInfo] {
         engine.worlds.filter { w in
-            let need: Tier = w.tier == "studio" ? .studio : w.tier == "experience" ? .experience : .free
-            return need <= store.tier
+            return store.hasAccess(w)
         }
     }
 

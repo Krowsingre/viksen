@@ -235,7 +235,7 @@ private struct NowPlayingCard: View {
     var body: some View {
         // Swipe through unlocked Dimensions (owner, 2026-11-05): only once at least one
         // besides the built-in Viksen is unlocked. The card shown is what the fox plays.
-        let unlocked = engine.worlds.filter { DimensionAccess.required($0) <= store.tier }
+        let unlocked = engine.worlds.filter { store.hasAccess($0) }
             .sorted { ($0.worldID == EngineController.coreDimensionID ? 0 : 1) < ($1.worldID == EngineController.coreDimensionID ? 0 : 1) }
         let core = unlocked.first { $0.worldID == EngineController.coreDimensionID } ?? unlocked.first
         if unlocked.count > 1 {

@@ -2,21 +2,26 @@ import Foundation
 import Observation
 import StoreKit
 
-/// StoreKit 2 purchases. The current tier is derived only from verified
-/// transactions Apple signs for this device's account; nothing is stored by us
-/// and no server of ours is involved.
+/// StoreKit 2 purchases. What the listener may play is derived only from verified
+/// transactions Apple signs for their Apple Account; nothing is stored by us and no
+/// server of ours is involved.
 @MainActor
 @Observable
 final class Store {
-    private(set) var tier: Tier = .free
+    /// Dimensions bought (ids), kept forever.
+    private(set) var owned: Set<String> = []
+    /// An active "Viksen All Dimensions" subscription (including its free trial).
+    private(set) var subscribed = false
+    private(set) var subscriptionRenewal: Date?
+    /// Changes whenever access changes (purchase, restore, renewal, expiry, refund).
+    private(set) var accessVersion = 0
     private(set) var products: [String: Product] = [:]
     private(set) var isLoading = false
     private(set) var purchasingID: String?
+    private(set) var trialAvailable = false
     var lastError: String?
 
-    /// Called whenever the tier changes (e.g. after a purchase, restore or refund).
-    var onTierChange: ((Tier) -> Void)?
-
+    private var dimensionIDs: [String] = []
     private var updatesTask: Task<Void, Never>?
 
     init() {
@@ -26,43 +31,58 @@ final class Store {
                 await self?.refreshEntitlements()
             }
         }
-        Task { await loadProducts(); await refreshEntitlements() }
+        Task { await refreshEntitlements() }
     }
 
-    func allows(_ feature: Feature) -> Bool { tier >= feature.requiredTier }
+    /// The Dimensions on sale (all but the free ones); call when the list is known.
+    func configure(dimensionIDs ids: [String]) {
+        guard ids != dimensionIDs else { return }
+        dimensionIDs = ids
+        Task { await loadProducts() }
+    }
+
+    func hasAccess(_ w: AtmosWorldInfo) -> Bool {
+        Edition(tier: w.tier) == .free || subscribed || owned.contains(w.worldID)
+    }
+    func owns(_ w: AtmosWorldInfo) -> Bool { owned.contains(w.worldID) }
+
+    func product(for w: AtmosWorldInfo) -> Product? { products[ProductID.dimension(w.worldID)] }
+    var subscriptionProducts: [Product] { ProductID.subscriptions.compactMap { products[$0] } }
 
     func loadProducts() async {
         isLoading = true
         defer { isLoading = false }
         do {
-            let list = try await Product.products(for: ProductID.all)
+            let list = try await Product.products(for: ProductID.subscriptions + dimensionIDs.map(ProductID.dimension))
             products = Dictionary(uniqueKeysWithValues: list.map { ($0.id, $0) })
+            if let sub = products[ProductID.allMonthly]?.subscription ?? products[ProductID.allYearly]?.subscription {
+                trialAvailable = await sub.isEligibleForIntroOffer
+            }
         } catch {
             lastError = "Could not load prices: \(error.localizedDescription)"
         }
     }
 
     func refreshEntitlements() async {
-        var best: Tier = .free
+        var bought: Set<String> = []
+        var active = false
+        var renewal: Date?
         for await result in Transaction.currentEntitlements {
             guard case .verified(let t) = result, t.revocationDate == nil else { continue }
-            best = max(best, ProductID.tier(for: t.productID))
+            if let id = ProductID.dimensionID(for: t.productID) {
+                bought.insert(id)
+            } else if ProductID.subscriptions.contains(t.productID), (t.expirationDate ?? .distantFuture) > Date() {
+                active = true
+                renewal = max(renewal ?? .distantPast, t.expirationDate ?? .distantPast)
+            }
         }
-        if best != tier {
-            tier = best
-            onTierChange?(best)
+        if bought != owned || active != subscribed {
+            owned = bought
+            subscribed = active
+            accessVersion += 1
+            AppLog.info("Access: \(bought.count) Dimension(s) owned, subscription \(active ? "active" : "off")")
         }
-    }
-
-    /// Products to offer for the current tier (the upgrade only for Experience owners).
-    var offers: [Product] {
-        let ids: [String]
-        switch tier {
-        case .free: ids = [ProductID.experience, ProductID.studio]
-        case .experience: ids = [ProductID.studioUpgrade]
-        case .studio: ids = []
-        }
-        return ids.compactMap { products[$0] }
+        subscriptionRenewal = renewal
     }
 
     func purchase(_ product: Product) async {
@@ -78,7 +98,7 @@ final class Store {
                 await t.finish()
                 await refreshEntitlements()
             case .pending:
-                lastError = "The purchase is pending approval."
+                lastError = "The purchase is waiting for approval."
             case .userCancelled:
                 break
             @unknown default:

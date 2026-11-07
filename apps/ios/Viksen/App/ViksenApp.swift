@@ -42,7 +42,8 @@ struct ViksenApp: App {
                 if let t = AppLog.launchStarted {
                     AppLog.info(String(format: "Timing: launch to first screen %.0f ms", Date().timeIntervalSince(t) * 1000))
                 }
-                store.onTierChange = { [engine] tier in engine.enforce(tier) }
+                // Prices for every Dimension on sale (all but the free ones).
+                store.configure(dimensionIDs: engine.worlds.filter { Edition(tier: $0.tier) != .free }.map(\.worldID))
                 engine.beginRunTracking()
             }
             #if os(macOS)

@@ -12,7 +12,7 @@ struct SettingsView: View {
             List {
                 Section {
                     NavigationLink { MembershipPage() } label: {
-                        LabeledContent { Text(store.tier == .free ? "Free" : "Subscriber") } label: {
+                        LabeledContent { Text(store.subscribed ? "All Dimensions" : store.owned.isEmpty ? "Free" : "\(store.owned.count) owned") } label: {
                             Label("Membership", systemImage: "crown")
                         }
                     }
@@ -37,30 +37,52 @@ struct SettingsView: View {
 
 // MARK: Membership
 
-/// The tier, what it includes, subscribing, and restoring purchases. Single Dimensions
-/// are bought from their own page under Dimensions.
+/// What the listener has: the subscription, the Dimensions they own, and buying,
+/// managing and restoring. Single Dimensions are also bought from their own page.
 struct MembershipPage: View {
     @Environment(Store.self) private var store
+    @Environment(EngineController.self) private var engine
     @State private var showPaywall = false
 
     var body: some View {
+        let forSale = engine.worlds.filter { Edition(tier: $0.tier) != .free }
         List {
             Section {
-                LabeledContent("Your membership", value: store.tier == .free ? "Free" : store.tier.title)
+                if store.subscribed {
+                    LabeledContent("Viksen All Dimensions", value: "Active")
+                    if let renews = store.subscriptionRenewal {
+                        LabeledContent("Renews or ends", value: renews.formatted(date: .abbreviated, time: .omitted))
+                    }
+                } else {
+                    LabeledContent("Viksen All Dimensions", value: "Not subscribed")
+                }
             } footer: {
-                Text(store.tier == .free
-                     ? "Free includes the Viksen Dimension, the time of day, the moon, the Moon Chart and the basic senses."
-                     : "Your subscription includes every Dimension except special editions, and all the senses.")
+                Text(store.subscribed
+                     ? "Every Dimension plays while you are subscribed. Dimensions you bought stay yours if you stop."
+                     : "Viksen is free. Buy any other Dimension to keep, or subscribe to play them all\(store.trialAvailable ? ", free for the first week" : "").")
+            }
+            Section("Dimensions") {
+                ForEach(engine.worlds, id: \.worldID) { w in
+                    LabeledContent(w.name) {
+                        if Edition(tier: w.tier) == .free { Text("Free") }
+                        else if store.owns(w) { Text("Owned") }
+                        else if store.subscribed { Text("Subscription") }
+                        else { Text(store.product(for: w)?.displayPrice ?? "–") }
+                    }
+                }
             }
             Section {
-                if store.tier == .free {
-                    Button("Subscribe…") { showPaywall = true }
-                } else if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                if store.subscribed, let url = URL(string: "https://apps.apple.com/account/subscriptions") {
                     Link("Manage subscription", destination: url)
+                } else if !forSale.isEmpty {
+                    Button("Subscribe or buy…") { showPaywall = true }
                 }
                 Button("Restore Purchases") { Task { await store.restore() } }
             } footer: {
                 Text("Purchases belong to your Apple Account, so they come back on any of your devices with Restore Purchases.")
+            }
+            if let error = store.lastError {
+                Section { Text(error).foregroundStyle(Theme.danger) }
             }
         }
         .navigationTitle("Membership")

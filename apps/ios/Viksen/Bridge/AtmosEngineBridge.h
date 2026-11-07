@@ -46,7 +46,7 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic, copy) NSString *name;
 @property (nonatomic, copy) NSString *artist;
 @property (nonatomic, copy) NSString *musicalKey;
-@property (nonatomic, copy) NSString *tier;          // "free", "experience", "studio"
+@property (nonatomic, copy) NSString *tier;          // "free", "standard" or "special" (how it is sold)
 @property (nonatomic) double tempo;
 @property (nonatomic) NSInteger stemCount;
 @property (nonatomic) BOOL audioAvailable;           // all stem files are in this build

@@ -1,49 +1,29 @@
 import Foundation
 
-/// Purchase tiers. Higher tiers include everything below them.
-enum Tier: Int, Comparable, CaseIterable {
-    case free = 0, experience, studio
-
-    static func < (a: Tier, b: Tier) -> Bool { a.rawValue < b.rawValue }
-
-    var title: String {
-        switch self {
-        case .free: "Viksen Free"
-        case .experience: "Viksen Experience"
-        case .studio: "Viksen Studio"
-        }
-    }
-}
-
-/// Every gated capability and the tier it needs. This table is the single place
-/// to change what each tier includes (owner's tier plan, docs/DECISIONS.md #19).
-enum Feature: CaseIterable {
-    // Free: basic augmented audio
-    case liveMicBasic, motionSensing, weather
-    // Experience: the full listening experience
-    case headTracking, activity, health, expandedWorlds
-
-    var requiredTier: Tier {
-        switch self {
-        case .liveMicBasic, .motionSensing, .weather: .free   // rain plays storm songs on every tier
-        case .headTracking, .activity, .health, .expandedWorlds: .experience
-        }
-    }
-}
-
-/// App Store product identifiers (create these as non-consumable in-app purchases
-/// in App Store Connect).
+/// The purchase model (owner, 2026-11-07):
+/// - Free: the Viksen Dimension (and every sense and feature of the app).
+/// - Each other Dimension is a one-time purchase, kept forever: standard $4.99, special $6.99
+///   (prices are set in App Store Connect; the app shows the App Store's price).
+/// - "Viksen All Dimensions" subscription (monthly or yearly, one-week free trial) unlocks
+///   every Dimension while it is active. Dimensions bought stay yours either way.
+/// No Family Sharing for now. Everything is tied to the listener's Apple Account.
 enum ProductID {
-    static let experience = "com.krowsingre.viksen.experience"        // $9.99
-    static let studio = "com.krowsingre.viksen.studio"                // $24.99, includes Experience
-    static let studioUpgrade = "com.krowsingre.viksen.studio.upgrade" // $14.99, Experience owners only
-    static let all = [experience, studio, studioUpgrade]
-
-    static func tier(for id: String) -> Tier {
-        switch id {
-        case studio, studioUpgrade: .studio
-        case experience: .experience
-        default: .free
-        }
+    static let prefix = "com.krowsingre.viksen"
+    /// One product per Dimension, e.g. com.krowsingre.viksen.dimension.steel-steam-and-borrowed-dreams
+    static func dimension(_ dimensionID: String) -> String { "\(prefix).dimension.\(dimensionID)" }
+    static func dimensionID(for productID: String) -> String? {
+        let p = "\(prefix).dimension."
+        return productID.hasPrefix(p) ? String(productID.dropFirst(p.count)) : nil
     }
+    static let allMonthly = "\(prefix).all.monthly"   // $2.99 a month
+    static let allYearly = "\(prefix).all.yearly"     // $24.99 a year
+    static let subscriptions = [allMonthly, allYearly]
+    /// The App Store Connect subscription group's name (for reference).
+    static let subscriptionGroup = "Viksen All Dimensions"
+}
+
+/// How a Dimension is sold, from its world.json "tier": "free", "standard" or "special".
+enum Edition: String {
+    case free, standard, special
+    init(tier: String) { self = Edition(rawValue: tier) ?? (tier == "free" ? .free : .standard) }
 }

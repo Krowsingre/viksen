@@ -54,7 +54,7 @@ struct RootView: View {
             let p = PictureInPicture(engine: engine)
             // Unlocked and on this device, in Home's order (Viksen first).
             p.choices = { [engine, store] in
-                engine.worlds.filter { DimensionAccess.required($0) <= store.tier && engine.isPlayable($0) }
+                engine.worlds.filter { store.hasAccess($0) && engine.isPlayable($0) }
                     .sorted { ($0.worldID == EngineController.coreDimensionID ? 0 : 1) < ($1.worldID == EngineController.coreDimensionID ? 0 : 1) }
             }
             pip = p
@@ -62,7 +62,13 @@ struct RootView: View {
         }
         .onChange(of: engine.activeDimensionID) { pip?.refresh() }
         .onChange(of: engine.lastDimensionID) { pip?.refresh() }
-        .onChange(of: store.tier) { pip?.refresh() }
+        .onChange(of: store.accessVersion) {
+            // A subscription that ended (or a refund) stops a Dimension no longer included.
+            if let id = engine.activeDimensionID, let w = engine.worlds.first(where: { $0.worldID == id }), !store.hasAccess(w) {
+                engine.leaveWorld()
+            }
+            pip?.refresh()
+        }
         .onChange(of: nav.tab) { pip?.refresh() }   // e.g. after downloading on the Dimensions page
         .sheet(isPresented: Binding(get: { nav.tab == .settings }, set: { if !$0 && nav.tab == .settings { nav.tab = .home } })) {
             SettingsView()

@@ -8,7 +8,7 @@ struct ExperienceView: View {
     @Environment(AppNavigator.self) private var nav
     @Environment(Store.self) private var store
 
-    private func locked(_ w: AtmosWorldInfo) -> Bool { DimensionAccess.required(w) > store.tier }
+    private func locked(_ w: AtmosWorldInfo) -> Bool { !store.hasAccess(w) }
 
     var body: some View {
         let mine = engine.worlds.filter { !locked($0) }
@@ -37,17 +37,13 @@ struct ExperienceView: View {
     }
 }
 
-enum DimensionAccess {
-    static func required(_ w: AtmosWorldInfo) -> Tier {
-        switch w.tier { case "studio": .studio; case "experience": .experience; default: .free }
-    }
-}
 
 /// One Dimension in the list: art, name, what is on this device; play from the row.
 private struct DimensionRow: View {
     let world: AtmosWorldInfo
     let locked: Bool
     @Environment(EngineController.self) private var engine
+    @Environment(Store.self) private var store
 
     var body: some View {
         let current = engine.activeDimensionID == world.worldID
@@ -81,7 +77,7 @@ private struct DimensionRow: View {
     }
 
     private var subtitle: String {
-        if locked { return "Included with a subscription" }
+        if locked { return store.product(for: world).map { "\($0.displayPrice), or with All Dimensions" } ?? "Buy, or subscribe to All Dimensions" }
         if world.audioAvailable || world.userMade { return "Built in" }
         if engine.downloads.isDownloading(world.worldID) { return "Downloading…" }
         let bytes = engine.downloads.bytes(world.worldID)
@@ -241,9 +237,7 @@ struct BodyMotionSection: View {
         let activity = engine.activity
 
         if head.isSupported {
-            Gated(feature: .headTracking, title: "Head tracking") {
-                Toggle("Head tracking", isOn: $engine.headTrackingEnabled)
-            }
+            Toggle("Head tracking", isOn: $engine.headTrackingEnabled)
             if engine.headTrackingEnabled {
                 HStack {
                     Text(head.headphonesConnected ? String(format: "Facing %+.0f°", head.yawDegrees)
@@ -265,9 +259,7 @@ struct BodyMotionSection: View {
         }
 
         if activity.isSupported {
-            Gated(feature: .activity, title: "Activity") {
-                Toggle("Activity", isOn: $engine.activityEnabled)
-            }
+            Toggle("Activity", isOn: $engine.activityEnabled)
             if engine.activityEnabled {
                 if activity.permissionDenied {
                     Text("Motion & Fitness access is off. You can turn it on in iOS Settings > Privacy & Security > Motion & Fitness.")
@@ -286,9 +278,7 @@ struct BodyMotionSection: View {
 
         let health = engine.health
         if health.isAvailable {
-            Gated(feature: .health, title: "Workout intensity") {
-                Toggle("Workout intensity (Health)", isOn: $engine.healthEnabled)
-            }
+            Toggle("Workout intensity (Health)", isOn: $engine.healthEnabled)
             if engine.healthEnabled {
                 HStack {
                     Text(health.heartRate.map { String(format: "%.0f bpm", $0) } ?? "No recent heart rate")
@@ -314,9 +304,7 @@ struct WeatherSection: View {
     var body: some View {
         @Bindable var engine = engine
         let weather = engine.weather
-        Gated(feature: .weather, title: "Weather-aware atmosphere") {
-            Toggle("Use local weather", isOn: $engine.weatherEnabled)
-        }
+        Toggle("Use local weather", isOn: $engine.weatherEnabled)
         if engine.weatherEnabled {
             if weather.locationDenied {
                 Text("Location access is off for Viksen. You can allow approximate location in iOS Settings.")
@@ -356,7 +344,7 @@ struct DimensionDetailView: View {
     @State private var showPaywall = false
 
     private var bundled: Bool { world.audioAvailable || world.userMade }
-    private var locked: Bool { DimensionAccess.required(world) > store.tier }
+    private var locked: Bool { !store.hasAccess(world) }
 
     var body: some View {
         let current = engine.activeDimensionID == world.worldID
@@ -380,9 +368,9 @@ struct DimensionDetailView: View {
             }
             if locked {
                 Section {
-                    Button("Subscribe to unlock…") { showPaywall = true }
+                    Button(store.product(for: world).map { "Buy for \($0.displayPrice)…" } ?? "Buy or subscribe…") { showPaywall = true }
                 } footer: {
-                    Text("\(world.name) is included with a Viksen subscription.")
+                    Text("Buy \(world.name) to keep, or play every Dimension with a Viksen All Dimensions subscription.")
                 }
             } else {
                 Section {
@@ -431,7 +419,7 @@ struct DimensionDetailView: View {
         .navigationTitle(world.name)
         .inlineNavigationTitle()
         .sheet(isPresented: $showMoonChart) { MoonChartView(initialDimensionID: world.worldID) }
-        .sheet(isPresented: $showPaywall) { PaywallView(highlight: .experience) }
+        .sheet(isPresented: $showPaywall) { PaywallView(dimension: world) }
         .confirmationDialog("Remove \(world.name) from this \(Platform.deviceNoun)?", isPresented: $confirmRemove, titleVisibility: .visible) {
             Button("Remove", role: .destructive) { engine.removeAllTracks(world) }
         } message: {
