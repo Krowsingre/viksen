@@ -1,0 +1,110 @@
+{
+  "format": "atmos.world",
+  "schemaVersion": 1,
+  "id": "new-dimension-id",
+  "name": "New Dimension",
+  "artist": "Krowsingre",
+  "tier": "experience",
+  "album": "",
+  "songs": [
+    {
+      "slot": "day",
+      "id": "day",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-new",
+      "id": "night-new",
+      "lunarPhase": "new",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-waxing-crescent",
+      "id": "night-waxing-crescent",
+      "lunarPhase": "waxingCrescent",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-first-quarter",
+      "id": "night-first-quarter",
+      "lunarPhase": "firstQuarter",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-waxing-gibbous",
+      "id": "night-waxing-gibbous",
+      "lunarPhase": "waxingGibbous",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-full",
+      "id": "night-full",
+      "lunarPhase": "full",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-waning-gibbous",
+      "id": "night-waning-gibbous",
+      "lunarPhase": "waningGibbous",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-last-quarter",
+      "id": "night-last-quarter",
+      "lunarPhase": "lastQuarter",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-waning-crescent",
+      "id": "night-waning-crescent",
+      "lunarPhase": "waningCrescent",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "storm",
+      "id": "storm",
+      "plays": "rain",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-1",
+      "id": "secret-1",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-2",
+      "id": "secret-2",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-3",
+      "id": "secret-3",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-4",
+      "id": "secret-4",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-5",
+      "id": "secret-5",
+      "title": "",
+      "stems": []
+    }
+  ]
+}

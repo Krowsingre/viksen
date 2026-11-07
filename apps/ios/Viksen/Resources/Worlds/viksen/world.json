@@ -7,6 +7,7 @@
   "tier": "free",
   "songs": [
     {
+      "slot": "day",
       "id": "lunar-promise",
       "title": "Lunar Promise",
       "music": {
@@ -320,6 +321,7 @@
       ]
     },
     {
+      "slot": "night-new",
       "id": "lunar-dark-promise",
       "title": "Lunar Dark Promise",
       "music": {
@@ -660,331 +662,7 @@
       "lunarPhase": "new"
     },
     {
-      "id": "what-was-once",
-      "title": "What Was Once...",
-      "lunarPhase": "waningCrescent",
-      "music": {
-        "tempo": 109.45,
-        "key": "G minor",
-        "beatsPerBar": 4,
-        "barOffsetSeconds": 0.131,
-        "loop": {
-          "fromSeconds": 0,
-          "toSeconds": 308.9
-        }
-      },
-      "adaptive": {
-        "jumpEveryBars": 4,
-        "minStayBars": 8,
-        "crossfadeBeats": 2
-      },
-      "fadeSeconds": 3,
-      "stems": [
-        {
-          "id": "lead-vocals",
-          "file": "what-was-once-lead-vocals.m4a",
-          "title": "Lead Vocals",
-          "spatial": {
-            "azimuth": 0,
-            "elevation": 0,
-            "distance": 1.5,
-            "width": 20
-          }
-        },
-        {
-          "id": "backing-vocals",
-          "file": "what-was-once-backing-vocals.m4a",
-          "title": "Backing Vocals",
-          "spatial": {
-            "azimuth": 0,
-            "elevation": 10,
-            "distance": 2.2,
-            "width": 100
-          }
-        },
-        {
-          "id": "drums",
-          "file": "what-was-once-drums.m4a",
-          "title": "Drums",
-          "spatial": {
-            "azimuth": 0,
-            "elevation": -5,
-            "distance": 2.0,
-            "width": 60
-          }
-        },
-        {
-          "id": "bass",
-          "file": "what-was-once-bass.m4a",
-          "title": "Bass",
-          "spatial": {
-            "azimuth": 0,
-            "elevation": -10,
-            "distance": 1.4,
-            "width": 20
-          }
-        },
-        {
-          "id": "guitar",
-          "file": "what-was-once-guitar.m4a",
-          "title": "Guitar",
-          "spatial": {
-            "azimuth": 55,
-            "elevation": 0,
-            "distance": 1.8,
-            "width": 30
-          }
-        },
-        {
-          "id": "keyboard",
-          "file": "what-was-once-keyboard.m4a",
-          "title": "Keyboard",
-          "spatial": {
-            "azimuth": -40,
-            "elevation": 0,
-            "distance": 1.6,
-            "width": 40
-          }
-        },
-        {
-          "id": "percussion",
-          "file": "what-was-once-percussion.m4a",
-          "title": "Percussion",
-          "spatial": {
-            "azimuth": -25,
-            "elevation": 5,
-            "distance": 1.6,
-            "width": 50
-          }
-        },
-        {
-          "id": "strings",
-          "file": "what-was-once-strings.m4a",
-          "title": "Strings",
-          "spatial": {
-            "azimuth": 0,
-            "elevation": 15,
-            "distance": 2.8,
-            "width": 150
-          }
-        },
-        {
-          "id": "synth",
-          "file": "what-was-once-synth.m4a",
-          "title": "Synth",
-          "spatial": {
-            "azimuth": 180,
-            "elevation": 25,
-            "distance": 3.0,
-            "width": 90
-          }
-        },
-        {
-          "id": "other",
-          "file": "what-was-once-other.m4a",
-          "title": "Other",
-          "spatial": {
-            "azimuth": 120,
-            "elevation": 10,
-            "distance": 2.5,
-            "width": 60
-          }
-        },
-        {
-          "id": "brass",
-          "file": "what-was-once-brass.m4a",
-          "title": "Brass",
-          "spatial": {
-            "azimuth": 70,
-            "elevation": 15,
-            "distance": 2.6,
-            "width": 50
-          }
-        },
-        {
-          "id": "woodwinds",
-          "file": "what-was-once-woodwinds.m4a",
-          "title": "Woodwinds",
-          "spatial": {
-            "azimuth": -60,
-            "elevation": 10,
-            "distance": 2.0,
-            "width": 30
-          }
-        }
-      ],
-      "rules": [
-        {
-          "stem": "lead-vocals",
-          "when": {
-            "all": [
-              {
-                "type": "still"
-              }
-            ]
-          },
-          "gainDb": 0,
-          "otherwiseDb": -3,
-          "label": "The voice comes close when you are still"
-        },
-        {
-          "stem": "strings",
-          "when": {
-            "all": [
-              {
-                "type": "quiet"
-              }
-            ]
-          },
-          "gainDb": 2,
-          "otherwiseDb": 0,
-          "label": "Strings open up in the quiet"
-        },
-        {
-          "stem": "drums",
-          "when": {
-            "all": [
-              {
-                "type": "moving"
-              }
-            ]
-          },
-          "gainDb": 2,
-          "otherwiseDb": 0,
-          "label": "The drums rise when you move"
-        }
-      ],
-      "sections": [
-        {
-          "id": "the-first-remnant",
-          "title": "The First Remnant",
-          "fromSeconds": 0,
-          "toSeconds": 35,
-          "label": "You are still",
-          "when": {
-            "all": [
-              {
-                "type": "still"
-              }
-            ]
-          }
-        },
-        {
-          "id": "a-voice-remembered",
-          "title": "A Voice Remembered",
-          "fromSeconds": 35,
-          "toSeconds": 80,
-          "label": "It is quiet around you",
-          "when": {
-            "all": [
-              {
-                "type": "quiet"
-              }
-            ]
-          }
-        },
-        {
-          "id": "drifting-between",
-          "title": "Drifting Between",
-          "fromSeconds": 80,
-          "toSeconds": 110,
-          "label": "You are still",
-          "when": {
-            "all": [
-              {
-                "type": "still"
-              }
-            ]
-          }
-        },
-        {
-          "id": "the-weight-of-memory",
-          "title": "The Weight of Memory",
-          "fromSeconds": 110,
-          "toSeconds": 140,
-          "label": "You are moving",
-          "when": {
-            "all": [
-              {
-                "type": "moving"
-              }
-            ]
-          }
-        },
-        {
-          "id": "holding-on",
-          "title": "Holding On",
-          "fromSeconds": 140,
-          "toSeconds": 170,
-          "label": ""
-        },
-        {
-          "id": "the-space-left-behind",
-          "title": "The Space Left Behind",
-          "fromSeconds": 170,
-          "toSeconds": 200,
-          "label": "It is quiet around you",
-          "when": {
-            "all": [
-              {
-                "type": "quiet"
-              }
-            ]
-          }
-        },
-        {
-          "id": "the-rising-tide",
-          "title": "The Rising Tide",
-          "fromSeconds": 200,
-          "toSeconds": 230,
-          "label": "You are moving",
-          "when": {
-            "all": [
-              {
-                "type": "moving"
-              }
-            ]
-          }
-        },
-        {
-          "id": "what-remains",
-          "title": "What Remains",
-          "fromSeconds": 230,
-          "toSeconds": 270,
-          "label": "Your surroundings are loud",
-          "when": {
-            "all": [
-              {
-                "type": "loud"
-              }
-            ]
-          }
-        },
-        {
-          "id": "the-long-recollection",
-          "title": "The Long Recollection",
-          "fromSeconds": 270,
-          "toSeconds": 300,
-          "label": "Your heart rate is up",
-          "when": {
-            "all": [
-              {
-                "type": "intensityAtLeast",
-                "value": 0.5
-              }
-            ]
-          }
-        },
-        {
-          "id": "the-quiet-edge",
-          "title": "The Quiet Edge",
-          "fromSeconds": 300,
-          "toSeconds": 308.9,
-          "label": ""
-        }
-      ]
-    },
-    {
+      "slot": "night-waxing-crescent",
       "id": "the-first-stirring",
       "title": "The First Stirring of the Light",
       "lunarPhase": "waxingCrescent",
@@ -1313,6 +991,7 @@
       ]
     },
     {
+      "slot": "night-first-quarter",
       "id": "against-the-gathering-dark",
       "title": "Against the Gathering Dark",
       "lunarPhase": "firstQuarter",
@@ -1652,8 +1331,363 @@
       ]
     },
     {
+      "slot": "night-waxing-gibbous",
+      "id": "night-waxing-gibbous",
+      "lunarPhase": "waxingGibbous",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-full",
+      "id": "night-full",
+      "lunarPhase": "full",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-waning-gibbous",
+      "id": "night-waning-gibbous",
+      "lunarPhase": "waningGibbous",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-last-quarter",
+      "id": "night-last-quarter",
+      "lunarPhase": "lastQuarter",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-waning-crescent",
+      "id": "what-was-once",
+      "title": "What Was Once...",
+      "lunarPhase": "waningCrescent",
+      "music": {
+        "tempo": 109.45,
+        "key": "G minor",
+        "beatsPerBar": 4,
+        "barOffsetSeconds": 0.131,
+        "loop": {
+          "fromSeconds": 0,
+          "toSeconds": 308.9
+        }
+      },
+      "adaptive": {
+        "jumpEveryBars": 4,
+        "minStayBars": 8,
+        "crossfadeBeats": 2
+      },
+      "fadeSeconds": 3,
+      "stems": [
+        {
+          "id": "lead-vocals",
+          "file": "what-was-once-lead-vocals.m4a",
+          "title": "Lead Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 0,
+            "distance": 1.5,
+            "width": 20
+          }
+        },
+        {
+          "id": "backing-vocals",
+          "file": "what-was-once-backing-vocals.m4a",
+          "title": "Backing Vocals",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 10,
+            "distance": 2.2,
+            "width": 100
+          }
+        },
+        {
+          "id": "drums",
+          "file": "what-was-once-drums.m4a",
+          "title": "Drums",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -5,
+            "distance": 2.0,
+            "width": 60
+          }
+        },
+        {
+          "id": "bass",
+          "file": "what-was-once-bass.m4a",
+          "title": "Bass",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": -10,
+            "distance": 1.4,
+            "width": 20
+          }
+        },
+        {
+          "id": "guitar",
+          "file": "what-was-once-guitar.m4a",
+          "title": "Guitar",
+          "spatial": {
+            "azimuth": 55,
+            "elevation": 0,
+            "distance": 1.8,
+            "width": 30
+          }
+        },
+        {
+          "id": "keyboard",
+          "file": "what-was-once-keyboard.m4a",
+          "title": "Keyboard",
+          "spatial": {
+            "azimuth": -40,
+            "elevation": 0,
+            "distance": 1.6,
+            "width": 40
+          }
+        },
+        {
+          "id": "percussion",
+          "file": "what-was-once-percussion.m4a",
+          "title": "Percussion",
+          "spatial": {
+            "azimuth": -25,
+            "elevation": 5,
+            "distance": 1.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "strings",
+          "file": "what-was-once-strings.m4a",
+          "title": "Strings",
+          "spatial": {
+            "azimuth": 0,
+            "elevation": 15,
+            "distance": 2.8,
+            "width": 150
+          }
+        },
+        {
+          "id": "synth",
+          "file": "what-was-once-synth.m4a",
+          "title": "Synth",
+          "spatial": {
+            "azimuth": 180,
+            "elevation": 25,
+            "distance": 3.0,
+            "width": 90
+          }
+        },
+        {
+          "id": "other",
+          "file": "what-was-once-other.m4a",
+          "title": "Other",
+          "spatial": {
+            "azimuth": 120,
+            "elevation": 10,
+            "distance": 2.5,
+            "width": 60
+          }
+        },
+        {
+          "id": "brass",
+          "file": "what-was-once-brass.m4a",
+          "title": "Brass",
+          "spatial": {
+            "azimuth": 70,
+            "elevation": 15,
+            "distance": 2.6,
+            "width": 50
+          }
+        },
+        {
+          "id": "woodwinds",
+          "file": "what-was-once-woodwinds.m4a",
+          "title": "Woodwinds",
+          "spatial": {
+            "azimuth": -60,
+            "elevation": 10,
+            "distance": 2.0,
+            "width": 30
+          }
+        }
+      ],
+      "rules": [
+        {
+          "stem": "lead-vocals",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          },
+          "gainDb": 0,
+          "otherwiseDb": -3,
+          "label": "The voice comes close when you are still"
+        },
+        {
+          "stem": "strings",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "Strings open up in the quiet"
+        },
+        {
+          "stem": "drums",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          },
+          "gainDb": 2,
+          "otherwiseDb": 0,
+          "label": "The drums rise when you move"
+        }
+      ],
+      "sections": [
+        {
+          "id": "the-first-remnant",
+          "title": "The First Remnant",
+          "fromSeconds": 0,
+          "toSeconds": 35,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "a-voice-remembered",
+          "title": "A Voice Remembered",
+          "fromSeconds": 35,
+          "toSeconds": 80,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "drifting-between",
+          "title": "Drifting Between",
+          "fromSeconds": 80,
+          "toSeconds": 110,
+          "label": "You are still",
+          "when": {
+            "all": [
+              {
+                "type": "still"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-weight-of-memory",
+          "title": "The Weight of Memory",
+          "fromSeconds": 110,
+          "toSeconds": 140,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "holding-on",
+          "title": "Holding On",
+          "fromSeconds": 140,
+          "toSeconds": 170,
+          "label": ""
+        },
+        {
+          "id": "the-space-left-behind",
+          "title": "The Space Left Behind",
+          "fromSeconds": 170,
+          "toSeconds": 200,
+          "label": "It is quiet around you",
+          "when": {
+            "all": [
+              {
+                "type": "quiet"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-rising-tide",
+          "title": "The Rising Tide",
+          "fromSeconds": 200,
+          "toSeconds": 230,
+          "label": "You are moving",
+          "when": {
+            "all": [
+              {
+                "type": "moving"
+              }
+            ]
+          }
+        },
+        {
+          "id": "what-remains",
+          "title": "What Remains",
+          "fromSeconds": 230,
+          "toSeconds": 270,
+          "label": "Your surroundings are loud",
+          "when": {
+            "all": [
+              {
+                "type": "loud"
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-long-recollection",
+          "title": "The Long Recollection",
+          "fromSeconds": 270,
+          "toSeconds": 300,
+          "label": "Your heart rate is up",
+          "when": {
+            "all": [
+              {
+                "type": "intensityAtLeast",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        {
+          "id": "the-quiet-edge",
+          "title": "The Quiet Edge",
+          "fromSeconds": 300,
+          "toSeconds": 308.9,
+          "label": ""
+        }
+      ]
+    },
+    {
+      "slot": "storm",
       "id": "lunar-storm-promise",
-      "title": "Lunar Storm Promise",
+      "title": "Sanctuary",
       "music": {
         "tempo": 80,
         "key": "",
@@ -1989,6 +2023,36 @@
         }
       ],
       "plays": "rain"
+    },
+    {
+      "slot": "secret-1",
+      "id": "secret-1",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-2",
+      "id": "secret-2",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-3",
+      "id": "secret-3",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-4",
+      "id": "secret-4",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-5",
+      "id": "secret-5",
+      "title": "",
+      "stems": []
     }
   ]
 }

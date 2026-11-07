@@ -178,7 +178,7 @@ std::optional<DimensionManifest> parseDimension(const Json& j, std::string* erro
         return d;
     }
     if (!j["songs"].is_array() || j["songs"].empty()) return fail("songs must be a non-empty list");
-    if (j["songs"].size() > 12) return fail("at most 12 songs in a Dimension");
+    if (j["songs"].size() > 24) return fail("at most 24 slots in a Dimension");
     if (j.contains("unlock")) {
         auto u = parseConditions(j["unlock"], error);
         if (!u) return std::nullopt;
@@ -189,6 +189,14 @@ std::optional<DimensionManifest> parseDimension(const Json& j, std::string* erro
         Json song = sj;
         const std::string sid = sj.value("id", std::string{});
         if (sid.empty()) return fail("each song needs an id");
+        // Template slots: an empty slot (no stems yet) waits; secrets wait for the Secrets
+        // feature. Both are listed in `slots` but not played.
+        const std::string slot = sj.value("slot", std::string{});
+        const bool hasStems = sj.contains("stems") && sj["stems"].is_array() && !sj["stems"].empty();
+        for (const auto& other : d.slots)
+            if (other.id == sid) return fail("duplicate song id " + sid);
+        d.slots.push_back({slot, sid, sj.value("title", std::string{}), hasStems});
+        if (!hasStems || slot.rfind("secret", 0) == 0) continue;
         song["format"] = "atmos.world";
         song["id"] = d.id + "/" + sid;
         song["name"] = sj.value("title", sid);
@@ -202,6 +210,7 @@ std::optional<DimensionManifest> parseDimension(const Json& j, std::string* erro
             if (other.id == w->id) return fail("duplicate song id " + sid);
         d.songs.push_back(std::move(*w));
     }
+    if (d.songs.empty()) return fail("the Dimension has no songs with audio yet");
     return d;
 }
 

@@ -8,6 +8,7 @@
   "album": "The Shatter Gardens",
   "songs": [
     {
+      "slot": "day",
       "id": "the-fate-of-the-nine-vikron",
       "title": "The Fate of the Nine Vikron",
       "music": {
@@ -335,6 +336,7 @@
       ]
     },
     {
+      "slot": "night-new",
       "id": "steel-steam-and-borrowed-dreams",
       "title": "Steel, Steam, and Borrowed Dreams",
       "plays": "night",
@@ -704,6 +706,49 @@
       ]
     },
     {
+      "slot": "night-waxing-crescent",
+      "id": "night-waxing-crescent",
+      "lunarPhase": "waxingCrescent",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-first-quarter",
+      "id": "night-first-quarter",
+      "lunarPhase": "firstQuarter",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-waxing-gibbous",
+      "id": "night-waxing-gibbous",
+      "lunarPhase": "waxingGibbous",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-full",
+      "id": "night-full",
+      "lunarPhase": "full",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-waning-gibbous",
+      "id": "night-waning-gibbous",
+      "lunarPhase": "waningGibbous",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-last-quarter",
+      "id": "night-last-quarter",
+      "lunarPhase": "lastQuarter",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "night-waning-crescent",
       "id": "fallen-of-the-illuminous",
       "title": "Fallen of the Illuminous",
       "lunarPhase": "waningCrescent",
@@ -1003,6 +1048,7 @@
       ]
     },
     {
+      "slot": "storm",
       "id": "tree-of-bones",
       "title": "Tree of Bones",
       "plays": "rain",
@@ -1261,6 +1307,36 @@
           "label": ""
         }
       ]
+    },
+    {
+      "slot": "secret-1",
+      "id": "secret-1",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-2",
+      "id": "secret-2",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-3",
+      "id": "secret-3",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-4",
+      "id": "secret-4",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-5",
+      "id": "secret-5",
+      "title": "",
+      "stems": []
     }
   ]
 }

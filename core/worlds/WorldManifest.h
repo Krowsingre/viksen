@@ -64,13 +64,23 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error = null
 // A Dimension holds one or more songs. Single-song world.json files are a Dimension
 // with one song; multi-song files list them under "songs" (each with its own music,
 // stems, sections and rules). Songs carry ids "<dimension>/<song>".
+// One position in a Dimension's standard layout (owner, 2026-11-07): "day", "storm",
+// "night-<phase>" for each of the eight phases, "secret-1".."secret-5", or any extra
+// slot a non-standard Dimension adds. A slot with no stems yet waits to be filled and
+// is not played; secrets are not played until the Secrets feature exists.
+struct DimensionSlot {
+    std::string slot, id, title;
+    bool filled = false;      // has audio (stems) and is playable
+};
+
 struct DimensionManifest {
     std::string id, name, artist, tier = "free";
     std::string album;             // the owner's album the songs come from (shown, linked to buy)
     std::string albumLink;         // optional fixed Apple Music URL
     bool albumOnAppleMusic = false; // the album is live: the app may look up its Apple Music page
     ConditionSet unlock;
-    std::vector<WorldManifest> songs;
+    std::vector<WorldManifest> songs;   // the playable songs (filled, non-secret slots)
+    std::vector<DimensionSlot> slots;   // every slot, filled or waiting, in file order
     size_t totalStems() const { size_t n = 0; for (const auto& s : songs) n += s.stems.size(); return n; }
 };
 std::optional<DimensionManifest> parseDimension(const Json& j, std::string* error = nullptr);

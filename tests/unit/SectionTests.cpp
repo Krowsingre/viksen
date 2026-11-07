@@ -531,3 +531,34 @@ TEST_CASE("session/a phase song can stand in for other nights without counting f
     CHECK(st.songLunarPhase != tonight);
     s.unloadWorld();
 }
+
+TEST_CASE("worlds/Dimension template: empty slots and secrets wait; filled slots play") {
+    auto j = Json::parse(R"({
+      "format": "atmos.world", "schemaVersion": 1, "id": "tpl", "name": "Tpl", "artist": "Krowsingre", "tier": "free",
+      "songs": [
+        {"slot": "day", "id": "sun", "title": "Sun", "music": {"tempo": 120},
+         "stems": [{"id": "x", "file": "sun-x.wav"}], "sections": []},
+        {"slot": "night-new", "id": "night-new", "lunarPhase": "new", "title": "", "stems": []},
+        {"slot": "storm", "id": "storm", "plays": "rain", "title": ""},
+        {"slot": "secret-1", "id": "hidden", "title": "Hidden", "music": {"tempo": 90},
+         "stems": [{"id": "y", "file": "hidden-y.wav"}]}
+      ]})");
+    std::string err;
+    auto d = parseDimension(j, &err);
+    REQUIRE(d.has_value());
+    CHECK(d->songs.size() == 1);                 // only the filled, non-secret slot plays
+    CHECK(d->songs[0].id == "tpl/sun");
+    REQUIRE(d->slots.size() == 4);
+    CHECK(d->slots[0].filled);
+    CHECK(!d->slots[1].filled);
+    CHECK(d->slots[3].slot == "secret-1");
+    CHECK(d->slots[3].filled);                   // has audio, but secrets wait for their feature
+    // A Dimension whose slots are all empty (a fresh copy of the template) is not playable yet.
+    auto empty = Json::parse(R"({"format": "atmos.world", "id": "e", "songs": [{"slot": "day", "id": "day", "stems": []}]})");
+    CHECK(!parseDimension(empty, &err).has_value());
+    // The template in docs has the 15 standard slots.
+    std::ifstream in(std::filesystem::path(ATMOS_SOURCE_DIR) / "docs/templates/dimension.world.json");
+    REQUIRE(in.good());
+    const Json tpl = Json::parse(in);
+    CHECK(tpl["songs"].size() == 15);
+}
