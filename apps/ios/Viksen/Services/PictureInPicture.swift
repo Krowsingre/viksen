@@ -1,5 +1,6 @@
 import AVFoundation
 import AVKit
+import CoreImage
 import SwiftUI
 #if os(iOS)
 import UIKit
@@ -127,17 +128,39 @@ final class PictureInPicture: NSObject {
             }
         }
         ui = ui ?? UIImage(named: "FoxEmpty")
-        // A square frame at a modest size: sharp in the PiP window, light on memory.
-        let side: CGFloat = 600
+        // A wide 16:9 frame (owner, 2026-11-11: a smaller window). iOS sizes the PiP window
+        // from the frame's shape, so a wide frame makes its smallest size much shorter than a
+        // square one. The badge fills the height in the middle; either side, the same badge
+        // blurred and darkened.
+        let size = CGSize(width: 960, height: 540)
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
-        let rendered = UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { ctx in
+        let backdrop = ui.flatMap(Self.blurred)
+        let rendered = UIGraphicsImageRenderer(size: size, format: format).image { ctx in
             UIColor.black.setFill()
-            ctx.fill(CGRect(x: 0, y: 0, width: side, height: side))
-            ui?.draw(in: CGRect(x: 0, y: 0, width: side, height: side))
+            ctx.fill(CGRect(origin: .zero, size: size))
+            backdrop?.draw(in: CGRect(x: 0, y: (size.height - size.width) / 2, width: size.width, height: size.width))
+            UIColor.black.withAlphaComponent(0.45).setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+            let badge = CGRect(x: (size.width - size.height) / 2, y: 0, width: size.height, height: size.height)
+            UIBezierPath(roundedRect: badge, cornerRadius: 36).addClip()
+            ui?.draw(in: badge)
         }
         images[key] = rendered.cgImage
         return rendered.cgImage
+    }
+
+    private static func blurred(_ image: UIImage) -> UIImage? {
+        guard let input = CIImage(image: image) else { return nil }
+        let out = input.clampedToExtent().applyingGaussianBlur(sigma: 40).cropped(to: input.extent)
+        guard let cg = CIContext().createCGImage(out, from: input.extent) else { return nil }
+        return UIImage(cgImage: cg)
+    }
+
+    /// Back in the app: the floating window closes (the app itself is on screen).
+    func stopIfActive() {
+        guard let controller, controller.isPictureInPictureActive else { return }
+        controller.stopPictureInPicture()
     }
 
     private static func sampleBuffer(from image: CGImage) -> CMSampleBuffer? {
@@ -207,6 +230,12 @@ extension PictureInPicture: AVPictureInPictureSampleBufferPlaybackDelegate, AVPi
     /// The music is the point: PiP never silences it.
     nonisolated func pictureInPictureControllerShouldProhibitBackgroundAudioPlayback(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
         false
+    }
+
+    /// Tapping the window's "back to app" button: the app is ready at once.
+    nonisolated func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
+                                                restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
+        completionHandler(true)
     }
 
     nonisolated func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,

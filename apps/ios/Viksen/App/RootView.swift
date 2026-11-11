@@ -27,6 +27,7 @@ struct RootView: View {
     @Environment(EngineController.self) private var engine
     @Environment(Store.self) private var store
     @State private var pip: PictureInPicture?
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -69,7 +70,13 @@ struct RootView: View {
             }
             pip?.refresh()
         }
-        .onChange(of: nav.tab) { pip?.refresh() }   // e.g. after downloading on the Dimensions page
+        .onChange(of: nav.tab) { pip?.refresh() }
+        // Back in the app: close the floating window (iOS does not always do it itself).
+        .onChange(of: scenePhase) { _, phase in
+            #if os(iOS)
+            if phase == .active { pip?.stopIfActive() }
+            #endif
+        }   // e.g. after downloading on the Dimensions page
         .sheet(isPresented: Binding(get: { nav.tab == .settings }, set: { if !$0 && nav.tab == .settings { nav.tab = .home } })) {
             SettingsView()
         }
