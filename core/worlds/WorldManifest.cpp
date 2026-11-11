@@ -34,7 +34,11 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
             else if (p == "rain") w.plays = WorldManifest::Plays::Rain;
             else if (p == "wind") w.plays = WorldManifest::Plays::Wind;
             else if (p == "cloudy") w.plays = WorldManifest::Plays::Cloudy;
-            else return fail("unknown \"plays\" (use day, night, rain, wind or cloudy)");
+            else if (p == "snow") w.plays = WorldManifest::Plays::Snow;
+            else if (p == "fog") w.plays = WorldManifest::Plays::Fog;
+            else if (p == "dawn") w.plays = WorldManifest::Plays::Dawn;
+            else if (p == "dusk") w.plays = WorldManifest::Plays::Dusk;
+            else return fail("unknown \"plays\" (use day, night, dawn, dusk, rain, snow, fog, wind or cloudy)");
         }
         if (j.contains("music") && j["music"].is_object()) {
             const Json& m = j["music"];
@@ -133,6 +137,10 @@ Json worldToJson(const WorldManifest& w) {
     if (w.plays == WorldManifest::Plays::Rain) j["plays"] = "rain";
     if (w.plays == WorldManifest::Plays::Wind) j["plays"] = "wind";
     if (w.plays == WorldManifest::Plays::Cloudy) j["plays"] = "cloudy";
+    if (w.plays == WorldManifest::Plays::Snow) j["plays"] = "snow";
+    if (w.plays == WorldManifest::Plays::Fog) j["plays"] = "fog";
+    if (w.plays == WorldManifest::Plays::Dawn) j["plays"] = "dawn";
+    if (w.plays == WorldManifest::Plays::Dusk) j["plays"] = "dusk";
     Json loop = {{"fromSeconds", w.loopFromSeconds}};
     loop["toSeconds"] = w.loopToSeconds ? Json(*w.loopToSeconds) : Json(nullptr);
     j["music"] = {{"tempo", w.tempo}, {"key", w.key}, {"loop", loop}, {"beatsPerBar", w.beatsPerBar},

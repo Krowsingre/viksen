@@ -321,16 +321,16 @@
       ]
     },
     {
-      "slot": "wind",
-      "id": "wind",
-      "plays": "wind",
+      "slot": "dawn",
+      "id": "dawn",
+      "plays": "dawn",
       "title": "",
       "stems": []
     },
     {
-      "slot": "cloudy",
-      "id": "cloudy",
-      "plays": "cloudy",
+      "slot": "dusk",
+      "id": "dusk",
+      "plays": "dusk",
       "title": "",
       "stems": []
     },
@@ -2037,6 +2037,34 @@
         }
       ],
       "plays": "rain"
+    },
+    {
+      "slot": "snow",
+      "id": "snow",
+      "plays": "snow",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "fog",
+      "id": "fog",
+      "plays": "fog",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "wind",
+      "id": "wind",
+      "plays": "wind",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "cloudy",
+      "id": "cloudy",
+      "plays": "cloudy",
+      "title": "",
+      "stems": []
     },
     {
       "slot": "secret-1",

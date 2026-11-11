@@ -279,14 +279,15 @@ bool LiveSession::hasLunarSongs() const {
     return false;
 }
 
-// Dimensions with a day track (owner, 2026-11-05): rain plays the rain song; after dark,
-// the song for tonight's phase, else the night song; by day, the windy or cloudy song when
-// the weather says so (owner, 2026-11-11); otherwise the day track (the first song with no
-// phase and no other role). -1: the Dimension has none of these songs.
+// Dimensions with a day track (owner, 2026-11-05/11): weather first, day or night, in this
+// order: rain (thunderstorms too), snow, fog, wind, cloudy; then after dark the song for
+// tonight's phase, else the night song; at dawn or dusk their songs; otherwise the day
+// track (the first song with no phase and no other role). A missing song is skipped.
+// -1: the Dimension has none of these songs.
 int LiveSession::lunarTarget(const ConditionContext& c) const {
     if (!hasLunarSongs()) return -1;
     const auto& songs = dimension_->songs;
-    int day = -1, lunar = -1, night = -1, rain = -1, wind = -1, cloudy = -1;
+    int day = -1, lunar = -1, night = -1, rain = -1, wind = -1, cloudy = -1, snow = -1, fog = -1, dawn = -1, dusk = -1;
     const MoonPhaseName now = moonPhaseName(c.daysSinceUnixEpochUtc);
     for (size_t i = 0; i < songs.size(); ++i) {
         const auto& s = songs[i];
@@ -299,16 +300,23 @@ int LiveSession::lunarTarget(const ConditionContext& c) const {
         else if (s.plays == WorldManifest::Plays::Rain) { if (rain < 0) rain = k; }
         else if (s.plays == WorldManifest::Plays::Wind) { if (wind < 0) wind = k; }
         else if (s.plays == WorldManifest::Plays::Cloudy) { if (cloudy < 0) cloudy = k; }
+        else if (s.plays == WorldManifest::Plays::Snow) { if (snow < 0) snow = k; }
+        else if (s.plays == WorldManifest::Plays::Fog) { if (fog < 0) fog = k; }
+        else if (s.plays == WorldManifest::Plays::Dawn) { if (dawn < 0) dawn = k; }
+        else if (s.plays == WorldManifest::Plays::Dusk) { if (dusk < 0) dusk = k; }
         else if (day < 0) day = k;
     }
     if (c.raining && rain >= 0) return rain;
+    if (c.snowing && snow >= 0) return snow;
+    if (c.foggy && fog >= 0) return fog;
+    if (c.windy && wind >= 0) return wind;
+    if (c.cloudy && cloudy >= 0) return cloudy;
     if (c.night) {
         if (lunar >= 0) return lunar;
         if (night >= 0) return night;
-    } else {
-        if (c.windy && wind >= 0) return wind;
-        if (c.cloudy && cloudy >= 0) return cloudy;
     }
+    if (c.dawn && dawn >= 0) return dawn;
+    if (c.dusk && dusk >= 0) return dusk;
     return day >= 0 ? day : 0;
 }
 

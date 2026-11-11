@@ -468,7 +468,7 @@ TEST_CASE("session/day, night and rain songs: rain wins, then tonight's song, th
     j["songs"].push_back(cloudy);
     auto d = parseDimension(j);
     REQUIRE(d.has_value());
-    CHECK(!parseDimension([&] { Json b = j; b["songs"][1]["plays"] = "dusk"; return b; }()).has_value());
+    CHECK(!parseDimension([&] { Json b = j; b["songs"][1]["plays"] = "noon"; return b; }()).has_value());
     const double rate = 48000;
     auto clip = std::make_shared<const AudioClip>(test::makeSine(rate, static_cast<int>(rate * 4), 330, 0.3f));
     LiveSession::StemFileDecoder decode = [&](const std::string&, double, std::string&) -> std::unique_ptr<StemDecoder> {
@@ -497,11 +497,13 @@ TEST_CASE("session/day, night and rain songs: rain wins, then tonight's song, th
     CHECK(songAt(true, true).songTitle == "Storm");              // rain wins, day or night
     CHECK(songAt(false, true).songTitle == "Storm");
     CHECK(songAt(false, true).songLunarPhase.empty());           // rain does not count toward the Moon Chart
-    // Windy and cloudy days (owner, 2026-11-11): by day only; rain still wins.
+    // Every kind of weather plays day and night (owner, 2026-11-11); rain comes first,
+    // then snow, fog, wind, cloudy.
     CHECK(songAt(false, false, true).songTitle == "Gale");
     CHECK(songAt(false, false, false, true).songTitle == "Overcast");
-    CHECK(songAt(true, false, true, true).songTitle == "Song B");     // at night the night songs play
-    CHECK(songAt(false, true, true, true).songTitle == "Storm");
+    CHECK(songAt(true, false, true).songTitle == "Gale");              // windy nights too
+    CHECK(songAt(false, false, true, true).songTitle == "Gale");      // wind before cloudy
+    CHECK(songAt(true, true, true, true).songTitle == "Storm");
 }
 
 TEST_CASE("worlds/adaptive music off plays parts as written") {
@@ -571,5 +573,44 @@ TEST_CASE("worlds/Dimension template: empty slots and secrets wait; filled slots
     std::ifstream in(std::filesystem::path(ATMOS_SOURCE_DIR) / "docs/templates/dimension.world.json");
     REQUIRE(in.good());
     const Json tpl = Json::parse(in);
-    CHECK(tpl["songs"].size() == 17);   // day, wind, cloudy, eight nights, storm, five secrets
+    CHECK(tpl["songs"].size() == 21);   // day, dawn, dusk, eight nights, storm, snow, fog, wind, cloudy, five secrets
+}
+
+TEST_CASE("session/snow, fog, dawn and dusk songs: weather first, then night, then dawn or dusk") {
+    const double t = 20000.25;
+    Json j = twoSongDimension();
+    j["songs"][1]["plays"] = "night";
+    for (const char* role : {"snow", "fog", "dawn", "dusk"}) {
+        Json s = j["songs"][1]; s["id"] = role; s["title"] = role; s["plays"] = role;
+        j["songs"].push_back(s);
+    }
+    auto d = parseDimension(j);
+    REQUIRE(d.has_value());
+    const double rate = 48000;
+    auto clip = std::make_shared<const AudioClip>(test::makeSine(rate, static_cast<int>(rate * 4), 330, 0.3f));
+    LiveSession::StemFileDecoder decode = [&](const std::string&, double, std::string&) -> std::unique_ptr<StemDecoder> {
+        return std::make_unique<ClipStemDecoder>(clip);
+    };
+    LiveSession s(rate, 256);
+    std::string err;
+    auto songAt = [&](auto set) -> std::string {
+        ConditionContext c;
+        c.daysSinceUnixEpochUtc = t;
+        set(c);
+        s.updateWorld(0, c);
+        const bool loaded = s.loadDimension(*d, decode, &err);
+        CHECK(loaded);
+        auto title = s.worldStatus().songTitle;
+        s.unloadWorld();
+        return title;
+    };
+    CHECK(songAt([](ConditionContext& c) { c.snowing = true; }) == "snow");
+    CHECK(songAt([](ConditionContext& c) { c.snowing = true; c.night = true; }) == "snow");
+    CHECK(songAt([](ConditionContext& c) { c.foggy = true; c.night = true; }) == "fog");
+    CHECK(songAt([](ConditionContext& c) { c.snowing = true; c.foggy = true; }) == "snow");
+    CHECK(songAt([](ConditionContext& c) { c.dawn = true; }) == "dawn");
+    CHECK(songAt([](ConditionContext& c) { c.dusk = true; }) == "dusk");
+    CHECK(songAt([](ConditionContext& c) { c.dusk = true; c.foggy = true; }) == "fog");
+    CHECK(songAt([](ConditionContext& c) { c.night = true; }) == "Song B");
+    CHECK(songAt([](ConditionContext&) {}) == "Song A");
 }

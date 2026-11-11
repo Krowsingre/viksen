@@ -31,7 +31,11 @@ struct ConditionContext {
     bool adaptive = true;
     bool raining = false;              // it is raining where the listener is (weather, when on)
     bool windy = false;                // windy where the listener is (weather, when on)
-    bool cloudy = false;               // cloudy where the listener is (weather, when on)                // after dark, by the listener's chosen rule (fixed hours or sunset–sunrise)
+    bool cloudy = false;               // cloudy where the listener is (weather, when on)
+    bool snowing = false;              // snowing (weather, when on)
+    bool foggy = false;                // fog or mist (weather, when on)
+    bool dawn = false;                 // just after night ends (the listener's night rule)
+    bool dusk = false;                 // just before night begins                // after dark, by the listener's chosen rule (fixed hours or sunset–sunrise)
     EnvironmentStateSnapshot env;
     double totalListeningSeconds = 0;
     int consecutiveWorlds = 0;

@@ -48,9 +48,10 @@ struct WorldManifest {
     // The lunar phase this song belongs to (a Dimension's eight lunar-phase songs), if any.
     std::optional<MoonPhaseName> lunarPhase;
     // When the song plays in a Dimension with a day track (owner, 2026-11-05): "day"
-    // (default), "night" (every night that has no song for its own phase), "rain" (day or
-    // night), or "wind" / "cloudy" (owner, 2026-11-11: windy or cloudy days, by day only).
-    enum class Plays { Day, Night, Rain, Wind, Cloudy };
+    // (default), "night" (every night that has no song for its own phase), the weather
+    // songs "rain" (also thunderstorms, for now), "snow", "fog", "wind" and "cloudy" (day or
+    // night), or "dawn" / "dusk" (owner, 2026-11-11).
+    enum class Plays { Day, Night, Rain, Wind, Cloudy, Snow, Fog, Dawn, Dusk };
     Plays plays = Plays::Day;
     std::vector<WorldStem> stems;
     std::vector<WorldRule> rules;

@@ -30,6 +30,11 @@ final class NightClock {
         }
     }
     private(set) var isNight = false
+    /// Dawn and dusk (owner, 2026-11-11): the 45 minutes just after night ends and just
+    /// before it begins, by whichever rule is chosen. They never overlap the night.
+    private(set) var isDawn = false
+    private(set) var isDusk = false
+    static let twilight: TimeInterval = 45 * 60
     /// Sunset to sunrise needs a location; until there is one, the fixed hours apply.
     private(set) var usingFallback = false
     private var coordinate: CLLocationCoordinate2D?
@@ -56,14 +61,20 @@ final class NightClock {
 
     func refresh(at date: Date = Date()) {
         // Assigned only on change: views reading these are not redrawn every second.
-        let night: Bool, fallback: Bool
-        if rule == .sunsetSunrise, let c = coordinate, let dark = Self.isDark(at: date, coordinate: c) {
-            night = dark; fallback = false
-        } else {
-            night = Self.inFixedHours(date); fallback = rule == .sunsetSunrise
-        }
+        let (night, fallback) = nightAt(date)
+        let dawn = !night && nightAt(date.addingTimeInterval(-Self.twilight)).night
+        let dusk = !night && !dawn && nightAt(date.addingTimeInterval(Self.twilight)).night
         if night != isNight { isNight = night }
+        if dawn != isDawn { isDawn = dawn }
+        if dusk != isDusk { isDusk = dusk }
         if fallback != usingFallback { usingFallback = fallback }
+    }
+
+    private func nightAt(_ date: Date) -> (night: Bool, fallback: Bool) {
+        if rule == .sunsetSunrise, let c = coordinate, let dark = Self.isDark(at: date, coordinate: c) {
+            return (dark, false)
+        }
+        return (Self.inFixedHours(date), rule == .sunsetSunrise)
     }
 
     private func locate() {
