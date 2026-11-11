@@ -460,8 +460,12 @@ TEST_CASE("session/day, night and rain songs: rain wins, then tonight's song, th
     j["songs"][1]["plays"] = "night";                 // Song B: every night
     Json rain = j["songs"][1]; rain["id"] = "r"; rain["title"] = "Storm"; rain["plays"] = "rain";
     Json phase = j["songs"][1]; phase["id"] = "p"; phase["title"] = "Other Phase"; phase.erase("plays"); phase["lunarPhase"] = other;
+    Json gale = j["songs"][1]; gale["id"] = "w"; gale["title"] = "Gale"; gale["plays"] = "wind";
+    Json cloudy = j["songs"][1]; cloudy["id"] = "c"; cloudy["title"] = "Overcast"; cloudy["plays"] = "cloudy";
     j["songs"].push_back(rain);
     j["songs"].push_back(phase);
+    j["songs"].push_back(gale);
+    j["songs"].push_back(cloudy);
     auto d = parseDimension(j);
     REQUIRE(d.has_value());
     CHECK(!parseDimension([&] { Json b = j; b["songs"][1]["plays"] = "dusk"; return b; }()).has_value());
@@ -472,11 +476,13 @@ TEST_CASE("session/day, night and rain songs: rain wins, then tonight's song, th
     };
     LiveSession s(rate, 256);
     std::string err;
-    auto songAt = [&](bool night, bool raining) -> WorldStatus {
+    auto songAt = [&](bool night, bool raining, bool windy = false, bool overcast = false) -> WorldStatus {
         ConditionContext c;
         c.daysSinceUnixEpochUtc = t;
         c.night = night;
         c.raining = raining;
+        c.windy = windy;
+        c.cloudy = overcast;
         s.updateWorld(0, c);
         const bool loaded = s.loadDimension(*d, decode, &err);
         CHECK(loaded);
@@ -491,6 +497,11 @@ TEST_CASE("session/day, night and rain songs: rain wins, then tonight's song, th
     CHECK(songAt(true, true).songTitle == "Storm");              // rain wins, day or night
     CHECK(songAt(false, true).songTitle == "Storm");
     CHECK(songAt(false, true).songLunarPhase.empty());           // rain does not count toward the Moon Chart
+    // Windy and cloudy days (owner, 2026-11-11): by day only; rain still wins.
+    CHECK(songAt(false, false, true).songTitle == "Gale");
+    CHECK(songAt(false, false, false, true).songTitle == "Overcast");
+    CHECK(songAt(true, false, true, true).songTitle == "Song B");     // at night the night songs play
+    CHECK(songAt(false, true, true, true).songTitle == "Storm");
 }
 
 TEST_CASE("worlds/adaptive music off plays parts as written") {
@@ -560,5 +571,5 @@ TEST_CASE("worlds/Dimension template: empty slots and secrets wait; filled slots
     std::ifstream in(std::filesystem::path(ATMOS_SOURCE_DIR) / "docs/templates/dimension.world.json");
     REQUIRE(in.good());
     const Json tpl = Json::parse(in);
-    CHECK(tpl["songs"].size() == 15);
+    CHECK(tpl["songs"].size() == 17);   // day, wind, cloudy, eight nights, storm, five secrets
 }

@@ -29,7 +29,9 @@ struct ConditionContext {
     // headphones and speakers). Off: songs play their parts and mix as written (day,
     // night and rain songs still change).
     bool adaptive = true;
-    bool raining = false;              // it is raining where the listener is (weather, when on)                // after dark, by the listener's chosen rule (fixed hours or sunset–sunrise)
+    bool raining = false;              // it is raining where the listener is (weather, when on)
+    bool windy = false;                // windy where the listener is (weather, when on)
+    bool cloudy = false;               // cloudy where the listener is (weather, when on)                // after dark, by the listener's chosen rule (fixed hours or sunset–sunrise)
     EnvironmentStateSnapshot env;
     double totalListeningSeconds = 0;
     int consecutiveWorlds = 0;

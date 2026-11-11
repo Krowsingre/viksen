@@ -336,6 +336,20 @@
       ]
     },
     {
+      "slot": "wind",
+      "id": "wind",
+      "plays": "wind",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "cloudy",
+      "id": "cloudy",
+      "plays": "cloudy",
+      "title": "",
+      "stems": []
+    },
+    {
       "slot": "night-new",
       "id": "steel-steam-and-borrowed-dreams",
       "title": "Steel, Steam, and Borrowed Dreams",

@@ -4,11 +4,13 @@
 Copy it to `apps/ios/Viksen/Resources/Worlds/<dimension-id>/world.json`, set `id`, `name`,
 `album` and `tier`, then fill the slots as the music arrives.
 
-## The 15 standard slots
+## The 17 standard slots
 
 | Slot | Plays |
 |---|---|
 | `day` | by day |
+| `wind` | by day, while it is windy where the listener is (`"plays": "wind"`) |
+| `cloudy` | by day, while it is cloudy (`"plays": "cloudy"`) |
 | `night-new` … `night-waning-crescent` (8) | after dark during that moon phase. The night song with `"plays": "night"` (normally the New Moon song) also plays on nights whose phase has no song yet |
 | `storm` | while it rains (`"plays": "rain"`) |
 | `secret-1` … `secret-5` | waiting for the Secrets feature; never played yet |

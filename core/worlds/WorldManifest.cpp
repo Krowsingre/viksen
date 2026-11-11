@@ -32,7 +32,9 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
             if (p == "day") w.plays = WorldManifest::Plays::Day;
             else if (p == "night") w.plays = WorldManifest::Plays::Night;
             else if (p == "rain") w.plays = WorldManifest::Plays::Rain;
-            else return fail("unknown \"plays\" (use day, night or rain)");
+            else if (p == "wind") w.plays = WorldManifest::Plays::Wind;
+            else if (p == "cloudy") w.plays = WorldManifest::Plays::Cloudy;
+            else return fail("unknown \"plays\" (use day, night, rain, wind or cloudy)");
         }
         if (j.contains("music") && j["music"].is_object()) {
             const Json& m = j["music"];
@@ -129,6 +131,8 @@ Json worldToJson(const WorldManifest& w) {
     if (w.lunarPhase) j["lunarPhase"] = moonPhaseId(*w.lunarPhase);
     if (w.plays == WorldManifest::Plays::Night) j["plays"] = "night";
     if (w.plays == WorldManifest::Plays::Rain) j["plays"] = "rain";
+    if (w.plays == WorldManifest::Plays::Wind) j["plays"] = "wind";
+    if (w.plays == WorldManifest::Plays::Cloudy) j["plays"] = "cloudy";
     Json loop = {{"fromSeconds", w.loopFromSeconds}};
     loop["toSeconds"] = w.loopToSeconds ? Json(*w.loopToSeconds) : Json(nullptr);
     j["music"] = {{"tempo", w.tempo}, {"key", w.key}, {"loop", loop}, {"beatsPerBar", w.beatsPerBar},

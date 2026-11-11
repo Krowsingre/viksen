@@ -244,6 +244,11 @@ final class EngineController {
             // Rain plays a Dimension's storm song, on every tier (needs Weather on).
             let raining = weatherEnabled && (weather.mood == .rain || weather.mood == .storm)
             if bridge.raining != raining { bridge.raining = raining }
+            // Windy and cloudy days have their own songs where a Dimension has them.
+            let windy = weatherEnabled && weather.mood == .wind
+            let cloudy = weatherEnabled && weather.mood == .cloudy
+            if bridge.windy != windy { bridge.windy = windy }
+            if bridge.cloudy != cloudy { bridge.cloudy = cloudy }
             // Rain and thunder under the music while it rains and a Dimension plays.
             rainAmbience.update(!raining || activeDimensionID == nil ? .none : (weather.mood == .storm ? .storm : .rain))
             // Transition effects when a day-and-night Dimension changes song: the drone

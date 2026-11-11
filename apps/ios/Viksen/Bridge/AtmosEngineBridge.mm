@@ -383,6 +383,8 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         ctx.night = self.night;
         ctx.headphones = self.headphones;
         ctx.raining = self.raining;
+        ctx.windy = self.windy;
+        ctx.cloudy = self.cloudy;
         ctx.adaptive = self.adaptive;
         _session->updateWorld(dt, ctx);
     }

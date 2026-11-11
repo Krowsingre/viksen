@@ -104,6 +104,9 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic) BOOL headphones;
 /// It is raining (weather on): Dimensions with a rain song play it.
 @property (nonatomic) BOOL raining;
+/// Windy / cloudy (weather on): by day, Dimensions with a windy or cloudy song play it.
+@property (nonatomic) BOOL windy;
+@property (nonatomic) BOOL cloudy;
 /// "Adaptive music" for the current output: off plays songs as written.
 @property (nonatomic) BOOL adaptive;
 @property (nonatomic, weak, nullable) id<AtmosEngineBridgeDelegate> delegate;

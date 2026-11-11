@@ -321,6 +321,20 @@
       ]
     },
     {
+      "slot": "wind",
+      "id": "wind",
+      "plays": "wind",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "cloudy",
+      "id": "cloudy",
+      "plays": "cloudy",
+      "title": "",
+      "stems": []
+    },
+    {
       "slot": "night-new",
       "id": "lunar-dark-promise",
       "title": "Lunar Dark Promise",

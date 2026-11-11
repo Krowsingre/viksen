@@ -14,6 +14,20 @@
       "stems": []
     },
     {
+      "slot": "wind",
+      "id": "wind",
+      "plays": "wind",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "cloudy",
+      "id": "cloudy",
+      "plays": "cloudy",
+      "title": "",
+      "stems": []
+    },
+    {
       "slot": "night-new",
       "id": "night-new",
       "lunarPhase": "new",
