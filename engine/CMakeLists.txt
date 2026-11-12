@@ -2,6 +2,7 @@
 add_library(atmos_engine STATIC
   audio/AudioEngine.cpp
   audio/WorldStreamPlayer.cpp
+  audio/ClipSequencer.cpp
   audio/CaptureTap.cpp
   spatial/BinauralFactory.cpp
   spatial/SteamAudioRenderer.cpp

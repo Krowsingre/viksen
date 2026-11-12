@@ -18,6 +18,7 @@
 #include "engine/atmosphere/NoiseBed.h"
 #include "engine/audio/AudioBuffer.h"
 #include "engine/audio/CaptureTap.h"
+#include "engine/audio/ClipSequencer.h"
 #include "engine/audio/AudioClip.h"
 #include "engine/audio/Parameter.h"
 #include "engine/audio/SpscQueue.h"
@@ -105,6 +106,7 @@ public:
 
     // ---- World music (streamed stems on the music bus) ----
     WorldStreamPlayer& worldPlayer() noexcept { return world_; }
+    ClipSequencer& clipSequencer() noexcept { return sequencer_; }
 
     // ---- Atmosphere generator (any thread) ----
     void setAtmosphereBedEnabled(bool enabled) noexcept { bedEnabled_.store(enabled, std::memory_order_relaxed); }
@@ -177,6 +179,7 @@ private:
     MicTransform micTransform_;
     RoomMemory roomMemory_;
     WorldStreamPlayer world_;
+    ClipSequencer sequencer_;   // music built on the beat (phase 4)
     CaptureTap capture_;
     AudioBuffer captureMix_;        // partial mixes for capture modes other than FullMix
     SafetyLimiter captureLimiter_;

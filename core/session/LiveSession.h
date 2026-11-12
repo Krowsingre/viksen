@@ -126,6 +126,7 @@ public:
     // clean short crossfade. On by default; applies at once to the playing Dimension.
     void setLoopTransitionFx(bool on);
     bool loopTransitionFx() const { return loopFx_; }
+    int beatClipCount() const { return static_cast<int>(patterns_.size()); }   // phase 4 clips of the loaded song
     void setMicShiftHz(float hz);
     void setMicShiftMix(float mix);
     void setRoomMemoryEnabled(bool enabled);
@@ -213,6 +214,8 @@ private:
     void finishSongSwitch();
     std::unique_ptr<WorldDirector> director_;
     MusicReactor reactor_;            // room instrument phase 2: the moment drives the mix
+    std::vector<std::unique_ptr<SeqPattern>> patterns_, retiredPatterns_;   // phase 4 beat clips
+    void buildClips(const WorldManifest& world, std::vector<std::unique_ptr<StemDecoder>>& decoders);
     uint32_t lastTransients_ = 0;
     double onsetRate_ = 0.0;          // sudden sounds per second, smoothed
     std::unique_ptr<WorldLifecycle> lifecycle_;

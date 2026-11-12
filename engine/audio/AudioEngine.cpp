@@ -35,6 +35,7 @@ void AudioEngine::prepare(const EngineConfig& config) {
     micTransform_.prepare(sr, config_.maxBlockSize);
     roomMemory_.prepare(sr);
     world_.prepare(sr, config_.maxBlockSize);
+    sequencer_.prepare(sr);
     capture_.prepare(static_cast<int>(sr * 6));
     captureMix_.setSize(2, config_.maxBlockSize);
     captureLimiter_.prepare(sr, -1.0f);
@@ -385,6 +386,7 @@ void AudioEngine::processBlock(const float* const* inputs, int numInputs,
 
     // World music streams independently of the song transport.
     world_.processAdd(busBuffers_[static_cast<int>(Bus::Music)], numFrames);
+    sequencer_.processAdd(busBuffers_[static_cast<int>(Bus::Music)], numFrames);
 
     if (bedEnabled_.load(std::memory_order_relaxed)) bed_.processAdd(busBuffers_[static_cast<int>(Bus::Atmosphere)], numFrames);
 

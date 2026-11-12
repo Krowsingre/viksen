@@ -33,6 +33,16 @@ void LiveSession::rebuild(double sampleRate, int maxBlockSize) {
     applySettings(); // before prepare(): smoothers start at their targets
     engine_->prepare({sampleRate, maxBlockSize});
     if (original_) engine_->setLayer(kTrackSlot, prepareClipForEngine(*original_, sampleRate), Bus::Music, 0);
+    // The song's room colour, room instrument and beat clips belong to the new engine too
+    // (the clips are cut again at the new rate).
+    if (world_) {
+        applyRoomBlend(*world_);
+        if (worldFactory_) {
+            std::string err;
+            auto decoders = worldFactory_(sampleRate, err);
+            if (decoders.size() == world_->stems.size()) buildClips(*world_, decoders);
+        }
+    }
     if (worldWasPlaying) startFeeder(static_cast<int64_t>(resumeSeconds * sampleRate), nullptr);
 }
 
@@ -263,7 +273,57 @@ bool LiveSession::loadSong(const WorldManifest& world, StemDecoderFactory factor
         unloadWorld();
         return false;
     }
+    buildClips(world, probe);
     return true;
+}
+
+// Music built on the beat (phase 4): the song's "clips", each a slice of one of its stems
+// re-triggered by a 16-step (one bar) or 32-step (two bars) pattern within an energy range:
+//   {"stem": "percussion", "fromBar": 62, "beats": 4, "pattern": "x...............",
+//    "energy": [0.55, 1.0], "gainDb": -3, "pan": 0, "chance": 1}
+// Bars count from the song's bar offset. The slices are cut now, on the control thread.
+void LiveSession::buildClips(const WorldManifest& world, std::vector<std::unique_ptr<StemDecoder>>& decoders) {
+    auto& seq = engine_->clipSequencer();
+    seq.clearPatterns();
+    retiredPatterns_ = std::move(patterns_);   // kept alive until the next song: voices may still read them
+    patterns_.clear();
+    if (!world.extra.contains("clips") || !world.extra["clips"].is_array()) return;
+    const double rate = sampleRate();
+    const double beat = 60.0 / std::max(1.0, world.tempo);
+    for (const auto& c : world.extra["clips"]) {
+        if (patterns_.size() >= static_cast<size_t>(ClipSequencer::kSlots) || !c.is_object()) break;
+        const int stem = world.stemIndex(c.value("stem", std::string{}));
+        if (stem < 0 || stem >= static_cast<int>(decoders.size())) continue;
+        const std::string pattern = c.value("pattern", std::string{});
+        if (pattern.size() != 16 && pattern.size() != 32) continue;
+        const double from = world.barOffsetSeconds + c.value("fromBar", 0.0) * world.beatsPerBar * beat;
+        const int frames = static_cast<int>(std::llround(std::clamp(c.value("beats", 4.0), 0.25, 16.0) * beat * rate));
+        auto& d = *decoders[static_cast<size_t>(stem)];
+        if (!d.seek(static_cast<int64_t>(std::llround(from * rate)))) continue;
+        std::vector<float> lr(static_cast<size_t>(frames) * 2, 0.0f);
+        const int got = d.read(lr.data(), frames);
+        if (got <= 0) continue;
+        auto clip = std::make_shared<AudioClip>();
+        clip->sampleRate = rate;
+        clip->samples.setSize(2, got);
+        for (int i = 0; i < got; ++i) {
+            clip->samples.channel(0)[i] = lr[static_cast<size_t>(2 * i)];
+            clip->samples.channel(1)[i] = lr[static_cast<size_t>(2 * i + 1)];
+        }
+        auto p = std::make_unique<SeqPattern>();
+        p->clip = clip;
+        p->length = static_cast<int>(pattern.size());
+        for (size_t i = 0; i < pattern.size(); ++i) p->steps[i] = pattern[i] == 'x' || pattern[i] == 'X';
+        p->gain = std::pow(10.0f, c.value("gainDb", 0.0f) / 20.0f);
+        p->pan = c.value("pan", 0.0f);
+        if (c.contains("energy") && c["energy"].is_array() && c["energy"].size() == 2) {
+            p->energyMin = c["energy"][0].get<float>();
+            p->energyMax = c["energy"][1].get<float>();
+        }
+        p->chance = std::clamp(c.value("chance", 1.0f), 0.0f, 1.0f);
+        seq.setPattern(static_cast<int>(patterns_.size()), p.get());
+        patterns_.push_back(std::move(p));
+    }
 }
 
 StemDecoderFactory LiveSession::songFactory(int song) const {
@@ -421,6 +481,9 @@ void LiveSession::finishSongSwitch() {
 
 void LiveSession::unloadWorld() {
     stopFeeder();
+    engine_->clipSequencer().clearPatterns();
+    engine_->clipSequencer().master.store(0.0f);
+    engine_->clipSequencer().setClock(0.0, 0.0);
     engine_->roomInstrument().setClock(0.0, 0.0);
     engine_->setMusicCutoffHz(20000.0f);
     for (int i = 0; i < WorldStreamPlayer::kMaxStems; ++i) engine_->worldPlayer().setStemGain(i, 0.0f);
@@ -514,16 +577,22 @@ void LiveSession::updateWorld(double dt, const ConditionContext& context) {
         in.intensity = context.intensity;
         reactor_.update(dt, in);
         engine_->setMusicCutoffHz(reactor_.cutoffHz());
-        // The room instrument follows the song's beat and the moment's energy.
+        // The room instrument and the beat clips follow the song's beat and the moment's
+        // energy. Without any cue the clips rest: the song plays as written.
         auto& ri = engine_->roomInstrument();
+        auto& seq = engine_->clipSequencer();
         ri.energy.store(static_cast<float>(reactor_.engaged() ? reactor_.energy() : 0.5));
+        seq.energy.store(reactor_.engaged() ? static_cast<float>(reactor_.energy()) : -1.0f);
         if (feeder_ && world_->tempo > 0) {
             const double seconds = static_cast<double>(feeder_->playbackFrame()) / feeder_->rate();
-            ri.setClock((seconds - world_->barOffsetSeconds) * world_->tempo / 60.0, world_->tempo);
+            const double beatNow = (seconds - world_->barOffsetSeconds) * world_->tempo / 60.0;
+            ri.setClock(beatNow, world_->tempo);
+            seq.setClock(beatNow, world_->tempo);
         }
     }
     lifecycle_->update(true, dt);
     const float master = static_cast<float>(lifecycle_->gain());
+    engine_->clipSequencer().master.store(master);
     for (int i = 0; i < director_->stemCount(); ++i)
         engine_->worldPlayer().setStemGain(i, director_->linearGain(i) * reactor_.stemGain(i) * master);
     if (lifecycle_->finished() && switchTo_ >= 0) {

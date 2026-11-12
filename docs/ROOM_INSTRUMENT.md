@@ -11,7 +11,7 @@ done (owner). Experimental builds say "Experimental: room instrument" in About &
 | 1. The room leads | Mic level control + limiter (MicConditioner); no ducking by default; brighter tone (7 kHz) and a little frequency shift; room memory on per song (`roomBlend.memory`, `memoryPitch`); room level 85 % by default | Done |
 | 2. The room drives the music | Continuous, fast reactions: room loudness/busyness, movement and heart rate open a filter on the music and swell or pull back stems up to 10 dB; section jumps half as often | Done |
 | 3. Musical room effects | Pitch following into the song's key; beat-synced delay grooves from the room; onset-triggered tuned bells (no repeats until all have played) | Done |
-| 4. Music built on the beat | Clip/event layer on a musical clock: short loops and one-shots re-triggered on the beat | |
+| 4. Music built on the beat | Clip/event layer on a musical clock: short loops and one-shots re-triggered on the beat; first test on Lunar Promise with slices of its own stems (option A) | Done |
 | 5. Tuning, then merge | Per-route calibration, levels, battery, listening sessions | |
 
 ## Phase 1 details
@@ -60,3 +60,25 @@ done (owner). Experimental builds say "Experimental: room instrument" in About &
   key in world.json and the room follows it.
 - Placeholder hits are synthesised bells; a Dimension's own short sounds can replace them
   later (phase 4's sample layer).
+
+## Phase 4 details
+
+- `engine/audio/ClipSequencer`: up to 16 patterns, 24 voices, into the music bus (so the
+  phase 2 filter applies). Each pattern: a clip, 16 or 32 steps (one or two bars of 16ths),
+  gain, pan, an energy range and a chance per step. Voices fade in and out over 3 ms.
+  Clock from the song's position, as for the room instrument; it snaps on a fresh start and
+  after jumps, and is gently corrected otherwise. Clips follow the song's fade in/out.
+- Songs list them under "clips": `{"stem", "fromBar", "beats", "pattern", "energy":
+  [min, max], "gainDb", "pan", "chance"}`; the slices are cut from the song's own stems
+  when it loads (and again after a sample-rate change). With no cue (no microphone,
+  movement or workout) the clips rest and the song plays as written.
+- Lunar Promise test set (slices chosen by measuring each stem bar by bar):
+  - `perc-loop`: percussion bar 62, every bar, energy 0.55-1.
+  - `drum-fill`: second half of drums bar 78, on the last half of every second bar, 0.4-1.
+  - `other-hit`: one beat of "other" from bar 97, twice every two bars at 60 %, 0.7-1.
+  - `keys-motif`: keyboard bar 2 (the intro), every two bars, only when calm (0-0.35).
+- Owner-made loops and one-shots can later be referenced the same way (a "file" for
+  clips is a small addition).
+
+Also: after a sample-rate change the engine is rebuilt; the song's room colour, room
+instrument settings and beat clips are now applied to the new engine too.

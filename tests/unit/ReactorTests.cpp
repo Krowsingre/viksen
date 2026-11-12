@@ -98,3 +98,48 @@ TEST_CASE("engine/the music filter cuts the highs when closed and is bypassed wh
     CHECK(open > 0);
     CHECK(closed < open * 0.01);   // 8 kHz is far above a 1 kHz cutoff: at least 20 dB down
 }
+
+#include "engine/audio/ClipSequencer.h"
+
+TEST_CASE("engine/beat clips land on the beat, within their energy, and follow the song's fade") {
+    const double sr = 48000;
+    auto clip = std::make_shared<AudioClip>();
+    clip->sampleRate = sr;
+    clip->samples.setSize(2, 2400);   // 50 ms of a constant
+    for (int c = 0; c < 2; ++c) for (int i = 0; i < 2400; ++i) clip->samples.channel(c)[i] = 0.5f;
+    SeqPattern p;
+    p.clip = clip;
+    p.length = 16;
+    p.steps[0] = true;   // the downbeat of every bar
+    p.energyMin = 0.5f;
+    auto render = [&](float energy, float master, double seconds) {
+        ClipSequencer s;
+        s.prepare(sr);
+        s.setPattern(0, &p);
+        s.energy.store(energy);
+        s.master.store(master);
+        s.setClock(-0.01, 120.0);   // just before the first beat: a bar is 2 s at 120 BPM
+        AudioBuffer bus(2, 256);
+        std::vector<float> out;
+        for (int b = 0; b < static_cast<int>(seconds * sr / 256); ++b) {
+            bus.clear(256);
+            s.processAdd(bus, 256);
+            out.insert(out.end(), bus.channel(0), bus.channel(0) + 256);
+        }
+        return out;
+    };
+    auto onsetsOf = [](const std::vector<float>& v) {
+        std::vector<size_t> at;
+        for (size_t i = 1; i < v.size(); ++i) if (std::fabs(v[i]) > 0.05f && std::fabs(v[i - 1]) <= 0.05f) at.push_back(i);
+        return at;
+    };
+    auto on = render(0.8f, 1.0f, 4.5);
+    auto hits = onsetsOf(on);
+    REQUIRE(hits.size() == 3);                                    // bars at 0, 2 and 4 s
+    CHECK(std::fabs(static_cast<double>(hits[1]) - 4.01 * 0.5 * sr) < 200);   // bar 2 = beat 4, 0.01 beat after the start (within ~4 ms)
+    CHECK(std::fabs(static_cast<double>(hits[2] - hits[1]) - 2.0 * sr) < 50);
+    CHECK(onsetsOf(render(0.3f, 1.0f, 4.5)).empty());              // below its energy range: rests
+    CHECK(onsetsOf(render(-1.0f, 1.0f, 4.5)).empty());             // no cue at all: the song as written
+    double quiet = 0; for (float v : render(0.8f, 0.0f, 4.5)) quiet += std::fabs(v);
+    CHECK(quiet == 0.0);                                           // before the song fades in
+}

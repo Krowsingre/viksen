@@ -318,6 +318,61 @@
           "otherwiseDb": 0,
           "label": "Synth rises over loud surroundings"
         }
+      ],
+      "clips": [
+        {
+          "id": "perc-loop",
+          "stem": "percussion",
+          "fromBar": 62,
+          "beats": 4,
+          "pattern": "x...............",
+          "energy": [
+            0.55,
+            1.0
+          ],
+          "gainDb": -3,
+          "pan": 0
+        },
+        {
+          "id": "drum-fill",
+          "stem": "drums",
+          "fromBar": 78.5,
+          "beats": 2,
+          "pattern": "........................x.......",
+          "energy": [
+            0.4,
+            1.0
+          ],
+          "gainDb": -4,
+          "pan": 0
+        },
+        {
+          "id": "other-hit",
+          "stem": "other",
+          "fromBar": 97,
+          "beats": 1,
+          "pattern": "x...................x...........",
+          "energy": [
+            0.7,
+            1.0
+          ],
+          "gainDb": -6,
+          "pan": 0.4,
+          "chance": 0.6
+        },
+        {
+          "id": "keys-motif",
+          "stem": "keyboard",
+          "fromBar": 2,
+          "beats": 4,
+          "pattern": "x...............................",
+          "energy": [
+            0.0,
+            0.35
+          ],
+          "gainDb": -8,
+          "pan": -0.4
+        }
       ]
     },
     {

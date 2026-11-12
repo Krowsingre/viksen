@@ -319,3 +319,24 @@ TEST_CASE("session/room instrument: a song brings room memory in and does not du
     CHECK(!s.engine().roomMemory().enabled());
     CHECK(s.engine().roomDuckDepth() == 0.5f);
 }
+
+TEST_CASE("session/a song's beat clips are cut from its stems when it loads") {
+    Json j = demoWorldJson();
+    j["clips"] = Json::array({
+        {{"stem", "keys"}, {"fromBar", 0}, {"beats", 2}, {"pattern", "x..............."}, {"energy", {0.5, 1.0}}},
+        {{"stem", "nope"}, {"fromBar", 0}, {"beats", 2}, {"pattern", "x..............."}},          // unknown stem: skipped
+        {{"stem", "keys"}, {"fromBar", 0}, {"beats", 2}, {"pattern", "x.."}}});                    // bad pattern: skipped
+    auto w = parseWorld(j);
+    REQUIRE(w.has_value());
+    auto clip = std::make_shared<const AudioClip>(test::makeSine(48000, 48000 * 4, 220, 0.3f));
+    StemDecoderFactory factory = [&](double, std::string&) {
+        std::vector<std::unique_ptr<StemDecoder>> v;
+        for (int i = 0; i < 2; ++i) v.push_back(std::make_unique<ClipStemDecoder>(clip));
+        return v;
+    };
+    LiveSession s(48000, 512);
+    std::string err;
+    REQUIRE(s.loadWorld(*w, factory, &err));
+    CHECK(s.beatClipCount() == 1);
+    s.unloadWorld();
+}

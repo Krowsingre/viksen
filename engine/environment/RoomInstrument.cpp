@@ -215,8 +215,9 @@ void RoomInstrument::processAdd(const float* mono, float* outL, float* outR, int
     if (const uint32_t seq = clockSeq_.load(std::memory_order_acquire); seq != seenSeq_) {
         seenSeq_ = seq;
         const double b = clockBeat_.load(std::memory_order_relaxed);
+        const bool fresh = bpm_ <= 0;   // the clock was stopped: take the position as it is
         bpm_ = clockBpm_.load(std::memory_order_relaxed);
-        if (std::fabs(b - beat_) > 0.25 || bpm_ <= 0) beat_ = b;   // a jump (seek, new song)
+        if (fresh || std::fabs(b - beat_) > 0.25 || bpm_ <= 0) beat_ = b;   // a jump (seek, new song)
         else beat_ += 0.1 * (b - beat_);                            // otherwise a gentle correction
     }
     const double beatPerFrame = bpm_ / 60.0 / sr_;
