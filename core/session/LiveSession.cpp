@@ -233,6 +233,13 @@ void LiveSession::applyRoomBlend(const WorldManifest& w) {
     engine_->roomMemory().level.set(settings_.roomMemoryLevel);
     engine_->roomMemory().pitchSemitones.store(settings_.roomMemoryPitch);
     engine_->roomMemory().setEnabled(settings_.roomMemoryEnabled);
+    // The room in key and on the beat (phase 3): tune, groove and hits, each 0 = off.
+    auto& ri = engine_->roomInstrument();
+    ri.tuneLevel.store(std::clamp(rb.value("tune", 0.35f), 0.0f, 1.0f));
+    ri.grooveLevel.store(std::clamp(rb.value("groove", 0.4f), 0.0f, 1.0f));
+    ri.hitsLevel.store(std::clamp(rb.value("hits", 0.45f), 0.0f, 1.0f));
+    ri.setScale(RoomInstrument::scaleForKey(w.key));
+    ri.setClock(0.0, 0.0);   // until the song's position is known
 }
 
 bool LiveSession::loadSong(const WorldManifest& world, StemDecoderFactory factory, std::string* error) {
@@ -414,6 +421,7 @@ void LiveSession::finishSongSwitch() {
 
 void LiveSession::unloadWorld() {
     stopFeeder();
+    engine_->roomInstrument().setClock(0.0, 0.0);
     engine_->setMusicCutoffHz(20000.0f);
     for (int i = 0; i < WorldStreamPlayer::kMaxStems; ++i) engine_->worldPlayer().setStemGain(i, 0.0f);
     world_.reset();
@@ -506,6 +514,13 @@ void LiveSession::updateWorld(double dt, const ConditionContext& context) {
         in.intensity = context.intensity;
         reactor_.update(dt, in);
         engine_->setMusicCutoffHz(reactor_.cutoffHz());
+        // The room instrument follows the song's beat and the moment's energy.
+        auto& ri = engine_->roomInstrument();
+        ri.energy.store(static_cast<float>(reactor_.engaged() ? reactor_.energy() : 0.5));
+        if (feeder_ && world_->tempo > 0) {
+            const double seconds = static_cast<double>(feeder_->playbackFrame()) / feeder_->rate();
+            ri.setClock((seconds - world_->barOffsetSeconds) * world_->tempo / 60.0, world_->tempo);
+        }
     }
     lifecycle_->update(true, dt);
     const float master = static_cast<float>(lifecycle_->gain());

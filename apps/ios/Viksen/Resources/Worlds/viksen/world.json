@@ -12,7 +12,7 @@
       "title": "Lunar Promise",
       "music": {
         "tempo": 80,
-        "key": "",
+        "key": "B minor",
         "beatsPerBar": 4,
         "barOffsetSeconds": 0.523,
         "loop": {
@@ -340,7 +340,7 @@
       "title": "Lunar Dark Promise",
       "music": {
         "tempo": 80,
-        "key": "",
+        "key": "B minor",
         "beatsPerBar": 4,
         "barOffsetSeconds": 0.656,
         "loop": {
@@ -682,7 +682,7 @@
       "lunarPhase": "waxingCrescent",
       "music": {
         "tempo": 103,
-        "key": "",
+        "key": "B minor",
         "beatsPerBar": 4,
         "barOffsetSeconds": 0.006,
         "loop": {
@@ -1011,7 +1011,7 @@
       "lunarPhase": "firstQuarter",
       "music": {
         "tempo": 63,
-        "key": "",
+        "key": "B minor",
         "beatsPerBar": 4,
         "barOffsetSeconds": 0.188,
         "loop": {
@@ -1704,7 +1704,7 @@
       "title": "Sanctuary",
       "music": {
         "tempo": 80,
-        "key": "",
+        "key": "B minor",
         "beatsPerBar": 4,
         "barOffsetSeconds": 0.461,
         "loop": {

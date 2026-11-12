@@ -10,7 +10,7 @@ done (owner). Experimental builds say "Experimental: room instrument" in About &
 |---|---|---|
 | 1. The room leads | Mic level control + limiter (MicConditioner); no ducking by default; brighter tone (7 kHz) and a little frequency shift; room memory on per song (`roomBlend.memory`, `memoryPitch`); room level 85 % by default | Done |
 | 2. The room drives the music | Continuous, fast reactions: room loudness/busyness, movement and heart rate open a filter on the music and swell or pull back stems up to 10 dB; section jumps half as often | Done |
-| 3. Musical room effects | Pitch following into the song's key; beat-synced delay grooves from the room; onset-triggered one-shots (no repeats until all have played) | |
+| 3. Musical room effects | Pitch following into the song's key; beat-synced delay grooves from the room; onset-triggered tuned bells (no repeats until all have played) | Done |
 | 4. Music built on the beat | Clip/event layer on a musical clock: short loops and one-shots re-triggered on the beat | |
 | 5. Tuning, then merge | Per-route calibration, levels, battery, listening sessions | |
 
@@ -38,3 +38,25 @@ done (owner). Experimental builds say "Experimental: room instrument" in About &
 - Per song under "react": `depthDb`, `filterClosedHz`, `stems` {id: "energy" | "calm" |
   "neutral"}.
 - Section jumps: a part now stays twice as long before the planner may move on.
+
+## Phase 3 details
+
+- `engine/environment/RoomInstrument`, fed the conditioned microphone, adding to the room's
+  sound (heard only with the room blended in); about 2 % of one core.
+  - Tune: autocorrelation pitch tracking (80-800 Hz, first strong peak to avoid octave
+    errors), snapped to the song's pentatonic scale, sung by a soft two-voice tone between
+    E3 and E5 (60 ms glide, 0.25 s attack, 1.2 s release).
+  - Groove: 4 s of room in memory; on each 16th note of the song, with probability
+    0.2 + 0.5 x energy, a slice from 1-16 sixteenths back is replayed, panned at random.
+  - Hits: a sudden sound (after a 2 s warm-up, 180 ms apart) rings a soft FM bell on a
+    scale note drawn without repeats until all have sounded (two octaves from C4).
+  - Levels per song under "roomBlend": `tune` (0.35), `groove` (0.4), `hits` (0.45); 0 = off.
+- The beat clock comes from the song's position (tempo and bar offset); the energy from
+  the phase 2 reactor.
+- Keys: songs without one got an estimate from their audio (chroma + key profiles; the
+  method returns What Was Once as G minor, as known): the Lunar family B minor, The Fate
+  of the Nine Vikron E♭ minor, Fallen of the Illuminous and Tree of Bones B♭ major
+  (Tree of Bones is a low-confidence estimate). Owner-given keys are kept. Correct any
+  key in world.json and the room follows it.
+- Placeholder hits are synthesised bells; a Dimension's own short sounds can replace them
+  later (phase 4's sample layer).

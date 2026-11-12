@@ -9,6 +9,7 @@ add_library(atmos_engine STATIC
   dsp/Resampler.cpp
   environment/FeatureExtractor.cpp
   environment/MicConditioner.cpp
+  environment/RoomInstrument.cpp
   environment/MicTransform.cpp
   atmosphere/NoiseBed.cpp
   spatial/InterimStereoPanner.cpp

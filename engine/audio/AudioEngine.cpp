@@ -31,6 +31,7 @@ void AudioEngine::prepare(const EngineConfig& config) {
     bed_.setSeed(0xA7305u);
     features_.prepare(sr);
     micConditioner_.prepare(sr);
+    roomInstrument_.prepare(sr);
     micTransform_.prepare(sr, config_.maxBlockSize);
     roomMemory_.prepare(sr);
     world_.prepare(sr, config_.maxBlockSize);
@@ -174,7 +175,7 @@ void AudioEngine::renderMic(const float* const* inputs, int numInputs, int numFr
     const bool active = micEnabled_.load(std::memory_order_relaxed) && inputs && numInputs > 0;
     micActive_.store(active, std::memory_order_relaxed);
     if (!active) {
-        if (micWasActive_) { roomMemory_.forget(); micConditioner_.reset(); } // privacy: no room audio outlives the mic
+        if (micWasActive_) { roomMemory_.forget(); micConditioner_.reset(); roomInstrument_.reset(); } // privacy: no room audio outlives the mic
         micWasActive_ = false;
         return;
     }
@@ -209,6 +210,7 @@ void AudioEngine::renderMic(const float* const* inputs, int numInputs, int numFr
 
     roomMemory_.capture(mono, numFrames);
     roomMemory_.renderAdd(wet, numFrames);
+    roomInstrument_.processAdd(mono, wet.channel(0), wet.channel(1), numFrames);
 }
 
 void AudioEngine::filterMusic(int numFrames) noexcept {

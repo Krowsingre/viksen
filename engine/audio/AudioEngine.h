@@ -27,6 +27,7 @@
 #include "engine/environment/FeatureExtractor.h"
 #include "engine/environment/MicConditioner.h"
 #include "engine/environment/MicTransform.h"
+#include "engine/environment/RoomInstrument.h"
 #include "engine/environment/RoomMemory.h"
 #include "engine/routing/Bus.h"
 
@@ -97,6 +98,7 @@ public:
     // Replays recent seconds of the room (RAM only) into the transformed-mic bus.
     // Wiped automatically whenever the mic stops being consumed.
     RoomMemory& roomMemory() noexcept { return roomMemory_; }
+    RoomInstrument& roomInstrument() noexcept { return roomInstrument_; }
 
     // ---- Explicit session recording tap ----
     CaptureTap& capture() noexcept { return capture_; }
@@ -171,6 +173,7 @@ private:
     Biquad musicLpL_, musicLpR_;
     void filterMusic(int numFrames) noexcept;
     MicConditioner micConditioner_;   // level control + limiter before the room becomes sound
+    RoomInstrument roomInstrument_;   // the room in key and on the beat (phase 3)
     MicTransform micTransform_;
     RoomMemory roomMemory_;
     WorldStreamPlayer world_;
