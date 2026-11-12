@@ -66,12 +66,29 @@ struct MoonChartView: View {
                             .foregroundStyle(Theme.gold)
                     }
                     LabeledContent("Lunar Journey", value: "\(found.count) of 8 phases")
-                    LabeledContent("Secrets", value: "\(progress.secretsFound(dim)) of 5 found")
+                    LabeledContent("Secrets", value: "\(progress.secretsFound(dim)) of 11 found")
                     if progress.globalSecretsFound > 0 {
                         LabeledContent("Global Secrets", value: "\(progress.globalSecretsFound) found")
                     }
                 } header: { Text("Journey") } footer: {
                     if progress.globalSecretsFound > 0 { Text("Global Secrets are found across every Dimension.") }
+                }
+                // Badges for the moon-event secrets found in this Dimension (owner, 2026-11-11);
+                // the ones still hidden are not shown.
+                let secrets = progress.secretDates(dim).sorted { $0.value < $1.value }
+                if !secrets.isEmpty {
+                    Section {
+                        ForEach(secrets, id: \.key) { entry in
+                            HStack(spacing: 14) {
+                                SecretBadge(eventID: entry.key)
+                                Text(ProgressStore.secretTitle(entry.key))
+                                Spacer()
+                                Text(entry.value.formatted(date: .abbreviated, time: .omitted)).font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        }
+                    } header: { Text("Secrets found") } footer: {
+                        Text("Rare moments in the sky, found by listening while they happen where you are.")
+                    }
                 }
             }
             .navigationTitle("Moon Chart")
@@ -281,5 +298,38 @@ struct PhaseDetailView: View {
         }
         .navigationTitle(name)
         .inlineNavigationTitle()
+    }
+}
+
+
+/// A secret's badge: a symbol for its moon event in a gold ring.
+struct SecretBadge: View {
+    let eventID: String
+    var size: CGFloat = 36
+
+    static func symbol(_ id: String) -> String {
+        switch id {
+        case "supermoon": "moon.circle.fill"
+        case "risingSupermoon": "moon.haze.fill"
+        case "micromoon": "smallcircle.filled.circle"
+        case "blueMoon": "moon.fill"
+        case "blackMoon": "circle.fill"
+        case "harvestMoon": "leaf.fill"
+        case "huntersMoon": "moon.stars.fill"
+        case "totalLunarEclipse": "circle.lefthalf.filled"
+        case "partialLunarEclipse": "circle.righthalf.filled"
+        case "penumbralLunarEclipse": "circle.dotted"
+        case "solarEclipse": "sun.max.circle.fill"
+        default: "sparkle"
+        }
+    }
+
+    var body: some View {
+        Image(systemName: Self.symbol(eventID))
+            .font(.system(size: size * 0.5))
+            .foregroundStyle(eventID == "blueMoon" ? Color(red: 0.45, green: 0.62, blue: 1) : Theme.gold)
+            .frame(width: size, height: size)
+            .overlay(Circle().stroke(Theme.gold.opacity(0.8), lineWidth: 1.5))
+            .accessibilityHidden(true)
     }
 }

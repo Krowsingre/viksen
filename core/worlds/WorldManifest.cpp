@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "core/progress/MoonEvents.h"
 #include "engine/audio/WorldStreamPlayer.h"
 
 namespace atmos::core {
@@ -38,7 +39,15 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
             else if (p == "fog") w.plays = WorldManifest::Plays::Fog;
             else if (p == "dawn") w.plays = WorldManifest::Plays::Dawn;
             else if (p == "dusk") w.plays = WorldManifest::Plays::Dusk;
-            else return fail("unknown \"plays\" (use day, night, dawn, dusk, rain, snow, fog, wind or cloudy)");
+            else if (p == "secret") w.plays = WorldManifest::Plays::Secret;
+            else return fail("unknown \"plays\" (use day, night, dawn, dusk, rain, snow, fog, wind, cloudy or secret)");
+        }
+        if (j.contains("moonEvent")) {
+            w.moonEvent = j.value("moonEvent", std::string{});
+            if (!moonEventFromId(w.moonEvent)) return fail("unknown moonEvent \"" + w.moonEvent + "\"");
+            w.plays = WorldManifest::Plays::Secret;
+        } else if (w.plays == WorldManifest::Plays::Secret) {
+            return fail("a secret song needs its \"moonEvent\"");
         }
         if (j.contains("music") && j["music"].is_object()) {
             const Json& m = j["music"];
@@ -118,7 +127,7 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
             w.unlock = *u;
         }
         w.extra = j;
-        for (const char* k : {"format", "schemaVersion", "id", "name", "artist", "tier", "fadeSeconds", "music", "stems", "rules", "unlock", "adaptive", "sections", "lunarPhase", "plays"})
+        for (const char* k : {"format", "schemaVersion", "id", "name", "artist", "tier", "fadeSeconds", "music", "stems", "rules", "unlock", "adaptive", "sections", "lunarPhase", "plays", "moonEvent"})
             w.extra.erase(k);
         return w;
     } catch (const std::exception& e) {
@@ -141,6 +150,7 @@ Json worldToJson(const WorldManifest& w) {
     if (w.plays == WorldManifest::Plays::Fog) j["plays"] = "fog";
     if (w.plays == WorldManifest::Plays::Dawn) j["plays"] = "dawn";
     if (w.plays == WorldManifest::Plays::Dusk) j["plays"] = "dusk";
+    if (w.plays == WorldManifest::Plays::Secret) { j["plays"] = "secret"; j["moonEvent"] = w.moonEvent; }
     Json loop = {{"fromSeconds", w.loopFromSeconds}};
     loop["toSeconds"] = w.loopToSeconds ? Json(*w.loopToSeconds) : Json(nullptr);
     j["music"] = {{"tempo", w.tempo}, {"key", w.key}, {"loop", loop}, {"beatsPerBar", w.beatsPerBar},
@@ -190,7 +200,7 @@ std::optional<DimensionManifest> parseDimension(const Json& j, std::string* erro
         return d;
     }
     if (!j["songs"].is_array() || j["songs"].empty()) return fail("songs must be a non-empty list");
-    if (j["songs"].size() > 24) return fail("at most 24 slots in a Dimension");
+    if (j["songs"].size() > 40) return fail("at most 40 slots in a Dimension");
     if (j.contains("unlock")) {
         auto u = parseConditions(j["unlock"], error);
         if (!u) return std::nullopt;
@@ -201,14 +211,14 @@ std::optional<DimensionManifest> parseDimension(const Json& j, std::string* erro
         Json song = sj;
         const std::string sid = sj.value("id", std::string{});
         if (sid.empty()) return fail("each song needs an id");
-        // Template slots: an empty slot (no stems yet) waits; secrets wait for the Secrets
-        // feature. Both are listed in `slots` but not played.
+        // Template slots: an empty slot (no stems yet) waits; a secret slot plays only when it
+        // names its moon event. Waiting slots are listed in `slots` but not played.
         const std::string slot = sj.value("slot", std::string{});
         const bool hasStems = sj.contains("stems") && sj["stems"].is_array() && !sj["stems"].empty();
         for (const auto& other : d.slots)
             if (other.id == sid) return fail("duplicate song id " + sid);
         d.slots.push_back({slot, sid, sj.value("title", std::string{}), hasStems});
-        if (!hasStems || slot.rfind("secret", 0) == 0) continue;
+        if (!hasStems || (slot.rfind("secret", 0) == 0 && !sj.contains("moonEvent"))) continue;
         song["format"] = "atmos.world";
         song["id"] = d.id + "/" + sid;
         song["name"] = sj.value("title", sid);

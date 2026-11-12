@@ -20,6 +20,16 @@ final class ProgressStore {
 
     /// The most recent discovery made on this device (for a moment of celebration in the UI).
     private(set) var lastDiscovery: Discovery?
+
+    /// A moon-event secret just found here (the notice on screen shows it).
+    struct SecretFound: Equatable {
+        let dimensionID: String
+        let eventID: String
+        let title: String
+        let at: Date
+    }
+    private(set) var lastSecret: SecretFound?
+    private var lastSecretTick = Date()
     /// Bumped whenever progress changes, so views reading it refresh.
     private(set) var revision = 0
 
@@ -57,6 +67,23 @@ final class ProgressStore {
             save()
         }
     }
+
+    /// Call about once a second with the moon events on now.
+    func tickSecrets(dimensionID: String?, events: [String], audible: Bool) {
+        let now = Date()
+        let dt = now.timeIntervalSince(lastSecretTick)
+        lastSecretTick = now
+        guard let dimensionID, !dimensionID.isEmpty, !events.isEmpty else { return }
+        if let found = progress.tickSecrets(dimensionID, events: events, audible: audible, dtSeconds: dt) {
+            let title = AtmosProgress.moonEventTitle(found)
+            AppLog.info("Secret found: \(title) in \(dimensionID)")
+            lastSecret = SecretFound(dimensionID: dimensionID, eventID: found, title: title, at: now)
+            save()
+        }
+    }
+    func secretDates(_ dimensionID: String) -> [String: Date] { _ = revision; return progress.secretDates(dimensionID) }
+    static func secretTitle(_ eventID: String) -> String { AtmosProgress.moonEventTitle(eventID) }
+    func dismissSecret() { lastSecret = nil }
 
     func discoveredPhases(_ dimensionID: String) -> Set<String> { _ = revision; return Set(progress.discoveredPhaseIds(dimensionID)) }
     func lunarJourneyComplete(_ dimensionID: String) -> Bool { _ = revision; return progress.lunarJourneyComplete(dimensionID) }

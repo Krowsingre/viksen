@@ -36,7 +36,7 @@ struct ProgressEvent {
 class ProgressLog {
 public:
     static constexpr int kPhasesPerJourney = 8;
-    static constexpr int kSecretsPerDimension = 5;
+    static constexpr int kSecretsPerDimension = 11;   // one per moon event (MoonEvents.h)
 
     // Adds an event; returns true if it is new. A repeat keeps the earliest time.
     bool add(const ProgressEvent& e);
@@ -47,7 +47,7 @@ public:
     std::set<MoonPhaseName> discoveredPhases(const std::string& dimensionId) const;
     bool lunarJourneyComplete(const std::string& dimensionId) const;
     std::optional<double> lunarJourneyCompletedAt(const std::string& dimensionId) const;  // time of the 8th phase
-    int dimensionSecretsFound(const std::string& dimensionId) const;   // 0..5
+    int dimensionSecretsFound(const std::string& dimensionId) const;   // 0..11
     bool allDimensionSecretsFound(const std::string& dimensionId) const;
     int globalSecretsFound() const;                                    // never a total
     bool has(const ProgressEvent& e) const { return events_.count(e.id()) > 0; }

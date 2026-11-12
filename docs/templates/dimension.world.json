@@ -119,32 +119,90 @@
       "stems": []
     },
     {
-      "slot": "secret-1",
-      "id": "secret-1",
+      "slot": "secret-supermoon",
+      "id": "secret-supermoon",
+      "plays": "secret",
+      "moonEvent": "supermoon",
       "title": "",
       "stems": []
     },
     {
-      "slot": "secret-2",
-      "id": "secret-2",
+      "slot": "secret-rising-supermoon",
+      "id": "secret-rising-supermoon",
+      "plays": "secret",
+      "moonEvent": "risingSupermoon",
       "title": "",
       "stems": []
     },
     {
-      "slot": "secret-3",
-      "id": "secret-3",
+      "slot": "secret-micromoon",
+      "id": "secret-micromoon",
+      "plays": "secret",
+      "moonEvent": "micromoon",
       "title": "",
       "stems": []
     },
     {
-      "slot": "secret-4",
-      "id": "secret-4",
+      "slot": "secret-blue-moon",
+      "id": "secret-blue-moon",
+      "plays": "secret",
+      "moonEvent": "blueMoon",
       "title": "",
       "stems": []
     },
     {
-      "slot": "secret-5",
-      "id": "secret-5",
+      "slot": "secret-black-moon",
+      "id": "secret-black-moon",
+      "plays": "secret",
+      "moonEvent": "blackMoon",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-harvest-moon",
+      "id": "secret-harvest-moon",
+      "plays": "secret",
+      "moonEvent": "harvestMoon",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-hunters-moon",
+      "id": "secret-hunters-moon",
+      "plays": "secret",
+      "moonEvent": "huntersMoon",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-total-lunar-eclipse",
+      "id": "secret-total-lunar-eclipse",
+      "plays": "secret",
+      "moonEvent": "totalLunarEclipse",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-partial-lunar-eclipse",
+      "id": "secret-partial-lunar-eclipse",
+      "plays": "secret",
+      "moonEvent": "partialLunarEclipse",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-penumbral-lunar-eclipse",
+      "id": "secret-penumbral-lunar-eclipse",
+      "plays": "secret",
+      "moonEvent": "penumbralLunarEclipse",
+      "title": "",
+      "stems": []
+    },
+    {
+      "slot": "secret-solar-eclipse",
+      "id": "secret-solar-eclipse",
+      "plays": "secret",
+      "moonEvent": "solarEclipse",
       "title": "",
       "stems": []
     }

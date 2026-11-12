@@ -4,7 +4,7 @@
 Copy it to `apps/ios/Viksen/Resources/Worlds/<dimension-id>/world.json`, set `id`, `name`,
 `album` and `tier`, then fill the slots as the music arrives.
 
-## The 21 standard slots
+## The 27 standard slots
 
 | Slot | Plays |
 |---|---|
@@ -17,9 +17,9 @@ Copy it to `apps/ios/Viksen/Resources/Worlds/<dimension-id>/world.json`, set `id
 | `fog` | in fog or mist (`"plays": "fog"`) |
 | `wind` | while it is windy (`"plays": "wind"`) |
 | `cloudy` | while it is cloudy (`"plays": "cloudy"`) |
-| `secret-1` … `secret-5` | waiting for the Secrets feature; never played yet |
+| `secret-<event>` (11) | a moon event's hidden song, while the event is on where the listener is: `supermoon`, `rising-supermoon`, `micromoon`, `blue-moon`, `black-moon`, `harvest-moon`, `hunters-moon`, `total-lunar-eclipse`, `partial-lunar-eclipse`, `penumbral-lunar-eclipse`, `solar-eclipse` (`"plays": "secret"`, `"moonEvent"`) |
 
-Which song plays (the first that applies and has audio): rain, snow, fog, wind, cloudy
+Which song plays (the first that applies and has audio): a moon event's hidden song (the rarest event first), then rain, snow, fog, wind, cloudy
 (weather plays day and night), then after dark tonight's phase song or the night song,
 then dawn or dusk, then the day song. "Night", "dawn" and "dusk" follow the listener's
 Night setting (7 pm to 4 am, or sunset to sunrise).
@@ -39,3 +39,10 @@ Change them freely, e.g. on GitHub with the pencil icon, and the next build show
 name. Do not change an `id`: it names the audio files and keeps listeners' Moon Chart
 progress; a renamed song keeps its id (Lunar Storm Promise is titled "Sanctuary" but its id
 stays `lunar-storm-promise`).
+
+## Moon-event secrets
+
+Each Dimension has one secret per moon event (docs/DECISIONS.md #140). It is found by
+listening to that Dimension for 3 minutes while the event is on where the listener is,
+once per Dimension, kept forever; a notice appears and the Moon Chart shows its badge.
+The hidden song (if the slot is filled) plays during the event, under its own title.

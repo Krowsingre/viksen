@@ -48,6 +48,7 @@ struct RootView: View {
                 }
             }
             SideMenu()
+            SecretNotice()
         }
         .environment(nav)
         .onAppear {
@@ -316,5 +317,47 @@ private struct IdleMusicControls: View {
         .padding(.horizontal, 18)
         .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(SideMenu.lavender.opacity(0.13), lineWidth: 1))
+    }
+}
+
+
+/// "Secret found" (owner, 2026-11-11): shown for a few seconds when a moon-event secret is
+/// found in a Dimension, wherever the listener is in the app.
+private struct SecretNotice: View {
+    @Environment(EngineController.self) private var engine
+
+    var body: some View {
+        let progress = engine.progress
+        VStack {
+            if let s = progress.lastSecret {
+                let dimension = engine.worlds.first { $0.worldID == s.dimensionID }?.name ?? ""
+                HStack(spacing: 14) {
+                    SecretBadge(eventID: s.eventID, size: 44)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("SECRET FOUND").font(.system(size: 11, design: .serif)).tracking(2.5).foregroundStyle(Theme.gold)
+                        Text(s.title).font(.system(size: 20, design: .serif)).foregroundStyle(.white)
+                        if !dimension.isEmpty {
+                            Text("in \(dimension)").font(.footnote).foregroundStyle(.white.opacity(0.75))
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(16)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.gold.opacity(0.6), lineWidth: 1))
+                .padding(.horizontal, 16)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .onTapGesture { withAnimation { progress.dismissSecret() } }
+                .task(id: s.at) {
+                    try? await Task.sleep(for: .seconds(7))
+                    withAnimation { progress.dismissSecret() }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isStaticText)
+            }
+            Spacer()
+        }
+        .animation(.easeOut(duration: 0.4), value: progress.lastSecret)
+        .allowsHitTesting(progress.lastSecret != nil)
     }
 }

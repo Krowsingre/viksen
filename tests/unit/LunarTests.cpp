@@ -160,8 +160,11 @@ TEST_CASE("worlds/progress log: lunar journey, five secrets, global secrets with
     CHECK(*log.lunarJourneyCompletedAt("core") == 50.0);   // when the 8th phase was found
     CHECK(!log.lunarJourneyComplete("albumA"));            // never transferred
     CHECK(!log.allDimensionSecretsFound("core"));          // journey complete does not mean all secrets
-    for (int i = 0; i < 5; ++i) log.add({ProgressKind::DimensionSecret, "core", "s" + std::to_string(i), 60.0 + i});
-    CHECK(log.dimensionSecretsFound("core") == 5);
+    for (int i = 0; i < 10; ++i) log.add({ProgressKind::DimensionSecret, "core", "s" + std::to_string(i), 60.0 + i});
+    CHECK(log.dimensionSecretsFound("core") == 10);
+    CHECK(!log.allDimensionSecretsFound("core"));
+    log.add({ProgressKind::DimensionSecret, "core", "s10", 70.5});
+    CHECK(log.dimensionSecretsFound("core") == 11);          // one per moon event
     CHECK(log.allDimensionSecretsFound("core"));
     CHECK(log.dimensionSecretsFound("albumA") == 0);
     // Global secrets have no Dimension and no total.

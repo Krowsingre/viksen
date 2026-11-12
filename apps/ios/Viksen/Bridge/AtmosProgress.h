@@ -36,6 +36,25 @@ NS_ASSUME_NONNULL_BEGIN
 /// The current named lunar phase ("full", "waxingCrescent", ...).
 + (NSString *)currentPhaseId;
 
+// ---- Moon-event secrets (owner, 2026-11-11) ----
+/// The moon events on now where the listener is, rarest first ("supermoon", "solarEclipse"...).
+/// `night`: after dark by the listener's Night rule. Without a location (nil), the events
+/// that depend on the local sky (eclipses, Rising Supermoon) are never on.
++ (NSArray<NSString *> *)activeMoonEventsAtNight:(BOOL)night
+                                utcOffsetMinutes:(NSInteger)utcOffsetMinutes
+                                        latitude:(nullable NSNumber *)latitude
+                                       longitude:(nullable NSNumber *)longitude
+    NS_SWIFT_NAME(activeMoonEvents(night:utcOffsetMinutes:latitude:longitude:));
+/// The event's display name ("Rising Supermoon").
++ (NSString *)moonEventTitle:(NSString *)eventId;
+/// Call about once a second with the events on now: 3 minutes of listening to this
+/// Dimension during an event finds its secret (once per Dimension). Returns the event id
+/// found by this tick, or nil.
+- (nullable NSString *)tickSecrets:(NSString *)dimensionID events:(NSArray<NSString *> *)events
+                           audible:(BOOL)audible dtSeconds:(double)dt;
+/// When each secret was found in this Dimension (event id → date).
+- (NSDictionary<NSString *, NSDate *> *)secretDates:(NSString *)dimensionID;
+
 @end
 
 NS_ASSUME_NONNULL_END

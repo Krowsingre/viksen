@@ -17,6 +17,8 @@ add_library(atmos_core STATIC
   worlds/WorldSections.cpp
   worlds/TransitionFx.cpp
   progress/DiscoveryTracker.cpp
+  progress/MoonEvents.cpp
+  progress/SecretTracker.cpp
   progress/ProgressLog.cpp
   worlds/WorldFeeder.cpp
 )

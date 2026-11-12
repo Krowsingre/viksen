@@ -304,8 +304,13 @@ int LiveSession::lunarTarget(const ConditionContext& c) const {
         else if (s.plays == WorldManifest::Plays::Fog) { if (fog < 0) fog = k; }
         else if (s.plays == WorldManifest::Plays::Dawn) { if (dawn < 0) dawn = k; }
         else if (s.plays == WorldManifest::Plays::Dusk) { if (dusk < 0) dusk = k; }
+        else if (s.plays == WorldManifest::Plays::Secret) {}   // only while its event is on
         else if (day < 0) day = k;
     }
+    // A moon event's hidden song comes first (owner, 2026-11-11), the rarest event first.
+    for (const auto& ev : c.moonEvents)
+        for (size_t i = 0; i < songs.size(); ++i)
+            if (songs[i].plays == WorldManifest::Plays::Secret && songs[i].moonEvent == ev) return static_cast<int>(i);
     if (c.raining && rain >= 0) return rain;
     if (c.snowing && snow >= 0) return snow;
     if (c.foggy && fog >= 0) return fog;

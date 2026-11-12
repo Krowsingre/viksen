@@ -35,7 +35,8 @@ struct ConditionContext {
     bool snowing = false;              // snowing (weather, when on)
     bool foggy = false;                // fog or mist (weather, when on)
     bool dawn = false;                 // just after night ends (the listener's night rule)
-    bool dusk = false;                 // just before night begins                // after dark, by the listener's chosen rule (fixed hours or sunset–sunrise)
+    bool dusk = false;                 // just before night begins
+    std::vector<std::string> moonEvents;   // moon events on now where the listener is, rarest first (MoonEvents.h)                // after dark, by the listener's chosen rule (fixed hours or sunset–sunrise)
     EnvironmentStateSnapshot env;
     double totalListeningSeconds = 0;
     int consecutiveWorlds = 0;

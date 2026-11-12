@@ -37,7 +37,7 @@ final class NightClock {
     static let twilight: TimeInterval = 45 * 60
     /// Sunset to sunrise needs a location; until there is one, the fixed hours apply.
     private(set) var usingFallback = false
-    private var coordinate: CLLocationCoordinate2D?
+    private(set) var coordinate: CLLocationCoordinate2D?
     private let manager = CLLocationManager()
     private let proxy = NightLocationProxy()
 

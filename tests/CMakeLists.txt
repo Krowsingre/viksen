@@ -8,6 +8,7 @@ add_executable(atmos_tests
   unit/WorldTests.cpp
   unit/SectionTests.cpp
   unit/LunarTests.cpp
+  unit/MoonEventTests.cpp
   unit/SpatialTests.cpp
   unit/RecordingTests.cpp
   unit/SessionDocumentTests.cpp

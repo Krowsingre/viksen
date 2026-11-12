@@ -111,6 +111,9 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic) BOOL foggy;
 /// Just after night ends / just before it begins: Dimensions with a dawn or dusk song play it.
 @property (nonatomic) BOOL dawn;
+/// Moon events on now where the listener is, rarest first: a Dimension's hidden song for
+/// one of them plays first.
+@property (nonatomic, copy) NSArray<NSString *> *moonEvents;
 @property (nonatomic) BOOL dusk;
 /// "Adaptive music" for the current output: off plays songs as written.
 @property (nonatomic) BOOL adaptive;

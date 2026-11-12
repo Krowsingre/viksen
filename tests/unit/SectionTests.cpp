@@ -573,7 +573,7 @@ TEST_CASE("worlds/Dimension template: empty slots and secrets wait; filled slots
     std::ifstream in(std::filesystem::path(ATMOS_SOURCE_DIR) / "docs/templates/dimension.world.json");
     REQUIRE(in.good());
     const Json tpl = Json::parse(in);
-    CHECK(tpl["songs"].size() == 21);   // day, dawn, dusk, eight nights, storm, snow, fog, wind, cloudy, five secrets
+    CHECK(tpl["songs"].size() == 27);   // day, dawn, dusk, eight nights, storm, snow, fog, wind, cloudy, eleven moon-event secrets
 }
 
 TEST_CASE("session/snow, fog, dawn and dusk songs: weather first, then night, then dawn or dusk") {
@@ -613,4 +613,39 @@ TEST_CASE("session/snow, fog, dawn and dusk songs: weather first, then night, th
     CHECK(songAt([](ConditionContext& c) { c.dusk = true; c.foggy = true; }) == "fog");
     CHECK(songAt([](ConditionContext& c) { c.night = true; }) == "Song B");
     CHECK(songAt([](ConditionContext&) {}) == "Song A");
+}
+
+TEST_CASE("session/a moon event's hidden song plays first while the event is on") {
+    Json j = twoSongDimension();
+    j["songs"][1]["plays"] = "rain";
+    Json secret = j["songs"][1]; secret["id"] = "sm"; secret["title"] = "Moonrise"; secret.erase("plays");
+    secret["moonEvent"] = "supermoon";
+    j["songs"].push_back(secret);
+    auto d = parseDimension(j);
+    REQUIRE(d.has_value());
+    CHECK(!parseDimension([&] { Json b = j; b["songs"][2]["moonEvent"] = "bigMoon"; return b; }()).has_value());
+    const double rate = 48000;
+    auto clip = std::make_shared<const AudioClip>(test::makeSine(rate, static_cast<int>(rate * 4), 330, 0.3f));
+    LiveSession::StemFileDecoder decode = [&](const std::string&, double, std::string&) -> std::unique_ptr<StemDecoder> {
+        return std::make_unique<ClipStemDecoder>(clip);
+    };
+    LiveSession s(rate, 256);
+    std::string err;
+    auto songAt = [&](std::vector<std::string> events, bool raining) {
+        ConditionContext c;
+        c.daysSinceUnixEpochUtc = 20000.25;
+        c.night = true;
+        c.raining = raining;
+        c.moonEvents = std::move(events);
+        s.updateWorld(0, c);
+        const bool loaded = s.loadDimension(*d, decode, &err);
+        CHECK(loaded);
+        auto title = s.worldStatus().songTitle;
+        s.unloadWorld();
+        return title;
+    };
+    CHECK(songAt({}, false) == "Song A");                        // no event: never the secret
+    CHECK(songAt({"supermoon"}, true) == "Moonrise");             // the event wins over the weather
+    CHECK(songAt({"blueMoon", "supermoon"}, false) == "Moonrise"); // the first event with a song
+    CHECK(songAt({"blueMoon"}, true) == "Song B");             // no song for this event: the weather song
 }

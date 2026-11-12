@@ -131,6 +131,7 @@ NSError* makeError(const std::string& msg) {
         _intensity = -1;
         _adaptive = YES;
         _headphones = YES;
+        _moonEvents = @[];
     }
     return self;
 }
@@ -389,6 +390,7 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         ctx.foggy = self.foggy;
         ctx.dawn = self.dawn;
         ctx.dusk = self.dusk;
+        for (NSString *ev in self.moonEvents) ctx.moonEvents.push_back(std::string(ev.UTF8String ?: ""));
         ctx.adaptive = self.adaptive;
         _session->updateWorld(dt, ctx);
     }

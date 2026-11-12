@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreLocation
 import Foundation
 import Observation
 
@@ -269,6 +270,16 @@ final class EngineController {
             let songPhase = testing ? progress.currentPhaseID
                 : (nightClock.isNight ? worldStatus.songLunarPhaseId : "")
             progress.tick(dimensionID: currentDimensionID, songPhaseID: songPhase, audible: audible)
+            // Moon events (owner, 2026-11-11): their hidden songs play first, and 3 minutes of a
+            // Dimension during one finds its secret. The local sky needs the approximate
+            // location already used for weather or sunset; without it eclipses stay hidden.
+            let place = weather.coordinate ?? nightClock.coordinate
+            let events = AtmosProgress.activeMoonEvents(night: nightClock.isNight,
+                                                        utcOffsetMinutes: TimeZone.current.secondsFromGMT() / 60,
+                                                        latitude: place.map { NSNumber(value: $0.latitude) },
+                                                        longitude: place.map { NSNumber(value: $0.longitude) })
+            if bridge.moonEvents != events { bridge.moonEvents = events }
+            progress.tickSecrets(dimensionID: currentDimensionID, events: events, audible: audible)
             updateNowPlaying()
         }
         // Dropouts: log the increase at most once a minute.

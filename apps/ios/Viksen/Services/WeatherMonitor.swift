@@ -90,7 +90,11 @@ final class WeatherMonitor {
         onMood?(nil, true)
     }
 
+    /// The approximate location last used (in memory only; also for the moon's local sky).
+    private(set) var coordinate: CLLocationCoordinate2D?
+
     private func fetch(for location: CLLocation) async {
+        coordinate = location.coordinate
         if let last = lastFetch, Date().timeIntervalSince(last) < 800, mood != nil { return }
         do {
             let current = try await WeatherService.shared.weather(for: location, including: .current)
