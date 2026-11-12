@@ -37,7 +37,11 @@ done (owner). Experimental builds say "Experimental: room instrument" in About &
   near full energy; others (voices, other) are never moved.
 - Per song under "react": `depthDb`, `filterClosedHz`, `stems` {id: "energy" | "calm" |
   "neutral"}.
-- Section jumps: a part now stays twice as long before the planner may move on.
+- Section jumps: first made half as often; then stopped (owner, 2026-11-12): songs play
+  straight through and loop, and no song is changed for the listener's mood. The moment is
+  answered by the mix, the room and the beat clips. Song changes for dawn, dusk, weather and
+  moon events, and the hand-over at a song's end, stay. The jump mechanism is kept, off
+  (`LiveSession::setPartJumps`), in case rare jumps on big changes are wanted later.
 
 ## Phase 3 details
 

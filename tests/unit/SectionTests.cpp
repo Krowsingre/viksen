@@ -111,6 +111,7 @@ TEST_CASE("session/adaptive sections: moving plays the drive part, with a crossf
         return v;
     };
     LiveSession s(rate, 256);
+    s.setPartJumps(true);   // the jump mechanism itself (off by default since 2026-11-12)
     s.setMasterGain(1.0f);
     s.setWorldSpatialEnabled(false);
     REQUIRE(s.loadWorld(*w, factory));
@@ -154,6 +155,61 @@ TEST_CASE("session/adaptive sections: moving plays the drive part, with a crossf
     run(9.0);
     st = s.worldStatus();
     CHECK(st.sectionTitle == "Calm again" || st.sectionTitle == "Calm");
+    s.unloadWorld();
+}
+
+TEST_CASE("session/no jumps by default: the song plays straight through whatever the moment") {
+    auto w = parseWorld(sectionWorld());
+    REQUIRE(w.has_value());
+    // Distinct content per section: 220 Hz in calm parts, 880 Hz in drive (bars 4-8 = 8-16 s).
+    const double rate = 48000;   // stream lead ~2.7 s, as on device
+    AudioClip clip;
+    clip.sampleRate = rate;
+    clip.samples.setSize(2, static_cast<int>(rate * 24));
+    for (int i = 0; i < clip.numFrames(); ++i) {
+        const double t = i / rate;
+        const double f = (t >= 8 && t < 16) ? 880 : 220;
+        const float v = static_cast<float>(0.3 * std::sin(2 * 3.14159265358979 * f * t));
+        clip.samples.channel(0)[i] = v;
+        clip.samples.channel(1)[i] = v;
+    }
+    auto shared = std::make_shared<const AudioClip>(clip);
+    StemDecoderFactory factory = [&](double, std::string&) {
+        std::vector<std::unique_ptr<StemDecoder>> v;
+        v.push_back(std::make_unique<ClipStemDecoder>(shared));
+        return v;
+    };
+    LiveSession s(rate, 256);
+    s.setMasterGain(1.0f);
+    s.setWorldSpatialEnabled(false);
+    REQUIRE(s.loadWorld(*w, factory));
+    ConditionContext ctx;
+    ctx.env.motionAvailable = true;
+    ctx.env.still = true;
+    s.updateWorld(0, ctx);                     // choice before streaming starts
+    s.startWorld(true);
+    std::vector<float> l(256), r(256);
+    float* outs[2] = {l.data(), r.data()};
+    auto run = [&](double seconds) {
+        for (int i = 0; i < static_cast<int>(seconds * rate / 256); ++i) {
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+            while (s.engine().worldPlayer().readableFrames() < 256 && std::chrono::steady_clock::now() < deadline)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            s.updateWorld(256.0 / rate, ctx);
+            s.engine().process(nullptr, 0, outs, 2, 256);
+        }
+    };
+    CHECK(!s.partJumps());
+    run(3.0);
+    CHECK(s.worldStatus().composed);
+    // Start moving: a part would have jumped to the drive section; now the song just plays on.
+    ctx.env.still = false;
+    ctx.env.moving = true;
+    run(9.0);
+    const auto st = s.worldStatus();
+    CHECK(st.composed);
+    CHECK(st.sectionJumps == 0);
+    CHECK(st.positionSeconds >= 11.0);   // 12 s played, minus the feeder's lead: straight through
     s.unloadWorld();
 }
 
@@ -254,6 +310,7 @@ TEST_CASE("session/multi-song Dimension: moving changes the song; a finished son
         return std::make_unique<ClipStemDecoder>(it->second);
     };
     LiveSession s(rate, 256);
+    s.setPartJumps(true);   // the jump mechanism itself (off by default since 2026-11-12)
     s.setWorldSpatialEnabled(false);
     std::string err;
     REQUIRE(s.loadDimension(*d, decode, &err));
@@ -353,6 +410,7 @@ TEST_CASE("session/a crossfade longer than the stream buffer never stalls the st
         return v;
     };
     LiveSession s(rate, 256);
+    s.setPartJumps(true);   // the jump mechanism itself (off by default since 2026-11-12)
     s.setWorldSpatialEnabled(false);
     REQUIRE(s.loadWorld(*w, factory));
     ConditionContext ctx;

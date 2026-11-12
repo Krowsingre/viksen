@@ -445,7 +445,7 @@ void LiveSession::updateSongChoice(double dt, const ConditionContext& context) {
         return;
     }
     int candidate = -1;
-    if (lastChoice_.composed) {
+    if (partJumps_ && lastChoice_.composed) {   // no jumps: a song changes only at its end
         for (int k = 1; k < n && candidate < 0; ++k) {
             const int i = (song_ + k) % n;
             if (!chooseSections(dimension_->songs[static_cast<size_t>(i)].sections, context).composed) candidate = i;
@@ -464,7 +464,7 @@ void LiveSession::beginSongSwitch(int song, const ConditionContext& context, boo
     candidateFor_ = 0;
     // Start the next song at a part that suits now (or from the top when composed).
     const auto& next = dimension_->songs[static_cast<size_t>(song)];
-    const SectionChoice ch = chooseSections(next.sections, context);
+    const SectionChoice ch = partJumps_ ? chooseSections(next.sections, context) : SectionChoice{};
     switchFromSeconds_ = 0;
     if (!ch.composed)
         for (size_t i = 0; i < next.sections.size(); ++i)
@@ -571,7 +571,7 @@ void LiveSession::updateWorld(double dt, const ConditionContext& context) {
         if (feeder_) feeder_->setTransitionSpace(transitionSpace_);
     }
     if (!world_->sections.empty()) {
-        lastChoice_ = chooseSections(world_->sections, context);
+        lastChoice_ = partJumps_ ? chooseSections(world_->sections, context) : SectionChoice{};   // no jumps: as composed
         if (planner_) planner_->setChoice(lastChoice_);
     }
     updateSongChoice(dt, context);

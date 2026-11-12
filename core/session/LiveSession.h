@@ -130,6 +130,12 @@ public:
     // one room-instrument voice alone (RoomInstrument::Voice; -1 = all). Kept across
     // engine rebuilds.
     void setRoomForward(bool on);
+    // Jumps between a song's parts (and mood-driven changes of song) by the listener's
+    // state. Off (owner, 2026-11-12): songs play straight through and loop, and the
+    // moment is answered by the mix, the room and the beat clips. Song changes for
+    // dawn, dusk, weather and moon events, and the hand-over at a song's end, stay.
+    void setPartJumps(bool on) { partJumps_ = on; }
+    bool partJumps() const { return partJumps_; }
     bool roomForward() const { return roomForward_; }
     void setRoomSolo(int voice);
     int roomSolo() const { return roomSolo_; }
@@ -204,6 +210,7 @@ private:
     float transitionSpace_ = 0.5f;
     bool loopFx_ = true;
     bool roomForward_ = false;
+    bool partJumps_ = false;
     int roomSolo_ = -1;
     // Multi-song Dimensions.
     std::optional<DimensionManifest> dimension_;
