@@ -209,9 +209,10 @@ void AudioEngine::renderMic(const float* const* inputs, int numInputs, int numFr
     AudioBuffer& wet = busBuffers_[static_cast<int>(Bus::MicTransformed)];
     for (int i = 0; i < numFrames; ++i) { wet.channel(0)[i] += micWet_[i]; wet.channel(1)[i] += micWetR_[i]; }
 
+    roomInstrument_.processAdd(mono, wet.channel(0), wet.channel(1), numFrames);
+    roomMemory_.gate.store(roomInstrument_.memoryAmount(), std::memory_order_relaxed);   // its scene in the arrangement
     roomMemory_.capture(mono, numFrames);
     roomMemory_.renderAdd(wet, numFrames);
-    roomInstrument_.processAdd(mono, wet.channel(0), wet.channel(1), numFrames);
 }
 
 void AudioEngine::filterMusic(int numFrames) noexcept {

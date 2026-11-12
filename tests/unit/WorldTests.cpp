@@ -311,26 +311,20 @@ TEST_CASE("session/room instrument: a song brings room memory in and does not du
     CHECK(s.engine().roomMemory().enabled());
     CHECK(s.engine().roomDuckDepth() == 0.0f);
     auto& ri = s.engine().roomInstrument();
-    CHECK(ri.resonanceLevel.load() == 0.45f);
-    CHECK(ri.pitchEchoLevel.load() == 0.4f);
-    CHECK(ri.shiftEchoSemitones.load() == -12.0f);
+    CHECK(ri.dry.load() == 0.3f);
+    CHECK(s.engine().micTransform().level.get() == 0.0f);   // the room instrument makes the room blend
     // A song can still ask for its own room colour, including no memory and some ducking,
     // and set each room voice (out of range is clamped).
     Json j = demoWorldJson();
-    j["roomBlend"] = {{"memory", 0.0}, {"duck", 0.5}, {"resonance", 0.0}, {"grains", 2.0}, {"shiftEcho", 0.1},
-                      {"shiftEchoPitch", 7.0}, {"pitchEcho", 0.2}, {"groove", 0.0}, {"tune", 0.0}};
+    j["roomBlend"] = {{"memory", 0.0}, {"duck", 0.5}, {"dry", 0.5}, {"level", 0.8},
+                      {"scenes", Json::array({{{"fx", "grains"}, {"bars", 4}}, {{"fx", Json::array({"resonator", "straight", "nope"})}, {"bars", 6}}})}};
     auto quiet = parseWorld(j);
     REQUIRE(quiet.has_value());
     REQUIRE(s.loadWorld(*quiet, factory, &err));
     CHECK(!s.engine().roomMemory().enabled());
     CHECK(s.engine().roomDuckDepth() == 0.5f);
-    CHECK(ri.resonanceLevel.load() == 0.0f);
-    CHECK(ri.grainLevel.load() == 1.0f);
-    CHECK(ri.shiftEchoLevel.load() == 0.1f);
-    CHECK(ri.shiftEchoSemitones.load() == 7.0f);
-    CHECK(ri.pitchEchoLevel.load() == 0.2f);
-    CHECK(ri.grooveLevel.load() == 0.0f);
-    CHECK(ri.tuneLevel.load() == 0.0f);
+    CHECK(ri.dry.load() == 0.5f);
+    CHECK(ri.level.load() == 0.8f);
 }
 
 TEST_CASE("session/a song's beat clips are cut from its stems when it loads") {

@@ -25,7 +25,9 @@ public:
 
     // Any thread.
     SmoothedParameter level{0.6f};
-    std::atomic<float> pitchSemitones{-12.0f};   // -12..+12, applied to the next voice started
+    std::atomic<float> pitchSemitones{-12.0f};
+    // The room blend's arrangement brings the memory in and out (0..1, smoothed by it).
+    std::atomic<float> gate{1.0f};   // -12..+12, applied to the next voice started
     // Listener head direction (degrees, + = turned right). Each replayed memory has a
     // fixed direction in the room, so with head tracking the memories stay in place
     // while the head turns. 0 when no head tracking is available.

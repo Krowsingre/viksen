@@ -1,22 +1,35 @@
 #pragma once
-// Room instrument (owner, 2026-11-12; reworked after the owner's listening and an audit of
-// the studied reactive-audio design, docs/research/REFERENCE_STUDY.md): the room itself
-// becomes the music. Every voice below is made from the room's own sound, in the song's
-// key and on its beat; the only exception is "tune", kept for the owner to test.
+// The room blend, built the way the studied reactive-audio dreams build it (owner,
+// 2026-11-12; study: docs/research/REFERENCE_STUDY.md and docs/ROOM_INSTRUMENT.md). All code
+// here is original; only the techniques and their musical settings were studied.
 //
-// - Resonance: the room rings through four tuned resonators (comb filters) on notes of the
-//   song's scale, re-chosen every two bars, so a tap or a word rings out in key.
-// - Grains: the last second of the room, read back as small overlapping grains at random
-//   places, a soft shimmering bed.
-// - Shifted echo: the room pitch-shifted (an octave down by default) and echoed on the beat.
-// - Pitch echo: when the room holds a pitch (a voice, a chime, a horn), that very sound is
-//   echoed on the next 16th notes, retuned to the nearest note of the scale.
-// - Groove: slices of the last bars of the room replayed on the song's 16th notes.
-// - Tune (test): a soft tone that follows the room's pitch in the scale (app-made; may go).
-// The plain room is kept by the room blend itself (MicTransform), softened.
+// The room is always the sound. Its effects are ARRANGED: one at a time, each for a number
+// of bars, fading over about a second, while a little of the plain room stays underneath.
+// Each effect re-picks its settings on the bar and glides between them, so the room keeps
+// turning into something new. The clock is the song's beat (32 ticks a bar), or 100 BPM
+// with no song.
 //
-// Nothing is stored beyond a few seconds in memory; it all stops with the microphone. The
-// beat clock is set from the song's position by the session and runs on between updates.
+// Effects (each the room itself):
+// - straight:  the plain room, full range, into the hall.
+// - grains:    one-second grains of the room, 0-0.4 s back, 0.6-3 a second (re-picked
+//              every bar), spread wide.
+// - freqDream: the room frequency-shifted, sliding between 0 and -500 Hz every two bars
+//              (the right side follows the left three seconds later).
+// - delayDream: the room a semitone up, echoed on the beat; the feedback swells over
+//              16 bars, then falls back.
+// - resonator: the room rings through three tuned resonators on the song's root, fifth
+//              and ninth; the louder the room, the darker it rings; slow pan drift.
+// - glitch:    once a bar on each side: the room's pitch glides to a new interval (up to
+//              two octaves either way) and a 40 ms-2 s piece of it is caught and repeated.
+// - spiral:    two short frequency-shifted feedback echoes: each repeat falls further.
+// - ripple:    the room shifted up and down by an interval on the beat, faster and wider
+//              as the scene goes on (8, 4, 2, then 1 tick; a third up to an octave).
+// - groove:    a tape cut-up of the last 20 s of the room on the beat.
+// - memory:    the room memory (slowed past moments, engine/environment/RoomMemory).
+// - tune:      a soft three-voice synth on the room's pitches in the song's scale, changing
+//              on the bar (the one app-made sound; kept for the owner to test).
+//
+// Nothing is stored beyond 20 s in memory, and it is wiped when the microphone stops.
 
 #include <array>
 #include <atomic>
@@ -25,132 +38,181 @@
 #include <string>
 #include <vector>
 
+#include "engine/dsp/FrequencyShifter.h"
 #include "engine/dsp/PitchShifter.h"
+#include "engine/environment/RoomReverb.h"
 
 namespace atmos {
 
 class RoomInstrument {
 public:
+    enum Fx { kStraight = 0, kGrains, kFreqDream, kDelayDream, kResonator, kGlitch, kSpiral, kRipple, kGroove, kMemory, kTune, kFxCount };
+    static const char* fxName(int fx) noexcept;
+    static int fxFromName(const std::string& name) noexcept;   // -1 if unknown
+
+    struct Scene { uint16_t fx = 0; int bars = 12; };   // fx: bit i = Fx i
+    static constexpr int kMaxScenes = 24;
+    static std::vector<Scene> defaultScenes();
+
     void prepare(double sampleRate);
     void reset() noexcept;
 
-    // Any thread. Levels 0..1 (0 = off).
-    std::atomic<float> resonanceLevel{0.45f};
-    std::atomic<float> grainLevel{0.3f};
-    std::atomic<float> shiftEchoLevel{0.3f};
-    std::atomic<float> pitchEchoLevel{0.4f};
-    std::atomic<float> grooveLevel{0.4f};
-    std::atomic<float> tuneLevel{0.35f};
-    std::atomic<float> shiftEchoSemitones{-12.0f};
-    std::atomic<float> energy{0.5f};          // 0..1, the music's current energy
-    // Listening test (TestFlight): play one voice alone. -1 = all voices (as the song
-    // sets them); a Voice = only that one; kNone = no voice (the plain room blend only).
-    enum Voice { kResonance = 0, kGrains, kShiftEcho, kPitchEcho, kGroove, kTune, kNone };
-    std::atomic<int> solo{-1};
-    // The song's scale (pitch-class mask) and its root (0 = C .. 11 = B; -1 = the lowest
-    // pitch class in the mask).
+    // Control thread.
+    void setScenes(const std::vector<Scene>& scenes) noexcept;
     void setScale(uint16_t pitchClassMask, int root = -1) noexcept;
-    // The song's position in beats now, and its tempo (0 = no song).
-    void setClock(double beat, double bpm) noexcept;
+    void setClock(double beat, double bpm) noexcept;   // the song's position in beats; bpm 0 = no song
+    std::atomic<float> level{1.0f};    // all effects
+    std::atomic<float> dry{0.3f};      // the plain room always under the effects (high-passed)
+    // Listening test: -1 = the arrangement; an Fx = that effect alone, held; kFxCount = none.
+    std::atomic<int> solo{-1};
 
     // Audio thread: adds to out (stereo).
     void processAdd(const float* mono, float* outL, float* outR, int numFrames) noexcept;
 
-    // Scales from a key name ("G minor", "D♭ major", "C# minor"); pentatonic, which suits
-    // anything played over the song. Unknown or empty: A minor pentatonic.
-    static uint16_t scaleForKey(const std::string& key);
-    static int rootForKey(const std::string& key);   // 0..11; unknown: 9 (A)
+    // How much of the room memory the arrangement wants now (0..1), for the engine.
+    float memoryAmount() const noexcept { return memoryOut_.load(std::memory_order_relaxed); }
 
-    // For tests.
+    static uint16_t scaleForKey(const std::string& key);
+    static int rootForKey(const std::string& key);
+
+    // For tests and the UI.
+    int sceneIndex() const noexcept { return sceneOut_.load(std::memory_order_relaxed); }
+    uint16_t activeFx() const noexcept { return activeOut_.load(std::memory_order_relaxed); }
+    std::array<int, 3> resonatorNotes() const noexcept;
     float trackedHz() const noexcept { return trackedHz_.load(std::memory_order_relaxed); }
-    int tuneNote() const noexcept { return tuneNoteOut_.load(std::memory_order_relaxed); }
-    std::array<int, 4> resonatorNotes() const noexcept;
-    int pitchEchoes() const noexcept { return pitchEchoCount_.load(std::memory_order_relaxed); }
 
 private:
+    struct Glide {   // linear glide to a target over a time
+        double value = 0, target = 0, step = 0;
+        void set(double t, double samples) noexcept { target = t; step = samples > 1 ? (t - value) / samples : 0; if (samples <= 1) value = t; }
+        double next() noexcept {
+            if (step != 0) { value += step; if ((step > 0 && value >= target) || (step < 0 && value <= target)) { value = target; step = 0; } }
+            return value;
+        }
+    };
+    struct OnePole { float z = 0; float lp(float x, float a) noexcept { z += a * (x - z); return z; } };
+    struct Grain { bool on = false; double read = 0; int left = 0, length = 1; float gl = 0, gr = 0; };
+    struct Repeater {   // catches `length` of its input and repeats it, fading
+        std::vector<float> buf; int length = 1, pos = 0, gateLeft = 0; float gate = 0;
+    };
+
+    void onTick(long tick) noexcept;
+    void nextScene(long tick) noexcept;
     void trackPitch() noexcept;
-    int quantize(float hz) const noexcept;
     int nearestScaleNote(double midi) const noexcept;
-    void chooseChord(long index) noexcept;
-    float renderTune() noexcept;
-    void renderResonance(float x, float& l, float& r) noexcept;
-    void renderGrains(float& l, float& r) noexcept;
-    void renderShiftEcho(float x, float& l, float& r) noexcept;
-    void startPitchEcho(double detectedHz, int note) noexcept;
-    void renderPitchEcho(float& l, float& r) noexcept;
-    void renderGroove(float& l, float& r) noexcept;
+    int scaleStep(int note, int steps) const noexcept;
+    double ms(double m) const noexcept { return m * 0.001 * sr_; }
+    float rnd() noexcept { return std::uniform_real_distribution<float>(0.0f, 1.0f)(rng_); }
     float ringAt(double back) const noexcept;
-    float levelOf(Voice v, const std::atomic<float>& level) const noexcept {
-        const int s = solo.load(std::memory_order_relaxed);
-        return (s < 0 || s == v) ? level.load(std::memory_order_relaxed) : 0.0f;
-    }   // the room `back` samples ago
+
+    float fxStraight(float x, float& send) noexcept;
+    void fxGrains(float& l, float& r, float& send) noexcept;
+    void fxFreqDream(float x, float& l, float& r, float& send) noexcept;
+    void fxDelayDream(float x, float& l, float& r, float& send) noexcept;
+    void fxResonator(float x, float& l, float& r, float& send) noexcept;
+    void fxGlitch(float x, float& l, float& r, float& send) noexcept;
+    void fxSpiral(float x, float& l, float& r, float& send) noexcept;
+    void fxRipple(float x, float& l, float& r, float& send) noexcept;
+    void fxGroove(float x, float& l, float& r, float& send) noexcept;
+    void fxTune(float& l, float& r, float& send) noexcept;
+    float repeat(Repeater& rp, float x) noexcept;
 
     double sr_ = 48000.0;
-    std::atomic<uint16_t> scale_{(1u << 9) | (1u << 0) | (1u << 2) | (1u << 4) | (1u << 7)};   // A minor pentatonic
-    std::atomic<int> root_{9};
     std::mt19937 rng_{0x5eed};
+    std::atomic<uint16_t> scale_{(1u << 9) | (1u << 0) | (1u << 2) | (1u << 4) | (1u << 7)};
+    std::atomic<int> root_{9};
+
+    // Arrangement.
+    std::array<std::atomic<uint32_t>, kMaxScenes> scenes_{};   // fx | bars << 16
+    std::atomic<int> sceneCount_{0};
+    int scene_ = -1;
+    long sceneEnd_ = 0, lastTick_ = 0;
+    bool started_ = false, ticked_ = false;
+    std::array<float, kFxCount> gain_{}, target_{};
+    std::atomic<int> sceneOut_{-1};
+    std::atomic<uint16_t> activeOut_{0};
+    std::atomic<float> memoryOut_{0.0f};
+
+    // Clock.
+    std::atomic<double> clockBeat_{0.0}, clockBpm_{0.0};
+    std::atomic<uint32_t> clockSeq_{0};
+    uint32_t seenSeq_ = 0;
+    double beat_ = 0.0, bpm_ = 0.0;
     int64_t frame_ = 0;
 
-    // The last 4 s of the room (groove, grains, pitch echo).
+    // Shared: the last 20 s of the room, the hall.
     std::vector<float> ring_;
     int ringWrite_ = 0;
+    int64_t recorded_ = 0;
+    RoomReverb hall_;
+    OnePole hallIn_;
+    float hp200_ = 0, hp200Prev_ = 0;   // the dry room's high-pass
 
-    // Pitch tracking (decimated by 4).
+    // grains
+    std::array<Grain, 8> grains_{};
+    double grainRate_ = 1.0;
+    int grainWait_ = 0;
+    // freqDream
+    FrequencyShifter fdL_, fdR_;
+    Glide fdShiftL_, fdShiftR_;
+    int fdRightIn_ = -1;
+    double fdNext_ = 0;
+    bool fdLow_ = false;
+    // delayDream
+    std::vector<float> ddPre_, ddEcho_;
+    int ddPreW_ = 0, ddEchoW_ = 0;
+    PitchShifter ddShift_;
+    Glide ddFeedback_;
+    int ddCount_ = 0;
+    OnePole ddLp_;
+    // resonator
+    struct Comb { std::vector<float> line; int w = 0; double delay = 200; float lp = 0; };
+    std::array<Comb, 3> combs_{};
+    std::array<std::atomic<int>, 3> combNotes_{};
+    uint32_t combKey_ = 0;
+    std::array<OnePole, 8> resLp_{};
+    float resLevelDb_ = -60.0f, resCutoff_ = 3000.0f, resHp1_ = 0, resHp1Prev_ = 0, resHp2_ = 0, resHp2Prev_ = 0;
+    std::vector<float> resEchoA_, resEchoB_;
+    int resEchoW_ = 0;
+    OnePole resEchoLp_;
+    Glide resPan_;
+    // glitch
+    PitchShifter glShift_[2];
+    Glide glPitch_[2];
+    Repeater glRep_[2];
+    int glAt_[2] = {0, 16};
+    OnePole glLp_[2];
+    // spiral
+    FrequencyShifter spShift_[2];
+    std::vector<float> spLine_[2];
+    int spW_ = 0;
+    OnePole spLp_[2];
+    float spHp_[2] = {0, 0}, spHpPrev_[2] = {0, 0};
+    // ripple
+    PitchShifter rpShift_[2];
+    Glide rpPitch_[2];
+    int rpCount_ = 0, rpSign_ = 1, rpRightIn_ = -1;
+    double rpRightTarget_ = 0, rpRightGlide_ = 0;
+    // groove
+    double grBack_ = 0;
+    int grEvent_ = -1, grWait_ = 8, grMode_ = 4;
+    Glide grGate_, grPan_;
+    std::vector<float> grStereo_;
+    int grStereoW_ = 0;
+    float grHp_ = 0, grHpPrev_ = 0;
+    OnePole grRumbleLp_;
+    float grRumbleHp_ = 0, grRumbleHpPrev_ = 0;
+    // tune
     std::vector<float> pitchBuf_;
     int pitchWrite_ = 0, decim_ = 0, sinceAnalysis_ = 0;
     float decimAcc_ = 0.0f;
     std::atomic<float> trackedHz_{0.0f};
-    int candidateNote_ = -1, candidateHold_ = 0;
-    int heardRecently_ = 1 << 30;
-    int lastEchoedNote_ = -1, sinceEcho_ = 1 << 30;
-
-    // Tune voice (test).
-    std::atomic<int> tuneNoteOut_{-1};
-    double tuneHz_ = 220.0, tuneTargetHz_ = 220.0, phaseA_ = 0, phaseB_ = 0, vibrato_ = 0;
-    float tuneAmp_ = 0.0f;
-
-    // Resonators.
-    struct Comb { std::vector<float> line; int write = 0; double delay = 200, target = 200; float lp = 0, g = 0.9f; float panL = 0.7f, panR = 0.7f; };
-    std::array<Comb, 4> combs_{};
-    std::array<std::atomic<int>, 4> combNotes_{};
-    float resEnv_ = 0.0f;   // the resonators' level, so a held note on the chord can't build up
-    long lastChordBar_ = -3;
-    uint32_t chordKey_ = 0;   // the scale and root the chord was chosen for
-    float hp_ = 0.0f, hpPrev_ = 0.0f, inLp_ = 0.0f;   // the resonators' input band (80 Hz - 3 kHz)
-    float hpA_ = 0.99f, inLpA_ = 0.3f, grainLpA_ = 0.4f, echoLpA_ = 0.3f;
-    double glideK_ = 0.0003;
-
-    // Grains.
-    struct Grain { bool on = false; double read = 0; int left = 0, length = 1; float panL = 0.7f, panR = 0.7f; };
-    std::array<Grain, 8> grains_{};
-    int nextGrain_ = 0;
-    float grainLp_[2] = {0, 0};
-
-    // Shifted echo.
-    PitchShifter shifter_;
-    std::vector<float> echo_;
-    int echoWrite_ = 0;
-    double echoDelay_ = 24000.0;
-    float echoLp_ = 0.0f;
-
-    // Pitch echo: a captured room sound, replayed retuned on the coming 16ths.
-    std::vector<float> captured_;
-    int capturedLen_ = 0;
-    double captureRate_ = 1.0;
-    struct Repeat { int64_t at = 0; float gain = 0; float pan = 0; bool on = false; };
-    std::array<Repeat, 3> repeats_{};
-    struct Playback { bool on = false; double pos = 0; float gain = 0, panL = 0.7f, panR = 0.7f; };
-    std::array<Playback, 3> playbacks_{};
-    std::atomic<int> pitchEchoCount_{0};
-
-    // Beat clock and groove.
-    std::atomic<double> clockBeat_{0.0};
-    std::atomic<double> clockBpm_{0.0};
-    std::atomic<uint32_t> clockSeq_{0};
-    uint32_t seenSeq_ = 0;
-    double beat_ = 0.0, bpm_ = 0.0;
-    long last16th_ = -1;
-    std::array<Grain, 4> slices_{};
+    int heardNote_ = -1;
+    std::array<Glide, 3> tuneHz_{};
+    std::array<double, 3> tunePhase_{}, tuneSaw_{};
+    std::array<OnePole, 3> tuneLp_{};
+    double vibrato_ = 0;
+    bool tuneOn_ = false;
 };
 
 } // namespace atmos

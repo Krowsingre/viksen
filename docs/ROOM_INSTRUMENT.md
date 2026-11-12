@@ -43,49 +43,45 @@ done (owner). Experimental builds say "Experimental: room instrument" in About &
   moon events, and the hand-over at a song's end, stay. The jump mechanism is kept, off
   (`LiveSession::setPartJumps`), in case rare jumps on big changes are wanted later.
 
-## Phase 3 details
+## Phase 3 details: the room blend, built the way the studied dreams build it
 
-Owner's listening (2026-11-12): the first version answered taps with synthesised bells,
-which were app sounds triggered by the room, not the room blended in. An audit of the
-studied design (docs/research/REFERENCE_STUDY.md) found that its room is always the sound
-itself: tuned resonators, granular texture, tempo echoes with a pitch-shifted copy, and
-echoes of the room's own pitched sounds. The rework follows that. Every voice below is the
-room's own sound, except "tune".
+Owner, 2026-11-12: "build the blend the way the reference app does". The earlier versions (bells,
+then six voices always on together) are replaced. From the 14 dreams studied
+(docs/research/REFERENCE_STUDY.md), the room blend now works the way they do; all code is
+original.
 
-- `engine/environment/RoomInstrument`, fed the conditioned microphone, adding to the room's
-  bus (heard only with the room blended in, following the room level, and wiped when the
-  microphone stops); about 3 % of one core with every voice on.
-  - Resonance: the room (80 Hz-3 kHz) rings through four tuned comb resonators (2.5 s to
-    fall 60 dB, darkening as they fade, 80 ms glide between notes). Notes from the song's
-    pentatonic scale: a three-note chord in scale steps from the root in octave 3, plus the
-    root an octave lower; it walks degrees 0, 0, 3, 2, one step per two bars of the song
-    (home chord with no song clock). A level guard keeps a long note right on a resonator
-    to the level of a tap.
-  - Grains: 60-200 ms Hann grains from 0.2-1.0 s back in the room, about 12 a second,
-    panned at random, low-passed at 4 kHz.
-  - Shifted echo: the room pitch-shifted (`engine/dsp/PitchShifter.h`, two crossfaded
-    taps; an octave down by default) and echoed every 3/4 beat (0.5 s with no song),
-    feedback 0.45, each repeat darker; the echo left, its shadow right.
-  - Pitch echo: when the room holds a pitch for ~120 ms (a voice, a chime, a horn), the
-    last 250 ms of the room is replayed retuned to the nearest scale note, on the next
-    16th notes (+1, +3, +6; gains 1, 0.6, 0.35; as at 120 BPM with no song). At most one
-    echo at a time; the same note again only after 1.5 s.
-  - Groove: 4 s of room in memory; on each 16th note of the song, with probability
-    0.2 + 0.5 x energy, a slice from 1-16 sixteenths back is replayed, panned at random.
-  - Tune (kept for testing; may be removed or replaced by the room's own voice shifted
-    into key): autocorrelation pitch tracking (80-800 Hz, first strong peak to avoid octave
-    errors), snapped to the scale, sung by a soft two-voice tone between E3 and E5.
-  - The plain room stays in, softened: MicTransform's low-passed dry path (7 kHz).
-  - Levels per song under "roomBlend", each 0..1, 0 = off: `resonance` (0.45), `grains`
-    (0.3), `shiftEcho` (0.3) with `shiftEchoPitch` in semitones (-12), `pitchEcho` (0.4),
-    `groove` (0.4), `tune` (0.35). (`hits` is gone.)
-- The beat clock comes from the song's position (tempo and bar offset); the energy from
-  the phase 2 reactor; the key (scale and root) from world.json "key".
-- Keys: songs without one got an estimate from their audio (chroma + key profiles; the
-  method returns What Was Once as G minor, as known): the Lunar family B minor, The Fate
-  of the Nine Vikron E♭ minor, Fallen of the Illuminous and Tree of Bones B♭ major
-  (Tree of Bones is a low-confidence estimate). Owner-given keys are kept. Correct any
-  key in world.json and the room follows it.
+- **The room is always the sound.** Every effect is made from the microphone. A little plain
+  room (high-passed at 200 Hz, `roomBlend.dry`, 0.3) is always underneath, and everything
+  sends into one large, dark hall reverb.
+- **Arranged, not stacked.** One effect plays at a time, for 9-24 bars, fading in and out
+  over about a second, then the next takes over (`RoomInstrument::defaultScenes`; a song can
+  give its own: `roomBlend.scenes: [{"fx": "grains" | [..], "bars": 12}]`). The order starts
+  at a random scene.
+- **Always moving.** Each effect re-picks its settings on the bar (or every two or four bars)
+  and glides, on a 32-ticks-a-bar clock from the song's beat (100 BPM with no song).
+- **The effects** (settings as studied):
+
+| Effect | What it does |
+|---|---|
+| straight | the plain room, full range (0.6) |
+| grains | 1 s grains from 0-0.4 s back, 0.6-3 a second (new rate each bar), spread wide |
+| freqDream | frequency shift sliding toward -500 Hz and back, turning every 2 bars (right side 3 s behind) |
+| delayDream | the room 2/3 beat late and a semitone up, into a one-beat echo; feedback swells to 0.89 over 16 bars, then falls to 0.4 |
+| resonator | three resonators on the song's root, fifth and ninth (feedback 0.99); darker as the room gets louder (8 low-passes, 3000-380 Hz); a short ringing body and a 2/3-beat echo; slow pan drift |
+| glitch | once a bar per side: pitch glides to a random interval within 2 octaves (0.5-2 s) and a 40 ms-2 s piece is caught and repeated (fading 0.8 each time) |
+| spiral | two short echoes (100 / 200 ms) frequency-shifted down 100 Hz on every pass |
+| ripple | the room shifted up and down on the beat, every 8, then 4, 2, 1 ticks, by a third up to an octave |
+| groove | a cut-up of the last 20 s: every 1-12 ticks it cuts to another moment, panned, over the room's low rumble |
+| memory | the room memory (slowed past moments) |
+| tune | a soft three-voice synth on the room's pitch in the song's scale, changing on the bar (app-made; kept for testing) |
+
+- Levels measured against the room: each effect sits between about -4 dB and 0 dB; under
+  2 % of one core each, about 0.5 % for the arrangement.
+- The old room transform (echo, shift) is silent when the room instrument plays
+  (`MicTransform::level` 0). Room memory plays only in its scene (`RoomMemory::gate`).
+- The pitch echo, the walking resonator chord and the short-grain shimmer are gone; none of
+  them were in the studied dreams. Not yet built: the studied "snapshot" (onset-aligned room
+  captures replayed in shuffled order).
 
 ### Listening test (TestFlight, 2026-11-12)
 
@@ -93,8 +89,8 @@ Before arranging the voices (next step: one or two at a time, changing with the 
 the studied design does), a build to hear each voice and the balance. Diagnostics →
 "Room listening test", TestFlight only, not remembered:
 
-- Room voices: all, one alone (resonance, grains, shifted echo, pitch echo, groove, tune),
-  or none (the plain, softened room blend only). `RoomInstrument::solo`.
+- Room effect: the arrangement, one effect held, or none (a little plain room only).
+  `RoomInstrument::solo`.
 - Room forward: the room +6 dB and the music -6 dB, gliding over 0.5 s
   (`AudioEngine::setRoomForward`). Tests whether the room is simply buried by the music.
 

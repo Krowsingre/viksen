@@ -30,6 +30,7 @@ public:
     SmoothedParameter reverbMix{0.35f};    // 0 = dry room, 1 = mostly reverb
     SmoothedParameter roomSize{0.6f};      // reverb decay 0..1 (the moon widens it)
     SmoothedParameter reverbDamp{0.4f};    // high-frequency absorption 0..1
+    SmoothedParameter level{1.0f};         // output (0 when the room instrument makes the room blend)
 
     // Audio thread: mono in, stereo out (same length).
     void process(const float* in, float* outL, float* outR, int numFrames) noexcept;

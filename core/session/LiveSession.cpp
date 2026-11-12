@@ -125,7 +125,7 @@ void LiveSession::setBedColourHz(float v) { settings_.bedColourHz = v; engine_->
 void LiveSession::setMicToneHz(float v) { settings_.micToneHz = v; engine_->micTransform().cutoffHz.set(v); }
 void LiveSession::setRoomForward(bool on) { roomForward_ = on; engine_->setRoomForward(on); }
 void LiveSession::setRoomSolo(int voice) {
-    roomSolo_ = voice >= 0 && voice <= RoomInstrument::kNone ? voice : -1;
+    roomSolo_ = voice >= 0 && voice <= RoomInstrument::kFxCount ? voice : -1;
     engine_->roomInstrument().solo.store(roomSolo_);
 }
 void LiveSession::setLoopTransitionFx(bool on) {
@@ -250,18 +250,28 @@ void LiveSession::applyRoomBlend(const WorldManifest& w) {
     engine_->roomMemory().level.set(settings_.roomMemoryLevel);
     engine_->roomMemory().pitchSemitones.store(settings_.roomMemoryPitch);
     engine_->roomMemory().setEnabled(settings_.roomMemoryEnabled);
-    // The room in key and on the beat (phase 3): every voice is the room's own sound, in
-    // the song's key and on its beat, each 0 = off. "tune" is an app-made tone kept for
-    // testing and may be removed.
+    // The room blend, arranged the way the studied dreams arrange it: one room effect at a
+    // time for some bars, with a little plain room underneath. A song can give its own
+    // arrangement: "scenes": [{"fx": "grains" or ["grains", "straight"], "bars": 12}, ...].
+    // The room instrument makes the whole room sound, so the plain room transform is silent.
+    m.level.set(0.0f);
     auto& ri = engine_->roomInstrument();
-    auto level = [&](const char* name, float dflt) { return std::clamp(rb.value(name, dflt), 0.0f, 1.0f); };
-    ri.resonanceLevel.store(level("resonance", 0.45f));
-    ri.grainLevel.store(level("grains", 0.3f));
-    ri.shiftEchoLevel.store(level("shiftEcho", 0.3f));
-    ri.shiftEchoSemitones.store(std::clamp(rb.value("shiftEchoPitch", -12.0f), -24.0f, 24.0f));
-    ri.pitchEchoLevel.store(level("pitchEcho", 0.4f));
-    ri.grooveLevel.store(level("groove", 0.4f));
-    ri.tuneLevel.store(level("tune", 0.35f));
+    ri.level.store(std::clamp(rb.value("level", 1.0f), 0.0f, 2.0f));
+    ri.dry.store(std::clamp(rb.value("dry", 0.3f), 0.0f, 1.0f));
+    std::vector<RoomInstrument::Scene> scenes;
+    if (rb.contains("scenes") && rb["scenes"].is_array())
+        for (const auto& sc : rb["scenes"]) {
+            if (!sc.is_object()) continue;
+            RoomInstrument::Scene scene;
+            scene.bars = std::clamp(sc.value("bars", 12), 1, 256);
+            auto addFx = [&](const Json& f) {
+                if (!f.is_string()) return;
+                if (const int i = RoomInstrument::fxFromName(f.get<std::string>()); i >= 0) scene.fx = static_cast<uint16_t>(scene.fx | (1u << i));
+            };
+            if (sc.contains("fx")) { if (sc["fx"].is_array()) for (const auto& f : sc["fx"]) addFx(f); else addFx(sc["fx"]); }
+            if (scene.fx != 0 && scenes.size() < static_cast<size_t>(RoomInstrument::kMaxScenes)) scenes.push_back(scene);
+        }
+    ri.setScenes(scenes.empty() ? RoomInstrument::defaultScenes() : scenes);
     ri.setScale(RoomInstrument::scaleForKey(w.key), RoomInstrument::rootForKey(w.key));
     ri.setClock(0.0, 0.0);   // until the song's position is known
 }
@@ -595,7 +605,6 @@ void LiveSession::updateWorld(double dt, const ConditionContext& context) {
         // energy. Without any cue the clips rest: the song plays as written.
         auto& ri = engine_->roomInstrument();
         auto& seq = engine_->clipSequencer();
-        ri.energy.store(static_cast<float>(reactor_.engaged() ? reactor_.energy() : 0.5));
         seq.energy.store(reactor_.engaged() ? static_cast<float>(reactor_.energy()) : -1.0f);
         if (feeder_ && world_->tempo > 0) {
             const double seconds = static_cast<double>(feeder_->playbackFrame()) / feeder_->rate();

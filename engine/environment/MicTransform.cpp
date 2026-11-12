@@ -7,7 +7,7 @@ namespace atmos {
 
 void MicTransform::prepare(double sampleRate, int /*maxBlockSize*/) {
     sampleRate_ = sampleRate;
-    for (auto* p : {&cutoffHz, &echoSeconds, &feedback, &wet, &shiftHz, &shiftMix, &reverbMix, &roomSize, &reverbDamp})
+    for (auto* p : {&cutoffHz, &echoSeconds, &feedback, &wet, &shiftHz, &shiftMix, &reverbMix, &roomSize, &reverbDamp, &level})
         p->prepare(sampleRate, 0.05);
     shifter_.prepare(sampleRate);
     delay_.prepare(static_cast<int>(sampleRate * 2.0));
@@ -27,7 +27,7 @@ void MicTransform::reset() noexcept {
 
 void MicTransform::process(const float* in, float* outL, float* outR, int numFrames) noexcept {
     cutoffHz.beginBlock(); echoSeconds.beginBlock(); feedback.beginBlock(); wet.beginBlock();
-    shiftHz.beginBlock(); shiftMix.beginBlock(); reverbMix.beginBlock(); roomSize.beginBlock(); reverbDamp.beginBlock();
+    shiftHz.beginBlock(); shiftMix.beginBlock(); reverbMix.beginBlock(); roomSize.beginBlock(); reverbDamp.beginBlock(); level.beginBlock();
     // Cutoff is updated once per block (cheap and click-free enough for a tone control).
     const float cutoff = cutoffHz.current();
     if (std::fabs(cutoff - lastCutoff_) > 0.5f) {
@@ -59,8 +59,9 @@ void MicTransform::process(const float* in, float* outL, float* outR, int numFra
         reverb_.process(0.5f * (dryL + dryR), std::clamp(roomSize.next(), 0.0f, 1.0f),
                         std::clamp(reverbDamp.next(), 0.0f, 1.0f), rl, rr);
         const float rm = std::clamp(reverbMix.next(), 0.0f, 1.0f);
-        outL[i] = (1.0f - rm) * dryL + rm * rl * 3.0f;
-        outR[i] = (1.0f - rm) * dryR + rm * rr * 3.0f;
+        const float out = level.next();
+        outL[i] = out * ((1.0f - rm) * dryL + rm * rl * 3.0f);
+        outR[i] = out * ((1.0f - rm) * dryR + rm * rr * 3.0f);
     }
 }
 

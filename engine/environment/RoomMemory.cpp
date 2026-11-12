@@ -95,7 +95,7 @@ void RoomMemory::renderAdd(AudioBuffer& out, int numFrames) noexcept {
     }
 
     for (int i = 0; i < numFrames; ++i) {
-        const float lvl = level.next();
+        const float lvl = level.next() * gate.load(std::memory_order_relaxed);
         const float t = static_cast<float>(i + 1) * invN;
         for (int k = 0; k < kVoices; ++k) {
             Voice& v = voices_[static_cast<size_t>(k)];

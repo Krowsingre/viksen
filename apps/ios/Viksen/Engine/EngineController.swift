@@ -83,19 +83,25 @@ final class EngineController {
             AppLog.info("Test: room forward \(testRoomForward ? "on" : "off")")
         }
     }
+    /// The room blend's effects (engine RoomInstrument::Fx), for the listening test.
     enum RoomVoice: Int, CaseIterable, Identifiable {
-        case all = -1, resonance, grains, shiftedEcho, pitchEcho, groove, tune, none
+        case all = -1, straight, grains, freqDream, delayDream, resonator, glitch, spiral, ripple, groove, memory, tune, none
         var id: Int { rawValue }
         var title: String {
             switch self {
-            case .all: "All voices"
-            case .resonance: "Resonance"
+            case .all: "The arrangement (all, in turn)"
+            case .straight: "Plain room"
             case .grains: "Grains"
-            case .shiftedEcho: "Shifted echo"
-            case .pitchEcho: "Pitch echo"
-            case .groove: "Groove"
+            case .freqDream: "Frequency dream"
+            case .delayDream: "Delay dream"
+            case .resonator: "Resonator"
+            case .glitch: "Glitch"
+            case .spiral: "Spiral"
+            case .ripple: "Pitch ripple"
+            case .groove: "Groove (cut-up)"
+            case .memory: "Room memory"
             case .tune: "Tune (app tone)"
-            case .none: "None (plain room blend)"
+            case .none: "None (a little plain room only)"
             }
         }
     }

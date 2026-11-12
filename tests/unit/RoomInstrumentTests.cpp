@@ -1,5 +1,6 @@
 #include <atomic>
 #include <cmath>
+#include <cstdio>
 #include <random>
 #include <vector>
 
@@ -10,6 +11,7 @@ using atmos::RoomInstrument;
 
 namespace {
 constexpr double kSr = 48000;
+constexpr double kPi = 3.14159265358979;
 double energyOf(const std::vector<float>& v, size_t from = 0, size_t to = SIZE_MAX) {
     double s = 0; to = std::min(to, v.size());
     for (size_t i = from; i < to; ++i) s += double(v[i]) * v[i];
@@ -17,218 +19,176 @@ double energyOf(const std::vector<float>& v, size_t from = 0, size_t to = SIZE_M
 }
 uint16_t mask(std::initializer_list<int> pcs) { uint16_t m = 0; for (int p : pcs) m |= static_cast<uint16_t>(1u << p); return m; }
 struct Run { std::vector<float> l, r; };
-Run run(RoomInstrument& ri, const std::vector<float>& in) {
+Run run(RoomInstrument& ri, const std::vector<float>& in, int block = 256) {
     Run out{std::vector<float>(in.size(), 0.0f), std::vector<float>(in.size(), 0.0f)};
-    for (size_t i = 0; i < in.size(); i += 256) {
-        const int n = static_cast<int>(std::min<size_t>(256, in.size() - i));
+    for (size_t i = 0; i < in.size(); i += static_cast<size_t>(block)) {
+        const int n = static_cast<int>(std::min<size_t>(static_cast<size_t>(block), in.size() - i));
         ri.processAdd(in.data() + i, out.l.data() + i, out.r.data() + i, n);
     }
     return out;
 }
-std::vector<float> tone(double hz, double seconds, float amp = 0.2f) {
-    std::vector<float> v(static_cast<size_t>(kSr * seconds));
-    for (size_t i = 0; i < v.size(); ++i) {
-        const double p = 2 * 3.14159265358979 * hz * i / kSr;
-        v[i] = amp * static_cast<float>(std::sin(p) + 0.5 * std::sin(2 * p) + 0.25 * std::sin(3 * p));   // a voice-like tone
-    }
+std::vector<float> sine(double hz, double seconds, float amp, double from = 0, double total = -1) {
+    std::vector<float> v(static_cast<size_t>(kSr * (total > 0 ? total : seconds)), 0.0f);
+    const size_t a = static_cast<size_t>(kSr * from);
+    for (size_t i = 0; i < static_cast<size_t>(kSr * seconds) && a + i < v.size(); ++i) v[a + i] = amp * static_cast<float>(std::sin(2 * kPi * hz * i / kSr));
     return v;
 }
-// Only the named voice on.
-void only(RoomInstrument& ri, std::atomic<float>& keep) {
-    for (auto* l : {&ri.resonanceLevel, &ri.grainLevel, &ri.shiftEchoLevel, &ri.pitchEchoLevel, &ri.grooveLevel, &ri.tuneLevel})
-        if (l != &keep) l->store(0.0f);
+std::vector<float> noise(double seconds, float sd, unsigned seed = 3) {
+    std::mt19937 rng(seed); std::normal_distribution<float> n(0.0f, sd);
+    std::vector<float> v(static_cast<size_t>(kSr * seconds));
+    for (auto& x : v) x = n(rng);
+    return v;
 }
-// Strength of one frequency (Goertzel), per sample.
 double strength(const std::vector<float>& v, double hz, size_t from, size_t to) {
-    const double w = 2 * 3.14159265358979 * hz / kSr, c = 2 * std::cos(w);
+    const double w = 2 * kPi * hz / kSr, c = 2 * std::cos(w);
     double s1 = 0, s2 = 0;
     for (size_t i = from; i < to && i < v.size(); ++i) { const double s0 = v[i] + c * s1 - s2; s2 = s1; s1 = s0; }
-    return std::sqrt(s1 * s1 + s2 * s2 - c * s1 * s2) / double(to - from);
+    return std::sqrt(std::max(0.0, s1 * s1 + s2 * s2 - c * s1 * s2)) / double(to - from);
 }
-// The period of a stretch of sound, by autocorrelation, as a frequency (lagMin..lagMax).
-double pitchOf(const std::vector<float>& v, size_t from, size_t len, double loHz, double hiHz) {
-    double best = -1; int bestLag = 0;
-    for (int lag = static_cast<int>(kSr / hiHz); lag <= static_cast<int>(kSr / loHz); ++lag) {
-        double c = 0, e1 = 0, e2 = 0;
-        for (size_t i = from; i < from + len; ++i) { c += double(v[i]) * v[i + lag]; e1 += double(v[i]) * v[i]; e2 += double(v[i + lag]) * v[i + lag]; }
-        const double r = c / std::sqrt(e1 * e2 + 1e-20);
-        if (r > best) { best = r; bestLag = lag; }
-    }
-    return kSr / bestLag;
-}
+// One effect alone, without the plain room under it.
+void alone(RoomInstrument& ri, int fx) { ri.solo.store(fx); ri.dry.store(0.0f); }
 } // namespace
 
 TEST_CASE("room/keys become pentatonic scales and roots") {
     CHECK(RoomInstrument::scaleForKey("G minor") == mask({7, 10, 0, 2, 5}));
     CHECK(RoomInstrument::scaleForKey("D\xE2\x99\xAD major") == mask({1, 3, 5, 8, 10}));
     CHECK(RoomInstrument::scaleForKey("C# minor") == mask({1, 4, 6, 8, 11}));
-    CHECK(RoomInstrument::scaleForKey("") == mask({9, 0, 2, 4, 7}));   // unknown: A minor pentatonic
+    CHECK(RoomInstrument::scaleForKey("") == mask({9, 0, 2, 4, 7}));
     CHECK(RoomInstrument::rootForKey("G minor") == 7);
-    CHECK(RoomInstrument::rootForKey("D\xE2\x99\xAD major") == 1);
     CHECK(RoomInstrument::rootForKey("E\xE2\x99\xAD minor") == 3);
-    CHECK(RoomInstrument::rootForKey("C# minor") == 1);
     CHECK(RoomInstrument::rootForKey("") == 9);
+    CHECK(RoomInstrument::fxFromName("grains") == RoomInstrument::kGrains);
+    CHECK(RoomInstrument::fxFromName("nope") == -1);
 }
 
-TEST_CASE("room/the tune voice follows the room's pitch in the scale") {
-    RoomInstrument ri;
-    ri.prepare(kSr);
-    only(ri, ri.tuneLevel);
-    ri.setScale(mask({9, 0, 2, 4, 7}), 9);
-    auto out = run(ri, tone(220.0, 1.5));
-    CHECK(std::fabs(ri.trackedHz() - 220.0f) < 3.0f);
-    CHECK(ri.tuneNote() == 57);                       // A3
-    CHECK(energyOf(out.l, out.l.size() / 2) > 1.0);   // and it sings
-    // A pitch between scale notes snaps to the nearest one (A# -> A, in A minor pentatonic).
-    RoomInstrument r2; r2.prepare(kSr); only(r2, r2.tuneLevel);
-    r2.setScale(mask({9, 0, 2, 4, 7}), 9);
-    run(r2, tone(233.08, 1.5));
-    CHECK(r2.tuneNote() == 57);
+TEST_CASE("room/silence stays silent: every effect, the arrangement, with or without a song") {
+    for (double bpm : {0.0, 120.0})
+        for (int fx = -1; fx <= RoomInstrument::kFxCount; ++fx) {
+            RoomInstrument ri; ri.prepare(kSr);
+            ri.solo.store(fx);
+            ri.setClock(0.0, bpm);
+            auto out = run(ri, std::vector<float>(static_cast<size_t>(kSr * 3), 0.0f));
+            CHECK(energyOf(out.l) == 0.0);
+            CHECK(energyOf(out.r) == 0.0);
+        }
 }
 
-TEST_CASE("room/silence stays silent with every voice on, with or without a beat") {
-    for (double bpm : {0.0, 120.0}) {
-        RoomInstrument ri;
-        ri.prepare(kSr);
-        ri.setClock(0.0, bpm);
-        auto quiet = run(ri, std::vector<float>(static_cast<size_t>(kSr * 3), 0.0f));
-        CHECK(energyOf(quiet.l) == 0.0);
-        CHECK(energyOf(quiet.r) == 0.0);
-    }
+TEST_CASE("room/the arrangement plays one effect at a time and moves on at its bar") {
+    RoomInstrument ri; ri.prepare(kSr);
+    ri.setScenes({{static_cast<uint16_t>(1u << RoomInstrument::kGrains), 1}, {static_cast<uint16_t>(1u << RoomInstrument::kFreqDream), 2}});
+    ri.setClock(0.0, 120.0);                       // a bar = 2 s
+    run(ri, std::vector<float>(256, 0.0f));
+    const int first = ri.sceneIndex();
+    REQUIRE((first == 0 || first == 1));
+    CHECK(__builtin_popcount(ri.activeFx()) == 1);
+    const double firstBars = first == 0 ? 1 : 2;
+    // Just before the scene's end, still the same; just after, the next one.
+    run(ri, std::vector<float>(static_cast<size_t>(kSr * (firstBars * 2.0 - 0.1)), 0.0f));
+    CHECK(ri.sceneIndex() == first);
+    run(ri, std::vector<float>(static_cast<size_t>(kSr * 0.2), 0.0f));
+    CHECK(ri.sceneIndex() == (first + 1) % 2);
+    CHECK(ri.activeFx() == (first == 0 ? (1u << RoomInstrument::kFreqDream) : (1u << RoomInstrument::kGrains)));
+    // The default arrangement holds every room effect once.
+    uint16_t all = 0;
+    for (const auto& s : RoomInstrument::defaultScenes()) { CHECK(__builtin_popcount(s.fx) == 1); all |= s.fx; }
+    CHECK(all == (1u << RoomInstrument::kFxCount) - 1);
 }
 
-TEST_CASE("room/the groove slices the room only on a beat") {
-    std::mt19937 rng(3); std::normal_distribution<float> n(0.0f, 0.05f);
-    std::vector<float> noise(static_cast<size_t>(kSr * 4));
-    for (auto& v : noise) v = n(rng);
-    RoomInstrument a; a.prepare(kSr); only(a, a.grooveLevel);
-    auto noBeat = run(a, noise);
-    CHECK(energyOf(noBeat.l) < 1e-9);
-    RoomInstrument b; b.prepare(kSr); only(b, b.grooveLevel);
-    b.energy.store(1.0f);
-    b.setClock(0.0, 120.0);
-    auto groove = run(b, noise);
-    CHECK(energyOf(groove.l, static_cast<size_t>(kSr * 2)) > 1.0);
-}
-
-TEST_CASE("room/a tap rings the resonators on the song's scale notes") {
-    RoomInstrument ri;
-    ri.prepare(kSr);
-    only(ri, ri.resonanceLevel);
-    ri.setScale(RoomInstrument::scaleForKey("A minor"), RoomInstrument::rootForKey("A minor"));
-    std::vector<float> in(static_cast<size_t>(kSr * 2), 0.0f);
-    const size_t at = static_cast<size_t>(kSr * 0.5);
-    std::mt19937 rng(7); std::normal_distribution<float> n(0.0f, 0.3f);
-    for (size_t i = 0; i < 480; ++i) in[at + i] = n(rng) * std::exp(-static_cast<float>(i) / 100.0f);   // a 10 ms tap
-    auto out = run(ri, in);
-    // Home chord, as A minor pentatonic steps: A2, A3, D4, G4.
-    const auto notes = ri.resonatorNotes();
-    CHECK(notes[0] == 45); CHECK(notes[1] == 57); CHECK(notes[2] == 62); CHECK(notes[3] == 67);
-    CHECK(energyOf(out.l, 0, at) == 0.0);                 // nothing before the tap
-    const size_t from = at + static_cast<size_t>(kSr * 0.2), to = at + static_cast<size_t>(kSr * 1.2);
-    CHECK(energyOf(out.l, from, to) > 1e-3);              // still ringing 200 ms on
-    // It rings at the chord's notes, not between them.
-    for (int note : {57, 62, 67}) {
-        const double hz = 440.0 * std::pow(2.0, (note - 69) / 12.0), off = hz * std::pow(2.0, 0.5 / 12.0);
-        CHECK(strength(out.l, hz, from, to) > 4.0 * strength(out.l, off, from, to));
-    }
-    // With the song's beat the chord walks every two bars: bar 4 (beat 16) is degree 3.
-    RoomInstrument b; b.prepare(kSr); only(b, b.resonanceLevel);
-    b.setScale(RoomInstrument::scaleForKey("A minor"), 9);
-    b.setClock(16.0, 120.0);
-    run(b, std::vector<float>(512, 0.0f));
-    const auto walked = b.resonatorNotes();
-    CHECK(walked[0] == 52); CHECK(walked[1] == 64); CHECK(walked[2] == 69); CHECK(walked[3] == 74);
-}
-
-TEST_CASE("room/grains are made of the room's last second") {
-    RoomInstrument ri;
-    ri.prepare(kSr);
-    only(ri, ri.grainLevel);
-    std::vector<float> in(static_cast<size_t>(kSr * 4), 0.0f);
-    std::mt19937 rng(5); std::normal_distribution<float> n(0.0f, 0.1f);
-    const size_t start = static_cast<size_t>(kSr * 1), stop = static_cast<size_t>(kSr * 2);
-    for (size_t i = start; i < stop; ++i) in[i] = n(rng);
-    auto out = run(ri, in);
-    CHECK(energyOf(out.l, 0, start) == 0.0);                                         // no room, no grains
-    CHECK(energyOf(out.l, start + static_cast<size_t>(kSr * 0.5), stop) > 0.1);      // the room, scattered
-    CHECK(energyOf(out.l, stop, stop + static_cast<size_t>(kSr * 0.3)) > 0.01);      // and a little after it
-    CHECK(energyOf(out.l, stop + static_cast<size_t>(kSr * 1.3), in.size()) == 0.0); // gone once out of reach
-}
-
-TEST_CASE("room/the shifted echo repeats the room, an octave down, on the beat") {
-    for (double bpm : {0.0, 120.0}) {
-        RoomInstrument ri;
-        ri.prepare(kSr);
-        only(ri, ri.shiftEchoLevel);
-        ri.setClock(0.0, bpm);
-        const double delay = bpm > 0 ? 0.75 * 60.0 / bpm : 0.5;   // 3/4 beat, or 0.5 s
-        std::vector<float> in(static_cast<size_t>(kSr * 2), 0.0f);
-        const size_t at = static_cast<size_t>(kSr * 0.5), len = static_cast<size_t>(kSr * 0.3);
-        for (size_t i = 0; i < len; ++i) in[at + i] = 0.3f * static_cast<float>(std::sin(2 * 3.14159265358979 * 440.0 * i / kSr));
-        auto out = run(ri, in);
-        const size_t echoAt = at + static_cast<size_t>(kSr * delay);
-        CHECK(energyOf(out.l, 0, echoAt - 100) < 1e-9);          // nothing before the echo is due
-        CHECK(energyOf(out.l, echoAt, echoAt + len) > 1.0);      // then the echo
-        const size_t mid = echoAt + static_cast<size_t>(kSr * 0.05);
-        CHECK(strength(out.l, 220.0, mid, mid + 9600) > 3.0 * strength(out.l, 440.0, mid, mid + 9600));   // an octave down
-    }
-}
-
-TEST_CASE("room/a held note in the room is echoed in key on the 16ths") {
-    // 455 Hz is between A4 (440) and A#4; in A minor pentatonic it is retuned to A4.
-    RoomInstrument ri;
-    ri.prepare(kSr);
-    only(ri, ri.pitchEchoLevel);
-    ri.setScale(RoomInstrument::scaleForKey("A minor"), 9);
-    std::vector<float> in(static_cast<size_t>(kSr * 2), 0.0f);
-    const size_t len = static_cast<size_t>(kSr * 0.5);
-    for (size_t i = 0; i < len; ++i) in[i] = 0.3f * static_cast<float>(std::sin(2 * 3.14159265358979 * 455.0 * i / kSr));
-    auto out = run(ri, in);
-    CHECK(ri.pitchEchoes() == 1);
-    size_t first = 0;
-    while (first < out.l.size() && out.l[first] == 0.0f) ++first;
-    REQUIRE(first < out.l.size());
-    const double hz = pitchOf(out.l, first + 3000, 4096, 300.0, 600.0);
-    CHECK(std::fabs(hz - 440.0) < 4.0);
-    CHECK(energyOf(out.l, static_cast<size_t>(kSr * 1.5), out.l.size()) == 0.0);   // three repeats, then quiet
-
-    // With the song's beat, each repeat starts exactly on a 16th (120 BPM: every 6000 samples).
-    RoomInstrument b; b.prepare(kSr); only(b, b.pitchEchoLevel);
-    b.setScale(RoomInstrument::scaleForKey("A minor"), 9);
-    b.setClock(0.0, 120.0);
-    std::vector<float> in2(static_cast<size_t>(kSr * 3), 0.0f);
-    std::mt19937 rng(9); std::normal_distribution<float> n(0.0f, 0.001f);
-    for (auto& v : in2) v = n(rng);                       // a quiet room
-    for (size_t i = 0; i < len; ++i) in2[static_cast<size_t>(kSr) + i] += 0.3f * static_cast<float>(std::sin(2 * 3.14159265358979 * 455.0 * i / kSr));
-    auto out2 = run(b, in2);
-    CHECK(b.pitchEchoes() == 1);
-    size_t on = 0;
-    while (on < out2.l.size() && out2.l[on] == 0.0f) ++on;
-    REQUIRE(on < out2.l.size());
-    const size_t off = on % 6000;
-    CHECK(std::min(off, 6000 - off) <= 2);
-}
-
-TEST_CASE("room/solo (listening test) plays one voice alone, or none") {
-    // A held note with a beat: several voices would answer. Solo pitch echo: only it does.
-    std::vector<float> in(static_cast<size_t>(kSr * 2), 0.0f);
-    for (size_t i = 0; i < static_cast<size_t>(kSr * 0.5); ++i) in[i] = 0.3f * static_cast<float>(std::sin(2 * 3.14159265358979 * 455.0 * i / kSr));
-    auto render = [&](int solo) {
+TEST_CASE("room/each effect is made from the room: sound in, sound out") {
+    const auto in = noise(6.0, 0.05f);
+    for (int fx = 0; fx < RoomInstrument::kFxCount; ++fx) {
+        if (fx == RoomInstrument::kMemory || fx == RoomInstrument::kTune) continue;   // memory: the engine's; tune: pitches only
         RoomInstrument ri; ri.prepare(kSr);
-        ri.setScale(RoomInstrument::scaleForKey("A minor"), 9);
+        alone(ri, fx);
         ri.setClock(0.0, 120.0);
-        ri.solo.store(solo);
-        return run(ri, in);
-    };
-    RoomInstrument ref; ref.prepare(kSr); only(ref, ref.pitchEchoLevel);
-    ref.setScale(RoomInstrument::scaleForKey("A minor"), 9);
-    ref.setClock(0.0, 120.0);
-    const auto alone = run(ref, in);
-    const auto solo = render(RoomInstrument::kPitchEcho);
-    double diff = 0;
-    for (size_t i = 0; i < in.size(); ++i) diff += std::fabs(solo.l[i] - alone.l[i]);
-    CHECK(diff == 0.0);                                         // the same as that voice alone
-    CHECK(energyOf(render(-1).l) > energyOf(solo.l));           // all voices: more
-    CHECK(energyOf(render(RoomInstrument::kNone).l) == 0.0);    // none: nothing from the instrument
+        auto out = run(ri, in);
+        const double e = energyOf(out.l, static_cast<size_t>(kSr * 3)) + energyOf(out.r, static_cast<size_t>(kSr * 3));
+        if (e <= 1.0) std::printf("    effect %s: energy %g\n", RoomInstrument::fxName(fx), e);
+        CHECK(e > 1.0);
+    }
+    // Nothing but the plain room when "none" is chosen, and the plain room is high-passed.
+    RoomInstrument none; none.prepare(kSr);
+    none.solo.store(RoomInstrument::kFxCount);
+    auto plain = run(none, sine(60.0, 2.0, 0.3f));
+    CHECK(energyOf(plain.l, static_cast<size_t>(kSr)) < 0.15 * energyOf(sine(60.0, 1.0, 0.3f)));
+}
+
+TEST_CASE("room/the resonator rings on the song's root, fifth and ninth") {
+    RoomInstrument ri; ri.prepare(kSr);
+    alone(ri, RoomInstrument::kResonator);
+    ri.setScale(RoomInstrument::scaleForKey("A minor"), RoomInstrument::rootForKey("A minor"));
+    std::vector<float> in(static_cast<size_t>(kSr * 4), 0.0f);
+    const size_t at = static_cast<size_t>(kSr * 1.5);   // after the fade-in
+    std::mt19937 rng(7); std::normal_distribution<float> n(0.0f, 0.3f);
+    for (size_t i = 0; i < 480; ++i) in[at + i] = n(rng) * std::exp(-static_cast<float>(i) / 100.0f);
+    auto out = run(ri, in);
+    const auto notes = ri.resonatorNotes();
+    CHECK(notes[0] == 57); CHECK(notes[1] == 64); CHECK(notes[2] == 71);   // A3, E4, B4
+    CHECK(energyOf(out.l, 0, at) == 0.0);
+    const size_t from = at + static_cast<size_t>(kSr * 0.3), to = at + static_cast<size_t>(kSr * 1.3);
+    CHECK(energyOf(out.l, from, to) > 1e-4);
+    for (int note : {57, 64}) {
+        const double hz = 440.0 * std::pow(2.0, (note - 69) / 12.0), off = hz * std::pow(2.0, 0.5 / 12.0);
+        CHECK(strength(out.l, hz, from, to) > 3.0 * strength(out.l, off, from, to));
+    }
+}
+
+TEST_CASE("room/the frequency dream slides the room down toward -500 Hz and back") {
+    RoomInstrument ri; ri.prepare(kSr);
+    alone(ri, RoomInstrument::kFreqDream);
+    ri.setClock(0.0, 120.0);                       // turns every 2 bars (4 s); a full slide takes 8.5 s
+    auto out = run(ri, sine(1000.0, 8.0, 0.2f));
+    // Near 4 s it has slid about 235 Hz down (1000 Hz becomes ~765-795 Hz).
+    const size_t a = static_cast<size_t>(kSr * 3.6), b = static_cast<size_t>(kSr * 4.0);
+    CHECK(strength(out.l, 780.0, a, b) > 3.0 * strength(out.l, 1000.0, a, b));
+    // Then it heads back up over 8.5 s: by 8 s it is about 125 Hz down (~875 Hz).
+    const size_t c = static_cast<size_t>(kSr * 7.6), d = static_cast<size_t>(kSr * 8.0);
+    CHECK(strength(out.l, 880.0, c, d) > 3.0 * strength(out.l, 780.0, c, d));
+}
+
+TEST_CASE("room/the delay dream echoes the room a semitone up, on the beat") {
+    RoomInstrument ri; ri.prepare(kSr);
+    alone(ri, RoomInstrument::kDelayDream);
+    ri.setClock(0.0, 120.0);                       // a beat = 0.5 s
+    auto out = run(ri, sine(440.0, 0.3, 0.3f, 1.5, 5.0));
+    const size_t at = static_cast<size_t>(kSr * 1.5);
+    const size_t due = at + static_cast<size_t>(kSr * (0.5 * 2.0 / 3.0 + 0.5));   // 2/3 beat + 1 beat
+    CHECK(energyOf(out.l, at, due - 2000) < 1e-6);
+    CHECK(energyOf(out.l, due, due + static_cast<size_t>(kSr * 0.3)) > 0.5);
+    const size_t m = due + 4000;
+    CHECK(strength(out.l, 466.16, m, m + 8000) > 2.0 * strength(out.l, 440.0, m, m + 8000));
+}
+
+TEST_CASE("room/the groove cuts back into the last 20 seconds") {
+    RoomInstrument ri; ri.prepare(kSr);
+    alone(ri, RoomInstrument::kGroove);
+    ri.setClock(0.0, 120.0);
+    auto in = noise(8.0, 0.1f);
+    std::fill(in.begin() + static_cast<long>(kSr * 2), in.end(), 0.0f);   // the room falls silent after 2 s
+    auto out = run(ri, in);
+    // In the silence, the groove keeps playing pieces of what the room did.
+    CHECK(energyOf(out.l, static_cast<size_t>(kSr * 4), static_cast<size_t>(kSr * 8)) > 1.0);
+}
+
+TEST_CASE("room/memory comes in only in its scene; tune follows the room's pitch") {
+    RoomInstrument ri; ri.prepare(kSr);
+    alone(ri, RoomInstrument::kMemory);
+    run(ri, std::vector<float>(static_cast<size_t>(kSr * 4), 0.0f));
+    CHECK(ri.memoryAmount() > 0.9f);
+    ri.solo.store(RoomInstrument::kGrains);
+    run(ri, std::vector<float>(static_cast<size_t>(kSr * 8), 0.0f));
+    CHECK(ri.memoryAmount() < 0.01f);
+
+    RoomInstrument t; t.prepare(kSr);
+    alone(t, RoomInstrument::kTune);
+    t.setScale(RoomInstrument::scaleForKey("A minor"), 9);
+    t.setClock(0.0, 120.0);
+    std::vector<float> in(static_cast<size_t>(kSr * 6));
+    for (size_t i = 0; i < in.size(); ++i) {
+        const double p = 2 * kPi * 220.0 * i / kSr;
+        in[i] = 0.2f * static_cast<float>(std::sin(p) + 0.5 * std::sin(2 * p));
+    }
+    auto out = run(t, in);
+    CHECK(std::fabs(t.trackedHz() - 220.0f) < 3.0f);
+    CHECK(energyOf(out.l, static_cast<size_t>(kSr * 4)) > 1.0);
 }
