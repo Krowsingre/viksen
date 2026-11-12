@@ -211,7 +211,29 @@ void AudioEngine::renderMic(const float* const* inputs, int numInputs, int numFr
     roomMemory_.renderAdd(wet, numFrames);
 }
 
+void AudioEngine::filterMusic(int numFrames) noexcept {
+    const float target = std::clamp(musicCutoffTarget_.load(std::memory_order_relaxed), 200.0f, 20000.0f);
+    // Glide in the log domain, about 80 ms.
+    const float k = 1.0f - std::exp(-static_cast<float>(numFrames) / (0.08f * static_cast<float>(config_.sampleRate)));
+    musicCutoff_ = std::exp(std::log(musicCutoff_) + k * (std::log(target) - std::log(musicCutoff_)));
+    if (musicCutoff_ > 19500.0f && target > 19500.0f) {   // open: bypass, ready to start clean
+        if (musicCutoffSet_ > 0) { musicLpL_.reset(); musicLpR_.reset(); musicCutoffSet_ = -1.0f; }
+        return;
+    }
+    if (std::fabs(musicCutoff_ - musicCutoffSet_) > 0.5f) {
+        musicLpL_.setup(Biquad::Type::LowPass, config_.sampleRate, musicCutoff_, 0.707);
+        musicLpR_.setup(Biquad::Type::LowPass, config_.sampleRate, musicCutoff_, 0.707);
+        musicCutoffSet_ = musicCutoff_;
+    }
+    AudioBuffer& music = busBuffers_[static_cast<int>(Bus::Music)];
+    for (int i = 0; i < numFrames; ++i) {
+        music.channel(0)[i] = musicLpL_.process(music.channel(0)[i]);
+        music.channel(1)[i] = musicLpR_.process(music.channel(1)[i]);
+    }
+}
+
 void AudioEngine::sumToMaster(int numFrames) noexcept {
+    filterMusic(numFrames);
     mix_.clear(numFrames);
     const CaptureMode cmode = capture_.mode();
     const bool partial = cmode == CaptureMode::WithoutMic || cmode == CaptureMode::AtmosphereOnly || cmode == CaptureMode::MicOnly;

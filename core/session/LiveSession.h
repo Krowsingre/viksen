@@ -17,6 +17,7 @@
 #include "engine/audio/AudioEngine.h"
 #include "engine/environment/MotionAnalyzer.h"
 #include "engine/reactive/EnvironmentStates.h"
+#include "core/worlds/MusicReactor.h"
 #include "core/worlds/WorldDirector.h"
 #include "core/worlds/WorldFeeder.h"
 #include "core/worlds/WorldLifecycle.h"
@@ -211,6 +212,9 @@ private:
     void beginSongSwitch(int song, const ConditionContext& context, bool immediate);
     void finishSongSwitch();
     std::unique_ptr<WorldDirector> director_;
+    MusicReactor reactor_;            // room instrument phase 2: the moment drives the mix
+    uint32_t lastTransients_ = 0;
+    double onsetRate_ = 0.0;          // sudden sounds per second, smoothed
     std::unique_ptr<WorldLifecycle> lifecycle_;
     int64_t resumeFrame_ = 0;
     bool worldSpatial_ = true;

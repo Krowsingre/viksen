@@ -178,7 +178,9 @@ bool LiveSession::startFeeder(int64_t fromFrame, std::string* error) {
         const int64_t gridStart = static_cast<int64_t>(std::llround(world_->barOffsetSeconds * rate));
         planner_ = std::make_shared<SectionPlanner>(std::move(frames), static_cast<int64_t>(std::llround(bar * world_->jumpEveryBars * rate)),
                                                     std::max(loopStart, gridStart), end,
-                                                    static_cast<int64_t>(std::llround(bar * world_->minStayBars * rate)));
+                                                    // Room instrument phase 2: the mix now answers the moment at
+                                                    // once, so parts change half as often (twice the stay).
+                                                    static_cast<int64_t>(std::llround(bar * world_->minStayBars * 2.0 * rate)));
         // At most 6 s: blends are written in chunks (any length is safe), but their
         // scratch memory grows with length x stems.
         crossfade = static_cast<int64_t>(std::llround(std::min(6.0, beat * world_->crossfadeBeats) * rate));
@@ -239,6 +241,11 @@ bool LiveSession::loadSong(const WorldManifest& world, StemDecoderFactory factor
     worldAuthored_ = world;
     worldFactory_ = std::move(factory);
     director_ = std::make_unique<WorldDirector>(world);
+    {
+        std::vector<std::string> ids;
+        for (const auto& st : world.stems) ids.push_back(st.id);
+        reactor_.configure(ids, world.extra.contains("react") ? world.extra["react"] : Json::object());
+    }
     resumeFrame_ = 0;
     lastChoice_ = SectionChoice{};
     // Validate that the audio opens now rather than on first play.
@@ -407,6 +414,7 @@ void LiveSession::finishSongSwitch() {
 
 void LiveSession::unloadWorld() {
     stopFeeder();
+    engine_->setMusicCutoffHz(20000.0f);
     for (int i = 0; i < WorldStreamPlayer::kMaxStems; ++i) engine_->worldPlayer().setStemGain(i, 0.0f);
     world_.reset();
     worldAuthored_.reset();
@@ -482,10 +490,27 @@ void LiveSession::updateWorld(double dt, const ConditionContext& context) {
         if (planner_) planner_->setChoice(lastChoice_);
     }
     updateSongChoice(dt, context);
+    // The moment drives the mix (phase 2): room loudness and busyness, movement, workout.
+    {
+        const EnvironmentFeatures f = engine_->environmentFeatures();
+        const uint32_t onsets = f.transientCount - lastTransients_;
+        lastTransients_ = f.transientCount;
+        if (dt > 0) onsetRate_ += (1.0 - std::exp(-dt / 2.0)) * (std::min<double>(onsets, 50) / dt - onsetRate_);
+        ReactorInputs in;
+        in.adaptive = context.adaptive;
+        in.micActive = context.micActive;
+        in.roomLevelDb = f.levelDb;
+        in.onsetsPerSecond = static_cast<float>(onsetRate_);
+        in.motionAvailable = context.env.motionAvailable;
+        in.activity = context.env.activity;
+        in.intensity = context.intensity;
+        reactor_.update(dt, in);
+        engine_->setMusicCutoffHz(reactor_.cutoffHz());
+    }
     lifecycle_->update(true, dt);
     const float master = static_cast<float>(lifecycle_->gain());
     for (int i = 0; i < director_->stemCount(); ++i)
-        engine_->worldPlayer().setStemGain(i, director_->linearGain(i) * master);
+        engine_->worldPlayer().setStemGain(i, director_->linearGain(i) * reactor_.stemGain(i) * master);
     if (lifecycle_->finished() && switchTo_ >= 0) {
         finishSongSwitch();
         return;

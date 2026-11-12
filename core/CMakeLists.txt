@@ -21,6 +21,7 @@ add_library(atmos_core STATIC
   progress/SecretTracker.cpp
   progress/ProgressLog.cpp
   worlds/WorldFeeder.cpp
+  worlds/MusicReactor.cpp
 )
 target_include_directories(atmos_core PUBLIC ${PROJECT_SOURCE_DIR})
 target_include_directories(atmos_core SYSTEM PUBLIC ${PROJECT_SOURCE_DIR}/third_party)

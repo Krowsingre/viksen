@@ -22,6 +22,7 @@
 #include "engine/audio/Parameter.h"
 #include "engine/audio/SpscQueue.h"
 #include "engine/audio/WorldStreamPlayer.h"
+#include "engine/dsp/Biquad.h"
 #include "engine/dsp/Limiter.h"
 #include "engine/environment/FeatureExtractor.h"
 #include "engine/environment/MicConditioner.h"
@@ -164,6 +165,11 @@ private:
     SafetyLimiter limiter_;
     NoiseBed bed_;
     FeatureExtractor features_;
+    std::atomic<float> musicCutoffTarget_{20000.0f};
+    float musicCutoff_ = 20000.0f;         // audio thread: smoothed per block
+    float musicCutoffSet_ = -1.0f;
+    Biquad musicLpL_, musicLpR_;
+    void filterMusic(int numFrames) noexcept;
     MicConditioner micConditioner_;   // level control + limiter before the room becomes sound
     MicTransform micTransform_;
     RoomMemory roomMemory_;
@@ -182,6 +188,10 @@ private:
 public:
     void setRoomDuckDepth(float d) noexcept { roomDuckDepth_.store(d, std::memory_order_relaxed); }
     float roomDuckDepth() const noexcept { return roomDuckDepth_.load(std::memory_order_relaxed); }
+    // A low-pass on the music (room instrument, phase 2): 20000 Hz = open (bypassed).
+    // Any thread; glides over ~80 ms.
+    void setMusicCutoffHz(float hz) noexcept { musicCutoffTarget_.store(hz, std::memory_order_relaxed); }
+    float musicCutoffHz() const noexcept { return musicCutoffTarget_.load(std::memory_order_relaxed); }
 private:
 
     SpscQueue<Command, 256> commands_;
