@@ -172,3 +172,43 @@ TEST_CASE("dsp/room blend: echo on the beat ping-pongs, reverb is stereo and bou
     CHECK(diff / n > 1e-3);
     CHECK(maxAbs < 4.0);
 }
+
+#include <cmath>
+
+#include "engine/environment/MicConditioner.h"
+
+TEST_CASE("dsp/mic conditioner: a quiet room comes up, a loud one is held, silence is not pulled up") {
+    const double sr = 48000;
+    auto rmsDb = [](const std::vector<float>& v, size_t from) {
+        double s = 0; for (size_t i = from; i < v.size(); ++i) s += double(v[i]) * v[i];
+        return 10 * std::log10(s / double(v.size() - from) + 1e-12);
+    };
+    auto sine = [&](float amp, double seconds) {
+        std::vector<float> v(static_cast<size_t>(sr * seconds));
+        for (size_t i = 0; i < v.size(); ++i) v[i] = amp * static_cast<float>(std::sin(2 * 3.14159265 * 220 * i / sr));
+        return v;
+    };
+    {   // A quiet room (about -50 dBFS) rises to about the target within a few seconds.
+        atmos::MicConditioner c; c.prepare(sr);
+        auto x = sine(0.0045f, 8.0);
+        c.process(x.data(), static_cast<int>(x.size()));
+        const double out = rmsDb(x, x.size() - static_cast<size_t>(sr));
+        CHECK(out > atmos::MicConditioner::kTargetDb - 3);
+        CHECK(out < atmos::MicConditioner::kTargetDb + 3);
+    }
+    {   // A sudden loud sound never exceeds the ceiling.
+        atmos::MicConditioner c; c.prepare(sr);
+        auto x = sine(0.01f, 3.0);
+        auto bang = sine(0.99f, 0.5);
+        x.insert(x.end(), bang.begin(), bang.end());
+        c.process(x.data(), static_cast<int>(x.size()));
+        float peak = 0; for (float v : x) peak = std::max(peak, std::fabs(v));
+        CHECK(peak <= std::pow(10.0f, atmos::MicConditioner::kCeilingDb / 20.0f) + 1e-3f);
+    }
+    {   // Near silence (below the gate) is left where it is.
+        atmos::MicConditioner c; c.prepare(sr);
+        auto x = sine(0.0001f, 4.0);   // -83 dBFS
+        c.process(x.data(), static_cast<int>(x.size()));
+        CHECK(rmsDb(x, 0) < -75);
+    }
+}

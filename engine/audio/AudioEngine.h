@@ -24,6 +24,7 @@
 #include "engine/audio/WorldStreamPlayer.h"
 #include "engine/dsp/Limiter.h"
 #include "engine/environment/FeatureExtractor.h"
+#include "engine/environment/MicConditioner.h"
 #include "engine/environment/MicTransform.h"
 #include "engine/environment/RoomMemory.h"
 #include "engine/routing/Bus.h"
@@ -163,6 +164,7 @@ private:
     SafetyLimiter limiter_;
     NoiseBed bed_;
     FeatureExtractor features_;
+    MicConditioner micConditioner_;   // level control + limiter before the room becomes sound
     MicTransform micTransform_;
     RoomMemory roomMemory_;
     WorldStreamPlayer world_;
@@ -175,10 +177,11 @@ private:
     AudioBuffer mix_;
     std::vector<float> micMono_, micWet_, micWetR_;
     // Room blend ducking: the room steps back under loud music (0 = never, 1 = deeply).
-    std::atomic<float> roomDuckDepth_{0.6f};
+    std::atomic<float> roomDuckDepth_{0.0f};   // the room leads: no ducking unless a song asks
     float duckEnvDb_ = -90.0f;
 public:
     void setRoomDuckDepth(float d) noexcept { roomDuckDepth_.store(d, std::memory_order_relaxed); }
+    float roomDuckDepth() const noexcept { return roomDuckDepth_.load(std::memory_order_relaxed); }
 private:
 
     SpscQueue<Command, 256> commands_;

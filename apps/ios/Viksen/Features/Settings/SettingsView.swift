@@ -254,6 +254,9 @@ struct AboutPage: View {
                 LabeledContent("Version", value: (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")
                                + " (" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "–") + ")")
                 LabeledContent("Music", value: "Krowsingre")
+                if !AppBuild.channel.isEmpty {
+                    LabeledContent("Build", value: AppBuild.channel)
+                }
             }
         }
         .navigationTitle("About & Help")

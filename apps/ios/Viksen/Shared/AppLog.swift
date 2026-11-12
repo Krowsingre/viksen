@@ -85,6 +85,9 @@ enum AppLog {
 
 /// How this copy of the app was installed.
 enum AppBuild {
+    /// Which line of work this build comes from: shown in About & Help so TestFlight
+    /// builds can be told apart. Empty on the main line.
+    static let channel = "Experimental: room instrument"
     /// A TestFlight (or development) install: its receipt is a sandbox receipt.
     static let isTestFlight: Bool = {
         #if DEBUG

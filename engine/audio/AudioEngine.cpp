@@ -30,6 +30,7 @@ void AudioEngine::prepare(const EngineConfig& config) {
     bed_.prepare(sr);
     bed_.setSeed(0xA7305u);
     features_.prepare(sr);
+    micConditioner_.prepare(sr);
     micTransform_.prepare(sr, config_.maxBlockSize);
     roomMemory_.prepare(sr);
     world_.prepare(sr, config_.maxBlockSize);
@@ -173,7 +174,7 @@ void AudioEngine::renderMic(const float* const* inputs, int numInputs, int numFr
     const bool active = micEnabled_.load(std::memory_order_relaxed) && inputs && numInputs > 0;
     micActive_.store(active, std::memory_order_relaxed);
     if (!active) {
-        if (micWasActive_) roomMemory_.forget(); // privacy: no room audio outlives the mic
+        if (micWasActive_) { roomMemory_.forget(); micConditioner_.reset(); } // privacy: no room audio outlives the mic
         micWasActive_ = false;
         return;
     }
@@ -196,6 +197,11 @@ void AudioEngine::renderMic(const float* const* inputs, int numInputs, int numFr
 
     AudioBuffer& raw = busBuffers_[static_cast<int>(Bus::MicRaw)];
     for (int i = 0; i < numFrames; ++i) { raw.channel(0)[i] += mono[i]; raw.channel(1)[i] += mono[i]; }
+
+    // The room as an instrument (phase 1): a steady, present level and a safety limiter
+    // before it is transformed or remembered. Quiet/loud detection above used the
+    // unconditioned level.
+    micConditioner_.process(mono, numFrames);
 
     micTransform_.process(mono, micWet_.data(), micWetR_.data(), numFrames);
     AudioBuffer& wet = busBuffers_[static_cast<int>(Bus::MicTransformed)];

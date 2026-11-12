@@ -205,10 +205,13 @@ bool LiveSession::loadWorld(const WorldManifest& world, StemDecoderFactory facto
     return loadSong(world, std::move(factory), error);
 }
 
-// Room blend (owner, 2026-11-05): the room's echo falls on the song's beat (three
-// quarters of a beat unless the song says otherwise) and each song can set its own room
-// colour under "roomBlend": echoBeats, feedback, reverb, tone (Hz), shiftHz, shiftMix,
-// duck (0..1, how far the room steps back under loud music).
+// Room blend (owner, 2026-11-05; room instrument phase 1, 2026-11-12): the room's echo
+// falls on the song's beat (three quarters of a beat unless the song says otherwise) and
+// each song can set its own room colour under "roomBlend": echoBeats, feedback, reverb,
+// tone (Hz), shiftHz, shiftMix, memory (room memory level 0..1, 0 = off), memoryPitch
+// (semitones), duck (0..1, how far the room steps back under loud music). The room now
+// leads: bright, a little shifted, with room memory on and no ducking unless a song
+// asks for it.
 void LiveSession::applyRoomBlend(const WorldManifest& w) {
     auto& m = engine_->micTransform();
     const Json rb = w.extra.contains("roomBlend") && w.extra["roomBlend"].is_object() ? w.extra["roomBlend"] : Json::object();
@@ -216,10 +219,18 @@ void LiveSession::applyRoomBlend(const WorldManifest& w) {
     m.echoSeconds.set(static_cast<float>(std::clamp(beat * rb.value("echoBeats", 0.75), 0.05, 1.9)));
     m.feedback.set(rb.value("feedback", 0.42f));
     m.reverbMix.set(rb.value("reverb", 0.4f));
-    m.cutoffHz.set(rb.value("tone", 2600.0f));
+    m.cutoffHz.set(rb.value("tone", 7000.0f));
     m.shiftHz.set(rb.value("shiftHz", -120.0f));
-    m.shiftMix.set(rb.value("shiftMix", 0.0f));
-    engine_->setRoomDuckDepth(rb.value("duck", 0.6f));
+    m.shiftMix.set(rb.value("shiftMix", 0.25f));
+    engine_->setRoomDuckDepth(rb.value("duck", 0.0f));
+    // Room memory: the last seconds of the room replayed, slowed, as drifting voices.
+    // In memory only, wiped when the microphone stops; heard only with the room blended in.
+    settings_.roomMemoryLevel = rb.value("memory", 0.5f);
+    settings_.roomMemoryPitch = rb.value("memoryPitch", -12.0f);
+    settings_.roomMemoryEnabled = settings_.roomMemoryLevel > 0.0f;
+    engine_->roomMemory().level.set(settings_.roomMemoryLevel);
+    engine_->roomMemory().pitchSemitones.store(settings_.roomMemoryPitch);
+    engine_->roomMemory().setEnabled(settings_.roomMemoryEnabled);
 }
 
 bool LiveSession::loadSong(const WorldManifest& world, StemDecoderFactory factory, std::string* error) {

@@ -294,3 +294,28 @@ TEST_CASE("worlds/loop effect switch: off gives a clean loop that never plays wh
         CHECK(clean < 1e-6);         // nothing after the 8 ms crossfade
     }
 }
+
+TEST_CASE("session/room instrument: a song brings room memory in and does not duck the room") {
+    auto w = parseWorld(demoWorldJson());
+    REQUIRE(w.has_value());
+    auto clip = std::make_shared<const AudioClip>(test::makeSine(48000, 48000 * 4, 220, 0.3f));
+    StemDecoderFactory factory = [&](double, std::string&) {
+        std::vector<std::unique_ptr<StemDecoder>> v;
+        for (int i = 0; i < 2; ++i) v.push_back(std::make_unique<ClipStemDecoder>(clip));
+        return v;
+    };
+    LiveSession s(48000, 512);
+    std::string err;
+    REQUIRE(s.loadWorld(*w, factory, &err));
+    CHECK(s.settings().roomMemoryEnabled);
+    CHECK(s.engine().roomMemory().enabled());
+    CHECK(s.engine().roomDuckDepth() == 0.0f);
+    // A song can still ask for its own room colour, including no memory and some ducking.
+    Json j = demoWorldJson();
+    j["roomBlend"] = {{"memory", 0.0}, {"duck", 0.5}};
+    auto quiet = parseWorld(j);
+    REQUIRE(quiet.has_value());
+    REQUIRE(s.loadWorld(*quiet, factory, &err));
+    CHECK(!s.engine().roomMemory().enabled());
+    CHECK(s.engine().roomDuckDepth() == 0.5f);
+}

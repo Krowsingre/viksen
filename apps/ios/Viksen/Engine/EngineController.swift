@@ -77,7 +77,7 @@ final class EngineController {
     }
     /// How loud the room is under the music while "Blend the room" is on (0...1). Each
     /// song sets the room's colour (echo, reverb, tone) itself.
-    var roomLevel: Float = UserDefaults.standard.object(forKey: "roomLevel") as? Float ?? 0.5 {
+    var roomLevel: Float = UserDefaults.standard.object(forKey: "roomLevel") as? Float ?? 0.85 {
         didSet { UserDefaults.standard.set(roomLevel, forKey: "roomLevel"); applyRoomBlend() }
     }
     var motionSensing = false { didSet { bridge.setMotionSensingEnabled(motionSensing) } }
