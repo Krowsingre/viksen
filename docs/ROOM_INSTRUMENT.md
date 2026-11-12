@@ -10,7 +10,7 @@ done (owner). Experimental builds say "Experimental: room instrument" in About &
 |---|---|---|
 | 1. The room leads | Mic level control + limiter (MicConditioner); no ducking by default; brighter tone (7 kHz) and a little frequency shift; room memory on per song (`roomBlend.memory`, `memoryPitch`); room level 85 % by default | Done |
 | 2. The room drives the music | Continuous, fast reactions: room loudness/busyness, movement and heart rate open a filter on the music and swell or pull back stems up to 10 dB; section jumps half as often | Done |
-| 3. Musical room effects | Pitch following into the song's key; beat-synced delay grooves from the room; onset-triggered tuned bells (no repeats until all have played) | Done |
+| 3. Musical room effects | Reworked after the owner's listening: the room's own sound made musical. Resonators ringing on the song's scale, grains of the last second, a pitch-shifted echo on the beat, the room's held notes echoed in key on the 16ths, beat grooves; the synthesised bells are removed; the pitch-following tone is kept for testing | Done (rework) |
 | 4. Music built on the beat | Clip/event layer on a musical clock: short loops and one-shots re-triggered on the beat; first test on Lunar Promise with slices of its own stems (option A) | Done |
 | 5. Tuning, then merge | Calibration, levels, CPU (done); first experimental TestFlight build for listening; tune from the owner's feedback; merge | In progress |
 
@@ -41,25 +41,47 @@ done (owner). Experimental builds say "Experimental: room instrument" in About &
 
 ## Phase 3 details
 
+Owner's listening (2026-11-12): the first version answered taps with synthesised bells,
+which were app sounds triggered by the room, not the room blended in. An audit of the
+studied design (docs/research/REFERENCE_STUDY.md) found that its room is always the sound
+itself: tuned resonators, granular texture, tempo echoes with a pitch-shifted copy, and
+echoes of the room's own pitched sounds. The rework follows that. Every voice below is the
+room's own sound, except "tune".
+
 - `engine/environment/RoomInstrument`, fed the conditioned microphone, adding to the room's
-  sound (heard only with the room blended in); about 2 % of one core.
-  - Tune: autocorrelation pitch tracking (80-800 Hz, first strong peak to avoid octave
-    errors), snapped to the song's pentatonic scale, sung by a soft two-voice tone between
-    E3 and E5 (60 ms glide, 0.25 s attack, 1.2 s release).
+  bus (heard only with the room blended in, following the room level, and wiped when the
+  microphone stops); about 3 % of one core with every voice on.
+  - Resonance: the room (80 Hz-3 kHz) rings through four tuned comb resonators (2.5 s to
+    fall 60 dB, darkening as they fade, 80 ms glide between notes). Notes from the song's
+    pentatonic scale: a three-note chord in scale steps from the root in octave 3, plus the
+    root an octave lower; it walks degrees 0, 0, 3, 2, one step per two bars of the song
+    (home chord with no song clock). A level guard keeps a long note right on a resonator
+    to the level of a tap.
+  - Grains: 60-200 ms Hann grains from 0.2-1.0 s back in the room, about 12 a second,
+    panned at random, low-passed at 4 kHz.
+  - Shifted echo: the room pitch-shifted (`engine/dsp/PitchShifter.h`, two crossfaded
+    taps; an octave down by default) and echoed every 3/4 beat (0.5 s with no song),
+    feedback 0.45, each repeat darker; the echo left, its shadow right.
+  - Pitch echo: when the room holds a pitch for ~120 ms (a voice, a chime, a horn), the
+    last 250 ms of the room is replayed retuned to the nearest scale note, on the next
+    16th notes (+1, +3, +6; gains 1, 0.6, 0.35; as at 120 BPM with no song). At most one
+    echo at a time; the same note again only after 1.5 s.
   - Groove: 4 s of room in memory; on each 16th note of the song, with probability
     0.2 + 0.5 x energy, a slice from 1-16 sixteenths back is replayed, panned at random.
-  - Hits: a sudden sound (after a 2 s warm-up, 180 ms apart) rings a soft FM bell on a
-    scale note drawn without repeats until all have sounded (two octaves from C4).
-  - Levels per song under "roomBlend": `tune` (0.35), `groove` (0.4), `hits` (0.45); 0 = off.
+  - Tune (kept for testing; may be removed or replaced by the room's own voice shifted
+    into key): autocorrelation pitch tracking (80-800 Hz, first strong peak to avoid octave
+    errors), snapped to the scale, sung by a soft two-voice tone between E3 and E5.
+  - The plain room stays in, softened: MicTransform's low-passed dry path (7 kHz).
+  - Levels per song under "roomBlend", each 0..1, 0 = off: `resonance` (0.45), `grains`
+    (0.3), `shiftEcho` (0.3) with `shiftEchoPitch` in semitones (-12), `pitchEcho` (0.4),
+    `groove` (0.4), `tune` (0.35). (`hits` is gone.)
 - The beat clock comes from the song's position (tempo and bar offset); the energy from
-  the phase 2 reactor.
+  the phase 2 reactor; the key (scale and root) from world.json "key".
 - Keys: songs without one got an estimate from their audio (chroma + key profiles; the
   method returns What Was Once as G minor, as known): the Lunar family B minor, The Fate
   of the Nine Vikron E♭ minor, Fallen of the Illuminous and Tree of Bones B♭ major
   (Tree of Bones is a low-confidence estimate). Owner-given keys are kept. Correct any
   key in world.json and the room follows it.
-- Placeholder hits are synthesised bells; a Dimension's own short sounds can replace them
-  later (phase 4's sample layer).
 
 ## Phase 4 details
 

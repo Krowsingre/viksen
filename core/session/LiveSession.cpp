@@ -243,12 +243,19 @@ void LiveSession::applyRoomBlend(const WorldManifest& w) {
     engine_->roomMemory().level.set(settings_.roomMemoryLevel);
     engine_->roomMemory().pitchSemitones.store(settings_.roomMemoryPitch);
     engine_->roomMemory().setEnabled(settings_.roomMemoryEnabled);
-    // The room in key and on the beat (phase 3): tune, groove and hits, each 0 = off.
+    // The room in key and on the beat (phase 3): every voice is the room's own sound, in
+    // the song's key and on its beat, each 0 = off. "tune" is an app-made tone kept for
+    // testing and may be removed.
     auto& ri = engine_->roomInstrument();
-    ri.tuneLevel.store(std::clamp(rb.value("tune", 0.35f), 0.0f, 1.0f));
-    ri.grooveLevel.store(std::clamp(rb.value("groove", 0.4f), 0.0f, 1.0f));
-    ri.hitsLevel.store(std::clamp(rb.value("hits", 0.45f), 0.0f, 1.0f));
-    ri.setScale(RoomInstrument::scaleForKey(w.key));
+    auto level = [&](const char* name, float dflt) { return std::clamp(rb.value(name, dflt), 0.0f, 1.0f); };
+    ri.resonanceLevel.store(level("resonance", 0.45f));
+    ri.grainLevel.store(level("grains", 0.3f));
+    ri.shiftEchoLevel.store(level("shiftEcho", 0.3f));
+    ri.shiftEchoSemitones.store(std::clamp(rb.value("shiftEchoPitch", -12.0f), -24.0f, 24.0f));
+    ri.pitchEchoLevel.store(level("pitchEcho", 0.4f));
+    ri.grooveLevel.store(level("groove", 0.4f));
+    ri.tuneLevel.store(level("tune", 0.35f));
+    ri.setScale(RoomInstrument::scaleForKey(w.key), RoomInstrument::rootForKey(w.key));
     ri.setClock(0.0, 0.0);   // until the song's position is known
 }
 
