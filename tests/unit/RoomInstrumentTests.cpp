@@ -1,4 +1,5 @@
 #include <atomic>
+#include <bit>
 #include <cmath>
 #include <cstdio>
 #include <random>
@@ -80,7 +81,7 @@ TEST_CASE("room/the arrangement plays one effect at a time and moves on at its b
     run(ri, std::vector<float>(256, 0.0f));
     const int first = ri.sceneIndex();
     REQUIRE((first == 0 || first == 1));
-    CHECK(__builtin_popcount(ri.activeFx()) == 1);
+    CHECK(std::popcount(static_cast<unsigned>(ri.activeFx())) == 1);
     const double firstBars = first == 0 ? 1 : 2;
     // Just before the scene's end, still the same; just after, the next one.
     run(ri, std::vector<float>(static_cast<size_t>(kSr * (firstBars * 2.0 - 0.1)), 0.0f));
@@ -90,7 +91,7 @@ TEST_CASE("room/the arrangement plays one effect at a time and moves on at its b
     CHECK(ri.activeFx() == (first == 0 ? (1u << RoomInstrument::kFreqDream) : (1u << RoomInstrument::kGrains)));
     // The default arrangement holds every room effect once.
     uint16_t all = 0;
-    for (const auto& s : RoomInstrument::defaultScenes()) { CHECK(__builtin_popcount(s.fx) == 1); all |= s.fx; }
+    for (const auto& s : RoomInstrument::defaultScenes()) { CHECK(std::popcount(static_cast<unsigned>(s.fx)) == 1); all |= s.fx; }
     CHECK(all == (1u << RoomInstrument::kFxCount) - 1);
 }
 
