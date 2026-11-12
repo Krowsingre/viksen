@@ -2,7 +2,8 @@
 // Room instrument, phase 2 (owner, 2026-11-12): the moment drives the music continuously
 // and fast, instead of only through section jumps every 12-24 s.
 //
-// One "energy" (0..1) is taken from whatever the listener has on: the room's loudness and
+// One "energy" (0..1) is taken from whatever the listener has on: the room's loudness (above
+// its own learned background level, so every microphone and room reads alike) and
 // busyness (sudden sounds per second) from the microphone, movement, and workout
 // intensity. Any strong cue lifts it; it rises in about a third of a second and settles
 // over a couple of seconds. From it:
@@ -57,6 +58,10 @@ private:
     double energy_ = 0.5;      // smoothed; neutral when nothing is engaged
     bool engaged_ = false;
     double neutralBlend_ = 1.0;   // 1 = fully neutral (fades in and out over ~1 s)
+    double floorDb_ = -60.0;      // the room's background level, learned
+    bool floorKnown_ = false;
+public:
+    double roomFloorDb() const { return floorDb_; }
 };
 
 } // namespace atmos::core

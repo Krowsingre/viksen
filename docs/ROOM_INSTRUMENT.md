@@ -12,7 +12,7 @@ done (owner). Experimental builds say "Experimental: room instrument" in About &
 | 2. The room drives the music | Continuous, fast reactions: room loudness/busyness, movement and heart rate open a filter on the music and swell or pull back stems up to 10 dB; section jumps half as often | Done |
 | 3. Musical room effects | Pitch following into the song's key; beat-synced delay grooves from the room; onset-triggered tuned bells (no repeats until all have played) | Done |
 | 4. Music built on the beat | Clip/event layer on a musical clock: short loops and one-shots re-triggered on the beat; first test on Lunar Promise with slices of its own stems (option A) | Done |
-| 5. Tuning, then merge | Per-route calibration, levels, battery, listening sessions | |
+| 5. Tuning, then merge | Calibration, levels, CPU (done); first experimental TestFlight build for listening; tune from the owner's feedback; merge | In progress |
 
 ## Phase 1 details
 
@@ -82,3 +82,16 @@ done (owner). Experimental builds say "Experimental: room instrument" in About &
 
 Also: after a sample-rate change the engine is rebuilt; the song's room colour, room
 instrument settings and beat clips are now applied to the new engine too.
+
+## Phase 5 details
+
+- Calibration: instead of fixed thresholds per microphone, the reactor learns the room's
+  own background level (drops at once to a quieter moment, creeps up 1 dB per 10 s) and
+  measures loudness above it, so the built-in mic and headset mics react alike (a test
+  shows a 15 dB more sensitive mic giving the same energy).
+- Levels: the master safety limiter remains on the final output; the room's conditioner
+  limits the room at -3 dBFS before any effect.
+- CPU: optimised build, the engine benchmark (32 layers + atmosphere + the full room chain
+  including conditioner, room memory and room instrument) renders at 30x real time, about
+  3.3 % of one core.
+- Next: the first experimental TestFlight build from this branch, for listening.

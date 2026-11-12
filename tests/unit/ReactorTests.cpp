@@ -143,3 +143,30 @@ TEST_CASE("engine/beat clips land on the beat, within their energy, and follow t
     double quiet = 0; for (float v : render(0.8f, 0.0f, 4.5)) quiet += std::fabs(v);
     CHECK(quiet == 0.0);                                           // before the song fades in
 }
+
+TEST_CASE("reactor/calibrates to the room: a more sensitive mic reacts the same") {
+    auto energyAfter = [](float offsetDb) {
+        MusicReactor r;
+        r.configure({"drums"}, Json::object());
+        ReactorInputs in;
+        in.micActive = true;
+        in.roomLevelDb = -60 + offsetDb;   // the room's background...
+        run(r, in, 20);
+        in.roomLevelDb = -40 + offsetDb;   // ...then 20 dB louder
+        run(r, in, 1.5);
+        return r.energy();
+    };
+    const double builtIn = energyAfter(0), headset = energyAfter(15);
+    CHECK(std::fabs(builtIn - headset) < 0.02);
+    CHECK(builtIn > 0.3);   // 20 dB above the background: a clearly livelier room
+    // A room that stays loud becomes the new normal only slowly (1 dB per 10 s).
+    MusicReactor r;
+    r.configure({"drums"}, Json::object());
+    ReactorInputs in;
+    in.micActive = true;
+    in.roomLevelDb = -60;
+    run(r, in, 10);
+    in.roomLevelDb = -30;
+    run(r, in, 30);
+    CHECK(r.roomFloorDb() < -55);
+}

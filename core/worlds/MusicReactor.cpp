@@ -28,6 +28,7 @@ void MusicReactor::configure(const std::vector<std::string>& stemIds, const Json
     closedHz_ = react.is_object() ? std::clamp(react.value("filterClosedHz", 5000.0), 300.0, 20000.0) : 5000.0;
     energy_ = 0.5;
     neutralBlend_ = 1.0;
+    floorKnown_ = false;
     engaged_ = false;
 }
 
@@ -36,7 +37,14 @@ void MusicReactor::update(double dt, const ReactorInputs& in) {
     double target = 0.0;
     bool any = false;
     if (in.micActive) {
-        const double room = std::clamp((in.roomLevelDb + 60.0) / 40.0, 0.0, 1.0);   // -60 dB calm .. -20 dB loud
+        // Calibrated to this room and this microphone (phase 5): loudness is measured above
+        // the room's own background level, learned as we go (it drops at once to a quieter
+        // moment and creeps up 1 dB every 10 s), so any mic, near or far, reads the same.
+        const double level = std::max(-100.0, static_cast<double>(in.roomLevelDb));
+        if (!floorKnown_ || level < floorDb_) { floorDb_ = level; floorKnown_ = true; }
+        else floorDb_ += std::min(level - floorDb_, 0.1 * dt);
+        floorDb_ = std::clamp(floorDb_, -90.0, -35.0);
+        const double room = std::clamp((level - floorDb_ - 4.0) / 28.0, 0.0, 1.0);   // ~4 dB over the floor .. 32 dB over
         const double busy = std::clamp(in.onsetsPerSecond / 3.0, 0.0, 1.0);
         target = std::max(target, 0.6 * room + 0.4 * busy);
         any = true;
