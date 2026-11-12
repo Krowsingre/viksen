@@ -83,6 +83,19 @@ room's own sound, except "tune".
   (Tree of Bones is a low-confidence estimate). Owner-given keys are kept. Correct any
   key in world.json and the room follows it.
 
+### Listening test (TestFlight, 2026-11-12)
+
+Before arranging the voices (next step: one or two at a time, changing with the song, as
+the studied design does), a build to hear each voice and the balance. Diagnostics →
+"Room listening test", TestFlight only, not remembered:
+
+- Room voices: all, one alone (resonance, grains, shifted echo, pitch echo, groove, tune),
+  or none (the plain, softened room blend only). `RoomInstrument::solo`.
+- Room forward: the room +6 dB and the music -6 dB, gliding over 0.5 s
+  (`AudioEngine::setRoomForward`). Tests whether the room is simply buried by the music.
+
+Both are kept by the session across engine rebuilds.
+
 ## Phase 4 details
 
 - `engine/audio/ClipSequencer`: up to 16 patterns, 24 voices, into the music bus (so the

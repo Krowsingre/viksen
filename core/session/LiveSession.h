@@ -126,6 +126,13 @@ public:
     // clean short crossfade. On by default; applies at once to the playing Dimension.
     void setLoopTransitionFx(bool on);
     bool loopTransitionFx() const { return loopFx_; }
+    // Listening tests (TestFlight): the room forward (+6 dB) and the music back (-6 dB);
+    // one room-instrument voice alone (RoomInstrument::Voice; -1 = all). Kept across
+    // engine rebuilds.
+    void setRoomForward(bool on);
+    bool roomForward() const { return roomForward_; }
+    void setRoomSolo(int voice);
+    int roomSolo() const { return roomSolo_; }
     int beatClipCount() const { return static_cast<int>(patterns_.size()); }   // phase 4 clips of the loaded song
     void setMicShiftHz(float hz);
     void setMicShiftMix(float mix);
@@ -196,6 +203,8 @@ private:
     SectionChoice lastChoice_;
     float transitionSpace_ = 0.5f;
     bool loopFx_ = true;
+    bool roomForward_ = false;
+    int roomSolo_ = -1;
     // Multi-song Dimensions.
     std::optional<DimensionManifest> dimension_;
     StemFileDecoder fileDecoder_;

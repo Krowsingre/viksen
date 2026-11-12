@@ -132,6 +132,11 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 // The loop point (song end back to its start): YES = the jump transition (echo/reverb
 // wash and sweep), NO = a clean 8 ms crossfade. Applies at once.
 - (void)setLoopTransitionFx:(BOOL)on;
+// Listening tests (TestFlight). Room forward: the room +6 dB, the music -6 dB. Room solo:
+// one room-instrument voice alone (0 resonance, 1 grains, 2 shifted echo, 3 pitch echo,
+// 4 groove, 5 tune, 6 none = the plain room blend only; -1 = all voices).
+- (void)setRoomForward:(BOOL)on;
+- (void)setRoomSolo:(NSInteger)voice;
 
 // Requests permission if needed, reconfigures the session and restarts audio I/O.
 - (void)setMicEnabled:(BOOL)enabled completion:(void (^)(BOOL ok, NSString *_Nullable error))completion

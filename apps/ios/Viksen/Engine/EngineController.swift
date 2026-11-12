@@ -75,6 +75,36 @@ final class EngineController {
             AppLog.info("Loop effect \(loopTransitionFx ? "on" : "off")")
         }
     }
+    /// Listening tests (owner, 2026-11-12), TestFlight only, not remembered: the room
+    /// forward (+6 dB) and the music back (-6 dB); and one room-instrument voice alone.
+    var testRoomForward = false {
+        didSet {
+            bridge.setRoomForward(testRoomForward)
+            AppLog.info("Test: room forward \(testRoomForward ? "on" : "off")")
+        }
+    }
+    enum RoomVoice: Int, CaseIterable, Identifiable {
+        case all = -1, resonance, grains, shiftedEcho, pitchEcho, groove, tune, none
+        var id: Int { rawValue }
+        var title: String {
+            switch self {
+            case .all: "All voices"
+            case .resonance: "Resonance"
+            case .grains: "Grains"
+            case .shiftedEcho: "Shifted echo"
+            case .pitchEcho: "Pitch echo"
+            case .groove: "Groove"
+            case .tune: "Tune (app tone)"
+            case .none: "None (plain room blend)"
+            }
+        }
+    }
+    var testRoomSolo: RoomVoice = .all {
+        didSet {
+            bridge.setRoomSolo(testRoomSolo.rawValue)
+            AppLog.info("Test: room voice \(testRoomSolo.title)")
+        }
+    }
     /// How loud the room is under the music while "Blend the room" is on (0...1). Each
     /// song sets the room's colour (echo, reverb, tone) itself.
     var roomLevel: Float = UserDefaults.standard.object(forKey: "roomLevel") as? Float ?? 0.85 {

@@ -191,9 +191,15 @@ private:
     // Room blend ducking: the room steps back under loud music (0 = never, 1 = deeply).
     std::atomic<float> roomDuckDepth_{0.0f};   // the room leads: no ducking unless a song asks
     float duckEnvDb_ = -90.0f;
+    std::atomic<bool> roomForward_{false};
+    float roomForwardNow_ = 0.0f;   // 0..1, audio thread
 public:
     void setRoomDuckDepth(float d) noexcept { roomDuckDepth_.store(d, std::memory_order_relaxed); }
     float roomDuckDepth() const noexcept { return roomDuckDepth_.load(std::memory_order_relaxed); }
+    // Listening test (TestFlight): the room forward, the music back (room +6 dB, music
+    // -6 dB), gliding over ~0.5 s. The master limiter still guards the output.
+    void setRoomForward(bool on) noexcept { roomForward_.store(on, std::memory_order_relaxed); }
+    bool roomForward() const noexcept { return roomForward_.load(std::memory_order_relaxed); }
     // A low-pass on the music (room instrument, phase 2): 20000 Hz = open (bypassed).
     // Any thread; glides over ~80 ms.
     void setMusicCutoffHz(float hz) noexcept { musicCutoffTarget_.store(hz, std::memory_order_relaxed); }

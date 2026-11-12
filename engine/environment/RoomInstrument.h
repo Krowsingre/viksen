@@ -43,6 +43,10 @@ public:
     std::atomic<float> tuneLevel{0.35f};
     std::atomic<float> shiftEchoSemitones{-12.0f};
     std::atomic<float> energy{0.5f};          // 0..1, the music's current energy
+    // Listening test (TestFlight): play one voice alone. -1 = all voices (as the song
+    // sets them); a Voice = only that one; kNone = no voice (the plain room blend only).
+    enum Voice { kResonance = 0, kGrains, kShiftEcho, kPitchEcho, kGroove, kTune, kNone };
+    std::atomic<int> solo{-1};
     // The song's scale (pitch-class mask) and its root (0 = C .. 11 = B; -1 = the lowest
     // pitch class in the mask).
     void setScale(uint16_t pitchClassMask, int root = -1) noexcept;
@@ -75,7 +79,11 @@ private:
     void startPitchEcho(double detectedHz, int note) noexcept;
     void renderPitchEcho(float& l, float& r) noexcept;
     void renderGroove(float& l, float& r) noexcept;
-    float ringAt(double back) const noexcept;   // the room `back` samples ago
+    float ringAt(double back) const noexcept;
+    float levelOf(Voice v, const std::atomic<float>& level) const noexcept {
+        const int s = solo.load(std::memory_order_relaxed);
+        return (s < 0 || s == v) ? level.load(std::memory_order_relaxed) : 0.0f;
+    }   // the room `back` samples ago
 
     double sr_ = 48000.0;
     std::atomic<uint16_t> scale_{(1u << 9) | (1u << 0) | (1u << 2) | (1u << 4) | (1u << 7)};   // A minor pentatonic

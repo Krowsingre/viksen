@@ -30,6 +30,14 @@ struct DiagnosticsView: View {
                     Text("TestFlight only. Every Dimension opens and downloads without buying it, so Dimensions can be tested before their purchases are set up in App Store Connect. Never in the App Store version.")
                 }
                 Section {
+                    Picker("Room voices", selection: $engine.testRoomSolo) {
+                        ForEach(EngineController.RoomVoice.allCases) { Text($0.title).tag($0) }
+                    }
+                    Toggle("Room forward", isOn: $engine.testRoomForward)
+                } header: { Text("Room listening test") } footer: {
+                    Text("TestFlight only, with \"Blend the room\" on. Room voices: hear one of the room's voices alone (the plain, softened room stays in), or none of them. Room forward: the room 6 dB louder and the music 6 dB quieter. Both apply at once and reset when the app restarts.")
+                }
+                Section {
                     Toggle("Echo and reverb at the loop point", isOn: $engine.loopTransitionFx)
                 } footer: {
                     Text("TestFlight only. On: when a song loops back to its start it uses the same echo and reverb transition as a change of part (this is where the reverbed snap comes from). Off: a clean, very short crossfade. Changes the playing song at its next loop.")

@@ -209,3 +209,26 @@ TEST_CASE("room/a held note in the room is echoed in key on the 16ths") {
     const size_t off = on % 6000;
     CHECK(std::min(off, 6000 - off) <= 2);
 }
+
+TEST_CASE("room/solo (listening test) plays one voice alone, or none") {
+    // A held note with a beat: several voices would answer. Solo pitch echo: only it does.
+    std::vector<float> in(static_cast<size_t>(kSr * 2), 0.0f);
+    for (size_t i = 0; i < static_cast<size_t>(kSr * 0.5); ++i) in[i] = 0.3f * static_cast<float>(std::sin(2 * 3.14159265358979 * 455.0 * i / kSr));
+    auto render = [&](int solo) {
+        RoomInstrument ri; ri.prepare(kSr);
+        ri.setScale(RoomInstrument::scaleForKey("A minor"), 9);
+        ri.setClock(0.0, 120.0);
+        ri.solo.store(solo);
+        return run(ri, in);
+    };
+    RoomInstrument ref; ref.prepare(kSr); only(ref, ref.pitchEchoLevel);
+    ref.setScale(RoomInstrument::scaleForKey("A minor"), 9);
+    ref.setClock(0.0, 120.0);
+    const auto alone = run(ref, in);
+    const auto solo = render(RoomInstrument::kPitchEcho);
+    double diff = 0;
+    for (size_t i = 0; i < in.size(); ++i) diff += std::fabs(solo.l[i] - alone.l[i]);
+    CHECK(diff == 0.0);                                         // the same as that voice alone
+    CHECK(energyOf(render(-1).l) > energyOf(solo.l));           // all voices: more
+    CHECK(energyOf(render(RoomInstrument::kNone).l) == 0.0);    // none: nothing from the instrument
+}

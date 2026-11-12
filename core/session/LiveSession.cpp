@@ -31,6 +31,8 @@ void LiveSession::rebuild(double sampleRate, int maxBlockSize) {
     if (recorder_.recording()) { recorder_.stop(); recordingInterrupted_ = true; }
     engine_ = std::make_unique<AudioEngine>();
     applySettings(); // before prepare(): smoothers start at their targets
+    engine_->setRoomForward(roomForward_);
+    engine_->roomInstrument().solo.store(roomSolo_);
     engine_->prepare({sampleRate, maxBlockSize});
     if (original_) engine_->setLayer(kTrackSlot, prepareClipForEngine(*original_, sampleRate), Bus::Music, 0);
     // The song's room colour, room instrument and beat clips belong to the new engine too
@@ -121,6 +123,11 @@ void LiveSession::setBedEnabled(bool e) { settings_.bedEnabled = e; engine_->set
 void LiveSession::setBedLevel(float v) { settings_.bedLevel = v; engine_->atmosphereBed().level.set(v); }
 void LiveSession::setBedColourHz(float v) { settings_.bedColourHz = v; engine_->atmosphereBed().colourHz.set(v); }
 void LiveSession::setMicToneHz(float v) { settings_.micToneHz = v; engine_->micTransform().cutoffHz.set(v); }
+void LiveSession::setRoomForward(bool on) { roomForward_ = on; engine_->setRoomForward(on); }
+void LiveSession::setRoomSolo(int voice) {
+    roomSolo_ = voice >= 0 && voice <= RoomInstrument::kNone ? voice : -1;
+    engine_->roomInstrument().solo.store(roomSolo_);
+}
 void LiveSession::setLoopTransitionFx(bool on) {
     loopFx_ = on;
     if (feeder_) feeder_->setLoopFx(on);

@@ -232,3 +232,35 @@ TEST_CASE("engine/concurrent control and audio threads (stress)") {
     e->collectGarbage();
     CHECK(e->meters().blocksProcessed >= 200);
 }
+
+TEST_CASE("engine/room forward (listening test): room +6 dB, music -6 dB, gliding") {
+    // Music only: it settles at half its level, without a jump.
+    auto e = makeEngine();
+    auto clip = std::make_shared<const AudioClip>(test::makeSine(48000, 48000 * 3, 200, 0.25f));
+    REQUIRE(e->setLayer(0, clip, Bus::Music, 0));
+    e->setRoomForward(true);
+    AudioBuffer out;
+    REQUIRE(renderOffline(*e, {0, 48000 * 3, 256, {}}, out));
+    const int at = 48000 * 2 + 24000;   // 2.5 s: the 0.5 s glide has settled
+    CHECK_NEAR(test::peakOf(out.channel(0) + at, 4800), 0.125f, 0.002f);
+    float maxJump = 0;
+    for (int i = 1; i < 48000 * 3; ++i) maxJump = std::max(maxJump, std::fabs(out.channel(0)[i] - out.channel(0)[i - 1]));
+    CHECK(maxJump < 0.01f);
+    // The room (raw path for a plain measure): twice as loud, then back when switched off.
+    auto m = makeEngine();
+    m->setMicInputEnabled(true);
+    m->setBusGain(Bus::MicRaw, 0.25f);
+    m->setBusMuted(Bus::MicTransformed, true);
+    auto tone = test::makeSine(48000, 4800, 300, 0.3f, 1);
+    std::vector<float> l(4800), r(4800);
+    const float* ins[1] = {tone.samples.channel(0)};
+    float* outs[2] = {l.data(), r.data()};
+    m->process(ins, 1, outs, 2, 4800);
+    const float plain = test::peakOf(l.data() + 2400, 2400);
+    m->setRoomForward(true);
+    for (int i = 0; i < 30; ++i) m->process(ins, 1, outs, 2, 4800);
+    CHECK_NEAR(test::peakOf(l.data() + 2400, 2400), 2.0f * plain, 0.01f);
+    m->setRoomForward(false);
+    for (int i = 0; i < 30; ++i) m->process(ins, 1, outs, 2, 4800);
+    CHECK_NEAR(test::peakOf(l.data() + 2400, 2400), plain, 0.01f);
+}

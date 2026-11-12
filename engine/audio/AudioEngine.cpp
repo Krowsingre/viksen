@@ -255,15 +255,26 @@ void AudioEngine::sumToMaster(int numFrames) noexcept {
         const float amount = std::clamp((duckEnvDb_ + 30.0f) / 24.0f, 0.0f, 1.0f);
         duck = 1.0f - roomDuckDepth_.load(std::memory_order_relaxed) * amount;
     }
+    // Room forward (listening test): glide toward +6 dB room / -6 dB music, ~0.5 s.
+    const float fwdTarget = roomForward_.load(std::memory_order_relaxed) ? 1.0f : 0.0f;
+    const float fwdFrom = roomForwardNow_;
+    roomForwardNow_ += (1.0f - std::exp(-static_cast<float>(numFrames) / (0.5f * static_cast<float>(config_.sampleRate)))) * (fwdTarget - roomForwardNow_);
+    if (std::fabs(roomForwardNow_ - fwdTarget) < 1e-4f) roomForwardNow_ = fwdTarget;
     for (int b = 0; b < kNumBuses; ++b) {
         BusState& bs = buses_[b];
         const bool muted = bs.muted.load(std::memory_order_relaxed);
         bs.gain.beginBlock();
         AudioBuffer& src = busBuffers_[b];
         float peak = 0.0f;
-        const float busDuck = (b == static_cast<int>(Bus::MicRaw) || b == static_cast<int>(Bus::MicTransformed)) ? duck : 1.0f;
+        const bool room = b == static_cast<int>(Bus::MicRaw) || b == static_cast<int>(Bus::MicTransformed);
+        const bool music = b == static_cast<int>(Bus::Music);
+        const float busDuck = room ? duck : 1.0f;
+        // Room forward: +6 dB on the room, -6 dB on the music, ramped across the block.
+        const float fwdA = room ? 1.0f + fwdFrom : music ? 1.0f - 0.5f * fwdFrom : 1.0f;
+        const float fwdB = room ? 1.0f + roomForwardNow_ : music ? 1.0f - 0.5f * roomForwardNow_ : 1.0f;
+        const float fwdStep = (fwdB - fwdA) / static_cast<float>(std::max(1, numFrames));
         for (int i = 0; i < numFrames; ++i) {
-            const float g = bs.gain.next() * (muted ? 0.0f : 1.0f) * busDuck;
+            const float g = bs.gain.next() * (muted ? 0.0f : 1.0f) * busDuck * (fwdA + fwdStep * static_cast<float>(i));
             const float l = src.channel(0)[i] * g;
             const float r = src.channel(1)[i] * g;
             mix_.channel(0)[i] += l;

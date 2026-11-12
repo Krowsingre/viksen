@@ -164,7 +164,7 @@ void RoomInstrument::trackPitch() noexcept {
 }
 
 float RoomInstrument::renderTune() noexcept {
-    const float level = tuneLevel.load(std::memory_order_relaxed);
+    const float level = levelOf(kTune, tuneLevel);
     const bool singing = heardRecently_ < static_cast<int>(sr_ * 0.35) && level > 0;
     const float target = singing ? level : 0.0f;
     const float k = static_cast<float>(1.0 - std::exp(-1.0 / ((singing ? 0.25 : 1.2) * sr_)));   // soft attack, long release
@@ -192,7 +192,7 @@ float RoomInstrument::ringAt(double back) const noexcept {
 
 // Groove: slices of the last bars of the room on the song's 16th notes.
 void RoomInstrument::renderGroove(float& l, float& r) noexcept {
-    const float level = grooveLevel.load(std::memory_order_relaxed);
+    const float level = levelOf(kGroove, grooveLevel);
     if (bpm_ <= 0 || level <= 0) return;
     const long sixteenth = static_cast<long>(std::floor(beat_ * 4.0));
     if (sixteenth != last16th_) {
@@ -261,7 +261,7 @@ void RoomInstrument::renderResonance(float x, float& l, float& r) noexcept {
     hp_ = hpA_ * (hp_ + x - hpPrev_);
     hpPrev_ = x;
     inLp_ += inLpA_ * (hp_ - inLp_);
-    const float level = resonanceLevel.load(std::memory_order_relaxed);
+    const float level = levelOf(kResonance, resonanceLevel);
     if (level <= 0) return;
     const float in = 0.5f * inLp_;
     float sl = 0, sr = 0;
@@ -291,7 +291,7 @@ void RoomInstrument::renderResonance(float x, float& l, float& r) noexcept {
 
 // Grains: 60-200 ms of the last second of the room, at random places, ~12 a second.
 void RoomInstrument::renderGrains(float& l, float& r) noexcept {
-    const float level = grainLevel.load(std::memory_order_relaxed);
+    const float level = levelOf(kGrains, grainLevel);
     if (level <= 0) return;
     if (--nextGrain_ <= 0) {
         nextGrain_ = static_cast<int>(sr_ / 12.0 * std::uniform_real_distribution<double>(0.5, 1.5)(rng_));
@@ -326,7 +326,7 @@ void RoomInstrument::renderGrains(float& l, float& r) noexcept {
 
 // Shifted echo: the room, pitch-shifted, repeating every 3/4 of a beat (0.5 s with no song).
 void RoomInstrument::renderShiftEcho(float x, float& l, float& r) noexcept {
-    const float level = shiftEchoLevel.load(std::memory_order_relaxed);
+    const float level = levelOf(kShiftEcho, shiftEchoLevel);
     if (level <= 0) return;
     const int n = static_cast<int>(echo_.size());
     const double target = std::clamp(bpm_ > 0 ? 0.75 * 60.0 / bpm_ * sr_ : 0.5 * sr_, 0.05 * sr_, n - 3.0);
@@ -347,7 +347,7 @@ void RoomInstrument::renderShiftEcho(float x, float& l, float& r) noexcept {
 
 // Pitch echo: the room's own held note, retuned into the scale, on the next 16ths.
 void RoomInstrument::startPitchEcho(double detectedHz, int note) noexcept {
-    if (pitchEchoLevel.load(std::memory_order_relaxed) <= 0 || detectedHz <= 0 || note < 0) return;
+    if (levelOf(kPitchEcho, pitchEchoLevel) <= 0 || detectedHz <= 0 || note < 0) return;
     for (const auto& p : playbacks_) if (p.on) return;   // still sounding: let it finish
     for (const auto& rp : repeats_) if (rp.on) return;
     capturedLen_ = static_cast<int>(captured_.size()) - 2;
@@ -373,7 +373,7 @@ void RoomInstrument::renderPitchEcho(float& l, float& r) noexcept {
         for (auto& p : playbacks_)
             if (!p.on) { p = Playback{true, 0.0, rp.gain, std::sqrt(0.5f * (1 - rp.pan)), std::sqrt(0.5f * (1 + rp.pan))}; break; }
     }
-    const float level = pitchEchoLevel.load(std::memory_order_relaxed);
+    const float level = levelOf(kPitchEcho, pitchEchoLevel);
     const double last = capturedLen_ - 1;
     for (auto& p : playbacks_) {
         if (!p.on) continue;
