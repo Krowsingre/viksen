@@ -104,6 +104,8 @@ typedef NS_ENUM(NSInteger, AtmosBusId) {
 @property (nonatomic) BOOL headphones;
 /// It is raining (weather on): Dimensions with a rain song play it.
 @property (nonatomic) BOOL raining;
+/// A thunderstorm (weather on): Dimensions with a storm song play it, else their rain song.
+@property (nonatomic) BOOL storming;
 /// Windy / cloudy (weather on): by day, Dimensions with a windy or cloudy song play it.
 @property (nonatomic) BOOL windy;
 @property (nonatomic) BOOL cloudy;

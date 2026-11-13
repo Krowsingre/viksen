@@ -49,11 +49,11 @@ struct WorldManifest {
     std::optional<MoonPhaseName> lunarPhase;
     // When the song plays in a Dimension with a day track (owner, 2026-11-05): "day"
     // (default), "night" (every night that has no song for its own phase), the weather
-    // songs "rain" (also thunderstorms, for now), "snow", "fog", "wind" and "cloudy" (day or
+    // songs "rain" (also thunderstorms when there is no "storm" song), "storm" (thunderstorms), "snow", "fog", "wind" and "cloudy" (day or
     // night), or "dawn" / "dusk" (owner, 2026-11-11).
     // "secret": a moon-event secret's hidden song (owner, 2026-11-11), with `moonEvent` set
     // to the event's id ("supermoon", "solarEclipse"...); it plays while that event is on.
-    enum class Plays { Day, Night, Rain, Wind, Cloudy, Snow, Fog, Dawn, Dusk, Secret };
+    enum class Plays { Day, Night, Rain, Storm, Wind, Cloudy, Snow, Fog, Dawn, Dusk, Secret };
     Plays plays = Plays::Day;
     std::string moonEvent;
     std::vector<WorldStem> stems;

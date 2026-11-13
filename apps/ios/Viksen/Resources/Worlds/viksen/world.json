@@ -1701,7 +1701,7 @@
     {
       "slot": "storm",
       "id": "lunar-storm-promise",
-      "title": "Sanctuary",
+      "title": "Sanctuary from the Rain",
       "music": {
         "tempo": 80,
         "key": "",
@@ -2037,6 +2037,13 @@
         }
       ],
       "plays": "rain"
+    },
+    {
+      "slot": "thunderstorm",
+      "id": "sanctuary-from-the-storm",
+      "plays": "storm",
+      "title": "Sanctuary from the Storm",
+      "stems": []
     },
     {
       "slot": "snow",

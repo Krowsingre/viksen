@@ -33,6 +33,7 @@ std::optional<WorldManifest> parseWorld(const Json& j, std::string* error) {
             if (p == "day") w.plays = WorldManifest::Plays::Day;
             else if (p == "night") w.plays = WorldManifest::Plays::Night;
             else if (p == "rain") w.plays = WorldManifest::Plays::Rain;
+            else if (p == "storm") w.plays = WorldManifest::Plays::Storm;
             else if (p == "wind") w.plays = WorldManifest::Plays::Wind;
             else if (p == "cloudy") w.plays = WorldManifest::Plays::Cloudy;
             else if (p == "snow") w.plays = WorldManifest::Plays::Snow;
@@ -144,6 +145,7 @@ Json worldToJson(const WorldManifest& w) {
     if (w.lunarPhase) j["lunarPhase"] = moonPhaseId(*w.lunarPhase);
     if (w.plays == WorldManifest::Plays::Night) j["plays"] = "night";
     if (w.plays == WorldManifest::Plays::Rain) j["plays"] = "rain";
+    if (w.plays == WorldManifest::Plays::Storm) j["plays"] = "storm";
     if (w.plays == WorldManifest::Plays::Wind) j["plays"] = "wind";
     if (w.plays == WorldManifest::Plays::Cloudy) j["plays"] = "cloudy";
     if (w.plays == WorldManifest::Plays::Snow) j["plays"] = "snow";

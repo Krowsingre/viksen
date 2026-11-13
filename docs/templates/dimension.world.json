@@ -91,6 +91,13 @@
       "stems": []
     },
     {
+      "slot": "thunderstorm",
+      "id": "thunderstorm",
+      "plays": "storm",
+      "title": "",
+      "stems": []
+    },
+    {
       "slot": "snow",
       "id": "snow",
       "plays": "snow",
