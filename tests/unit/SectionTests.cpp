@@ -564,6 +564,47 @@ TEST_CASE("session/day, night and rain songs: rain wins, then tonight's song, th
     CHECK(songAt(true, true, true, true).songTitle == "Storm");
 }
 
+TEST_CASE("session/a thunderstorm plays the storm song, else the rain song") {
+    const double t = 20000.25;
+    Json j = twoSongDimension();
+    Json rain = j["songs"][1]; rain["id"] = "r"; rain["title"] = "Sanctuary from the Rain"; rain["plays"] = "rain";
+    Json storm = j["songs"][1]; storm["id"] = "s"; storm["title"] = "Sanctuary from the Storm"; storm["plays"] = "storm";
+    j["songs"].push_back(rain);
+    const double rate = 48000;
+    auto clip = std::make_shared<const AudioClip>(test::makeSine(rate, static_cast<int>(rate * 4), 330, 0.3f));
+    LiveSession::StemFileDecoder decode = [&](const std::string&, double, std::string&) -> std::unique_ptr<StemDecoder> {
+        return std::make_unique<ClipStemDecoder>(clip);
+    };
+    LiveSession s(rate, 256);
+    std::string err;
+    auto songAt = [&](const DimensionManifest& d, bool raining, bool storming) -> std::string {
+        ConditionContext c;
+        c.daysSinceUnixEpochUtc = t;
+        c.raining = raining;
+        c.storming = storming;
+        s.updateWorld(0, c);
+        const bool loaded = s.loadDimension(d, decode, &err);
+        CHECK(loaded);
+        const std::string title = s.worldStatus().songTitle;
+        s.unloadWorld();
+        return title;
+    };
+    // No storm song yet: a thunderstorm plays the rain song.
+    auto withoutStorm = parseDimension(j);
+    REQUIRE(withoutStorm.has_value());
+    CHECK(songAt(*withoutStorm, true, true) == "Sanctuary from the Rain");
+    // With one: thunderstorms play it; plain rain keeps the rain song.
+    j["songs"].push_back(storm);
+    auto withStorm = parseDimension(j);
+    REQUIRE(withStorm.has_value());
+    CHECK(songAt(*withStorm, true, true) == "Sanctuary from the Storm");
+    CHECK(songAt(*withStorm, false, true) == "Sanctuary from the Storm");
+    CHECK(songAt(*withStorm, true, false) == "Sanctuary from the Rain");
+    CHECK(songAt(*withStorm, false, false) != "Sanctuary from the Storm");
+    // "storm" survives a save and reload.
+    CHECK(worldToJson(withStorm->songs.back())["plays"] == "storm");
+}
+
 TEST_CASE("worlds/adaptive music off plays parts as written") {
     auto w = parseWorld(sectionWorld());
     REQUIRE(w.has_value());
@@ -631,7 +672,7 @@ TEST_CASE("worlds/Dimension template: empty slots and secrets wait; filled slots
     std::ifstream in(std::filesystem::path(ATMOS_SOURCE_DIR) / "docs/templates/dimension.world.json");
     REQUIRE(in.good());
     const Json tpl = Json::parse(in);
-    CHECK(tpl["songs"].size() == 27);   // day, dawn, dusk, eight nights, storm, snow, fog, wind, cloudy, eleven moon-event secrets
+    CHECK(tpl["songs"].size() == 28);   // day, dawn, dusk, eight nights, storm (rain), thunderstorm, snow, fog, wind, cloudy, eleven moon-event secrets
 }
 
 TEST_CASE("session/snow, fog, dawn and dusk songs: weather first, then night, then dawn or dusk") {

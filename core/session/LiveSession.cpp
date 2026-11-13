@@ -389,14 +389,14 @@ bool LiveSession::hasLunarSongs() const {
 }
 
 // Dimensions with a day track (owner, 2026-11-05/11): weather first, day or night, in this
-// order: rain (thunderstorms too), snow, fog, wind, cloudy; then after dark the song for
+// order: thunderstorm (its own song, else the rain song), rain, snow, fog, wind, cloudy; then after dark the song for
 // tonight's phase, else the night song; at dawn or dusk their songs; otherwise the day
 // track (the first song with no phase and no other role). A missing song is skipped.
 // -1: the Dimension has none of these songs.
 int LiveSession::lunarTarget(const ConditionContext& c) const {
     if (!hasLunarSongs()) return -1;
     const auto& songs = dimension_->songs;
-    int day = -1, lunar = -1, night = -1, rain = -1, wind = -1, cloudy = -1, snow = -1, fog = -1, dawn = -1, dusk = -1;
+    int day = -1, lunar = -1, night = -1, rain = -1, storm = -1, wind = -1, cloudy = -1, snow = -1, fog = -1, dawn = -1, dusk = -1;
     const MoonPhaseName now = moonPhaseName(c.daysSinceUnixEpochUtc);
     for (size_t i = 0; i < songs.size(); ++i) {
         const auto& s = songs[i];
@@ -407,6 +407,7 @@ int LiveSession::lunarTarget(const ConditionContext& c) const {
         if (s.plays == WorldManifest::Plays::Night) { if (night < 0) night = k; }
         else if (s.lunarPhase) {}
         else if (s.plays == WorldManifest::Plays::Rain) { if (rain < 0) rain = k; }
+        else if (s.plays == WorldManifest::Plays::Storm) { if (storm < 0) storm = k; }
         else if (s.plays == WorldManifest::Plays::Wind) { if (wind < 0) wind = k; }
         else if (s.plays == WorldManifest::Plays::Cloudy) { if (cloudy < 0) cloudy = k; }
         else if (s.plays == WorldManifest::Plays::Snow) { if (snow < 0) snow = k; }
@@ -420,7 +421,8 @@ int LiveSession::lunarTarget(const ConditionContext& c) const {
     for (const auto& ev : c.moonEvents)
         for (size_t i = 0; i < songs.size(); ++i)
             if (songs[i].plays == WorldManifest::Plays::Secret && songs[i].moonEvent == ev) return static_cast<int>(i);
-    if (c.raining && rain >= 0) return rain;
+    if (c.storming && storm >= 0) return storm;
+    if ((c.raining || c.storming) && rain >= 0) return rain;
     if (c.snowing && snow >= 0) return snow;
     if (c.foggy && fog >= 0) return fog;
     if (c.windy && wind >= 0) return wind;

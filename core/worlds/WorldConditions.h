@@ -29,7 +29,8 @@ struct ConditionContext {
     // headphones and speakers). Off: songs play their parts and mix as written (day,
     // night and rain songs still change).
     bool adaptive = true;
-    bool raining = false;              // it is raining where the listener is (weather, when on)
+    bool raining = false;              // it is raining where the listener is (weather, when on; thunderstorms too)
+    bool storming = false;             // a thunderstorm where the listener is (weather, when on)
     bool windy = false;                // windy where the listener is (weather, when on)
     bool cloudy = false;               // cloudy where the listener is (weather, when on)
     bool snowing = false;              // snowing (weather, when on)

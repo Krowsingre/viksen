@@ -281,6 +281,8 @@ final class EngineController {
             // Rain plays a Dimension's storm song, on every tier (needs Weather on).
             let raining = weatherEnabled && (weather.mood == .rain || weather.mood == .storm)
             if bridge.raining != raining { bridge.raining = raining }
+            let storming = weatherEnabled && weather.mood == .storm
+            if bridge.storming != storming { bridge.storming = storming }
             // Each kind of weather, and dawn and dusk, has its own song where a Dimension has one.
             let mood = weatherEnabled ? weather.mood : nil
             if bridge.windy != (mood == .wind) { bridge.windy = mood == .wind }
