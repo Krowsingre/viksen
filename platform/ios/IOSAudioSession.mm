@@ -39,13 +39,24 @@
     BOOL ok;
     if (withMic) {
         // Measurement mode disables voice processing/AGC so environmental sound is
-        // captured as-is. A2DP keeps high-quality Bluetooth output (input then stays
-        // on the built-in mic). DefaultToSpeaker avoids the quiet receiver.
+        // captured as-is. The room is heard through the headphones' own microphone
+        // (owner, 2026-11-13): wired headsets are the default input anyway; for
+        // Bluetooth, iOS 26's high-quality recording mode uses the AirPods' microphones
+        // without dropping the music to call quality. Headphones without it fall back to
+        // high-quality output (A2DP) with the phone's microphone. DefaultToSpeaker
+        // avoids the quiet receiver.
         ok = [s setCategory:AVAudioSessionCategoryPlayAndRecord
                        mode:AVAudioSessionModeMeasurement
-                    options:AVAudioSessionCategoryOptionAllowBluetoothA2DP |
+                    options:AVAudioSessionCategoryOptionBluetoothHighQualityRecording |
+                            AVAudioSessionCategoryOptionAllowBluetoothA2DP |
                             AVAudioSessionCategoryOptionDefaultToSpeaker
-                      error:error];
+                      error:nil];
+        if (!ok)   // not accepted on this device/route: high-quality output, phone microphone
+            ok = [s setCategory:AVAudioSessionCategoryPlayAndRecord
+                           mode:AVAudioSessionModeMeasurement
+                        options:AVAudioSessionCategoryOptionAllowBluetoothA2DP |
+                                AVAudioSessionCategoryOptionDefaultToSpeaker
+                          error:error];
     } else {
         ok = [s setCategory:AVAudioSessionCategoryPlayback mode:AVAudioSessionModeDefault options:0 error:error];
     }
