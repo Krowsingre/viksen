@@ -1,6 +1,6 @@
 #pragma once
 // The room blend, built the way the studied reactive-audio dreams build it (owner,
-// 2026-11-12; study: docs/research/REFERENCE_STUDY.md and docs/ROOM_INSTRUMENT.md). All code
+// 2026-11-12; study notes in the private assets repository (research/) and docs/ROOM_INSTRUMENT.md). All code
 // here is original; only the techniques and their musical settings were studied.
 //
 // The room is always the sound. Its effects are ARRANGED: one at a time, each for a number

@@ -23,3 +23,10 @@ third_party/steamaudio/
 apps/windows/**/bin/
 apps/windows/**/obj/
 build-win/
+
+# Artwork lives in the private assets repository (art/), copied in by tools/fetch_art.sh.
+apps/ios/Viksen/Resources/Assets.xcassets/*.imageset/
+apps/ios/Viksen/Resources/Assets.xcassets/*.appiconset/
+apps/ios/ViksenWatch/Resources/Assets.xcassets/*.appiconset/
+apps/windows/Viksen/Assets/*.png
+apps/desktop/Resources/*.png

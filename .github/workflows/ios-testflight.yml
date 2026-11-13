@@ -124,14 +124,16 @@ jobs:
       # The Viksen Dimension's theme (Lunar Promise) ships inside the app. The owner's
       # music lives only in the private assets repository; it is copied into the build
       # here and never committed to this repository (.gitignore excludes it).
-      - name: Bundle the Viksen Dimension's audio (private assets)
+      - name: Bundle the Viksen Dimension's audio and the artwork (private assets)
         env:
           ASSETS_TOKEN: ${{ secrets.ASSETS_TOKEN }}
         run: |
           [ -n "$ASSETS_TOKEN" ] || { echo "::error::ASSETS_TOKEN is not set"; exit 1; }
           git clone --depth 1 --filter=blob:none --sparse \
             "https://x-access-token:${ASSETS_TOKEN}@github.com/Krowsingre/viksen-assets.git" "$RUNNER_TEMP/assets"
-          git -C "$RUNNER_TEMP/assets" sparse-checkout set theme/lunar-promise theme/lunar-dark-promise theme/lunar-storm-promise theme/what-was-once theme/the-first-stirring theme/against-the-gathering-dark theme/threshold ambience/weather ambience/transitions
+          git -C "$RUNNER_TEMP/assets" sparse-checkout set art theme/lunar-promise theme/lunar-dark-promise theme/lunar-storm-promise theme/what-was-once theme/the-first-stirring theme/against-the-gathering-dark theme/threshold ambience/weather ambience/transitions
+          # Every image of the app (never committed to this repository).
+          tools/fetch_art.sh "$RUNNER_TEMP/assets"
           dest=apps/ios/Viksen/Resources/Worlds/viksen
           for f in "$RUNNER_TEMP/assets/theme/lunar-promise/"*.m4a; do
             cp "$f" "$dest/lunar-promise-$(basename "$f")"

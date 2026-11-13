@@ -1,7 +1,7 @@
 # Room instrument (branch `room-instrument`)
 
 Goal (owner, 2026-11-12): make blending the room feel as heightened and interactive as
-the reactive-audio design studied in docs/research/REFERENCE_STUDY.md: the room is the
+the reactive-audio reference app studied privately (notes in the private assets repository (research/)): the room is the
 instrument, the music accompanies it, and the music answers within moments. Built on this
 branch and merged only when it works right. No TestFlight builds until all phases are
 done (owner). Experimental builds say "Experimental: room instrument" in About & Help.
@@ -45,9 +45,9 @@ done (owner). Experimental builds say "Experimental: room instrument" in About &
 
 ## Phase 3 details: the room blend, built the way the studied dreams build it
 
-Owner, 2026-11-12: "build the blend the way the reference app does". The earlier versions (bells,
+Owner, 2026-11-12: build the room blend the way the reference app does. The earlier versions (bells,
 then six voices always on together) are replaced. From the 14 dreams studied
-(docs/research/REFERENCE_STUDY.md), the room blend now works the way they do; all code is
+(notes in the private assets repository (research/)), the room blend now works the way they do; all code is
 original.
 
 - **The room is always the sound.** Every effect is made from the microphone. A little plain

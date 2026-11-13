@@ -46,7 +46,7 @@ timeline, stereo export, SQLite library.
 
 # Milestone 1b: reactive foundations and iPhone polish
 
-Design input: the study of a reference app in `docs/research/REFERENCE_STUDY.md`.
+Design input: a private study of a reference app (notes in the private assets repository (research/)).
 Nothing from that app is used; every item below is original code.
 
 ## Implemented
