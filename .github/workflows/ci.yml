@@ -1,11 +1,17 @@
 name: CI
 
 # Runs only when started by hand (owner, 2026-11-05: saves build minutes for a private
-# repository). Actions tab -> CI -> Run workflow. Engine tests and the iPhone build
-# always run; tick "all_apps" to also build the desktop, Mac and Windows apps.
+# repository). Actions tab -> CI -> Run workflow. Engine tests run on Linux and Windows;
+# Mac runners are skipped unless "mac" is ticked (owner, 2026-11-13: Mac minutes cost ten
+# times as much; the TestFlight workflow compiles the iPhone app anyway). Tick "all_apps"
+# to also build the desktop, Mac and Windows apps.
 on:
   workflow_dispatch:
     inputs:
+      mac:
+        description: "Also run the Mac jobs (iPhone simulator build, macOS engine tests)"
+        type: boolean
+        default: false
       all_apps:
         description: "Also build the desktop, Mac and Windows apps"
         type: boolean
@@ -17,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-14]
+        os: ${{ fromJSON(inputs.mac && '["ubuntu-latest", "windows-latest", "macos-14"]' || '["ubuntu-latest", "windows-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +76,7 @@ jobs:
 
   ios:
     name: iPhone app (simulator build)
+    if: inputs.mac
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
