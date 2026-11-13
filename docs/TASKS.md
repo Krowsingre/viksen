@@ -1,7 +1,7 @@
 # Viksen task list
 
 The working list for the Viksen app, in the approved order (DECISIONS #46). Design
-detail: `docs/TECHNICAL_PROPOSAL.md`. Decisions: `docs/DECISIONS.md`.
+detail: the technical proposal (in the private assets repository (research/)). Decisions: `docs/DECISIONS.md`.
 
 ## Queued by the owner (build when the owner says)
 

@@ -41,6 +41,10 @@ JUCE is fetched automatically (or pass `-DATMOS_JUCE_DIR=/path/to/JUCE`). Platfo
 
 See [apps/ios/README.md](apps/ios/README.md) (XcodeGen + Xcode 15.3+).
 
+The apps' artwork (every image and app icon) lives in the private assets repository and is
+not committed here. Run `tools/fetch_art.sh` once after cloning (and after artwork
+changes) before building any app; the CI and TestFlight builds do it automatically.
+
 ## License
 
 Copyright (c) 2026 Krowsingre Publishing. All rights reserved. This is proprietary
