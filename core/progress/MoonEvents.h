@@ -6,8 +6,9 @@
 //
 // When each event is "on":
 // - Supermoon / Micromoon / Blue Moon / Harvest Moon / Hunter's Moon: after dark, on the
-//   night closest to that exact full moon. Black Moon: after dark, on the night of that
-//   new moon. Blue and Black Moons use the listener's local calendar month. The Harvest
+//   Full Moon night of the lunar calendar (WorldConditions.h: the local date that holds the
+//   full moon; after midnight the night is still that evening's). Black Moon: after dark,
+//   on the New Moon night. Blue and Black Moons use the listener's local calendar month. The Harvest
 //   Moon is the full moon nearest the autumn equinox (March in the Southern Hemisphere,
 //   when the location is known); the Hunter's Moon is the next full moon.
 // - Rising Supermoon: the first hour after the supermoon rises where the listener is.
@@ -21,6 +22,8 @@
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "core/worlds/WorldConditions.h"
 
 namespace atmos::core {
 
@@ -36,7 +39,9 @@ std::optional<MoonEvent> moonEventFromId(const std::string& id);
 
 struct MoonEventContext {
     double daysUtc = 0;                  // days since 1970-01-01 UTC
-    int utcOffsetMinutes = 0;            // the listener's local time zone, for calendar months
+    int utcOffsetMinutes = 0;            // the listener's local time zone (used when localDateOf is empty)
+    LocalDateFn localDateOf;             // the listener's calendar (time zone with daylight saving)
+    int localHour = 12;                  // 0..23, for the night rule of the lunar calendar
     bool night = false;                  // after dark, by the listener's Night rule
     std::optional<double> latitude, longitude;   // approximate location (degrees), if allowed
 };

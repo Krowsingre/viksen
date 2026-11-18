@@ -64,16 +64,84 @@ double moonElongationDegrees(double daysSinceUnixEpochUtc) {
 
 double moonPhase(double days) { return moonElongationDegrees(days) / 360.0; }
 
-// Days since the last new moon (the Moon's elongation advances at a slightly uneven rate;
-// the mean month is accurate enough for the 1..30 lunar day).
-double lunarAgeDays(double days) { return moonPhase(days) * kSynodicMonth; }
-
-int lunarDay(double days) { return std::min(30, static_cast<int>(lunarAgeDays(days)) + 1); }
-
-MoonPhaseName moonPhaseName(double days) {
-    // Each named phase spans 1/8 of the cycle, centred on its exact point.
-    return static_cast<MoonPhaseName>(static_cast<int>(std::floor(moonPhase(days) * 8.0 + 0.5)) % 8);
+LocalDateFn fixedOffsetDates(int utcOffsetMinutes) {
+    return [utcOffsetMinutes](double daysUtc) { return static_cast<long>(std::floor(daysUtc + utcOffsetMinutes / 1440.0)); };
 }
+
+long daysFromCivil(int y, int m, int d) {   // Howard Hinnant's algorithm
+    y -= m <= 2 ? 1 : 0;
+    const long era = (y >= 0 ? y : y - 399) / 400;
+    const long yoe = y - era * 400;
+    const long doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+    const long doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    return era * 146097 + doe - 719468;
+}
+
+double mainPhaseNear(double daysUtc, MainPhase p) {
+    const double target = 90.0 * static_cast<int>(p);
+    auto off = [&](double t) { double d = std::fmod(moonElongationDegrees(t) - target, 360.0); if (d < -180) d += 360; if (d >= 180) d -= 360; return d; };
+    double t = daysUtc - off(daysUtc) / (360.0 / kSynodicMonthDays);
+    for (int i = 0; i < 10; ++i) {   // the Moon gains ~12.2 degrees a day on the Sun
+        const double d = off(t);
+        t -= d / 12.19;
+        if (std::fabs(d) < 1e-6) break;
+    }
+    return t;
+}
+
+LunarDate lunarDateOn(long localDate, const LocalDateFn& dateOfIn) {
+    const LocalDateFn dateOf = dateOfIn ? dateOfIn : fixedOffsetDates(0);
+    // Every main phase from about six weeks before this date to a month after, in order.
+    struct Moment { double t; MainPhase p; };
+    std::vector<Moment> moments;
+    const double seed = static_cast<double>(localDate) + 0.5;
+    for (int p = 0; p < 4; ++p) {
+        // Walk forward one month at a time from well before the date: each step starts
+        // next to the previous moment, so it can never skip a month.
+        double t = mainPhaseNear(seed - 45.0, static_cast<MainPhase>(p));
+        while (t < seed + 35.0) {
+            moments.push_back({t, static_cast<MainPhase>(p)});
+            t = mainPhaseNear(t + kSynodicMonthDays, static_cast<MainPhase>(p));
+        }
+    }
+    std::sort(moments.begin(), moments.end(), [](const Moment& a, const Moment& b) { return a.t < b.t; });
+    LunarDate out;
+    out.date = localDate;
+    const Moment* last = nullptr;       // the latest main phase on or before this date
+    const Moment* lastNew = nullptr;    // the latest new moon on or before this date
+    for (const auto& m : moments) {
+        const long d = dateOf(m.t);
+        if (d > localDate) break;
+        last = &m;
+        if (m.p == MainPhase::New) lastNew = &m;
+    }
+    static const MoonPhaseName onDay[4] = {MoonPhaseName::New, MoonPhaseName::FirstQuarter, MoonPhaseName::Full, MoonPhaseName::LastQuarter};
+    static const MoonPhaseName after[4] = {MoonPhaseName::WaxingCrescent, MoonPhaseName::WaxingGibbous, MoonPhaseName::WaningGibbous, MoonPhaseName::WaningCrescent};
+    if (last) {
+        const int k = static_cast<int>(last->p);
+        if (dateOf(last->t) == localDate) { out.phase = onDay[k]; out.main = last->p; out.mainAtDaysUtc = last->t; }
+        else out.phase = after[k];
+    }
+    if (lastNew) {
+        out.lunation = dateOf(lastNew->t);
+        out.day = static_cast<int>(localDate - out.lunation) + 1;
+    }
+    return out;
+}
+
+long livingDate(double daysUtc, bool night, int localHour, const LocalDateFn& dateOf) {
+    const long d = dateOf ? dateOf(daysUtc) : static_cast<long>(std::floor(daysUtc));
+    return night && localHour < 12 ? d - 1 : d;   // after midnight, the night is still the evening's
+}
+
+LunarDate lunarDateOf(const ConditionContext& c) {
+    if (c.lunar) return *c.lunar;
+    return lunarDateOn(livingDate(c.daysSinceUnixEpochUtc, c.night, c.localHour, c.localDateOf), c.localDateOf);
+}
+
+int lunarDay(double days) { return lunarDateOn(static_cast<long>(std::floor(days))).day; }
+
+MoonPhaseName moonPhaseName(double days) { return lunarDateOn(static_cast<long>(std::floor(days))).phase; }
 
 const char* moonPhaseId(MoonPhaseName p) { return kPhaseIds[static_cast<int>(p)]; }
 
@@ -81,10 +149,6 @@ std::optional<MoonPhaseName> moonPhaseFromId(const std::string& id) {
     for (int i = 0; i < 8; ++i)
         if (id == kPhaseIds[i]) return static_cast<MoonPhaseName>(i);
     return std::nullopt;
-}
-
-bool isFullMoon(double days, double toleranceDays) {
-    return std::fabs(moonPhase(days) - 0.5) * kSynodicMonth <= toleranceDays;
 }
 
 bool ConditionSet::evaluate(const ConditionContext& c) const {
@@ -102,10 +166,10 @@ bool ConditionSet::evaluate(const ConditionContext& c) const {
             case Condition::Type::Still: ok = c.env.still; break;
             case Condition::Type::Moving: ok = c.env.moving; break;
             case Condition::Type::MoonPhase:
-                ok = static_cast<int>(moonPhaseName(c.daysSinceUnixEpochUtc)) == static_cast<int>(k.a);
+                ok = static_cast<int>(lunarDateOf(c).phase) == static_cast<int>(k.a);
                 break;
             case Condition::Type::LunarDay: {
-                const int d = lunarDay(c.daysSinceUnixEpochUtc), from = static_cast<int>(k.a), to = static_cast<int>(k.b);
+                const int d = lunarDateOf(c).day, from = static_cast<int>(k.a), to = static_cast<int>(k.b);
                 ok = from <= to ? (d >= from && d <= to) : (d >= from || d <= to);
                 break;
             }

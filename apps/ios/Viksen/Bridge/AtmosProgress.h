@@ -35,6 +35,9 @@ NS_ASSUME_NONNULL_BEGIN
 + (nullable NSDateInterval *)nextWindowForPhase:(NSString *)phaseId;
 /// The current named lunar phase ("full", "waxingCrescent", ...).
 + (NSString *)currentPhaseId;
+/// After dark by the listener's Night rule: a night keeps its evening's lunar date until
+/// morning. Set by the app every second.
+@property (class, nonatomic) BOOL night;
 
 // ---- Moon-event secrets (owner, 2026-11-11) ----
 /// The moon events on now where the listener is, rarest first ("supermoon", "solarEclipse"...).

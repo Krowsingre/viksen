@@ -1,5 +1,19 @@
 import Foundation
 
+/// How the lunar day is numbered on screen (owner, 2026-11-18). Only a label: the app acts
+/// on the moon's phases and events, never on this number.
+enum LunarDayStyle: String, CaseIterable, Identifiable {
+    case traditional   // the date of the new moon is day 1 (lunar calendars)
+    case moonAge       // the date of the new moon is day 0 (the Moon's age)
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .traditional: "Traditional (new moon is day 1)"
+        case .moonAge: "Moon's age (new moon is day 0)"
+        }
+    }
+}
+
 /// Display names for the engine's lunar-calendar phase ids.
 enum Lunar {
     /// The eight named phases in order through a lunar cycle.

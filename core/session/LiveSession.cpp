@@ -288,7 +288,7 @@ int LiveSession::lunarTarget(const ConditionContext& c) const {
     if (!hasLunarSongs()) return -1;
     const auto& songs = dimension_->songs;
     int day = -1, lunar = -1, night = -1, rain = -1, storm = -1, wind = -1, cloudy = -1, snow = -1, fog = -1, dawn = -1, dusk = -1;
-    const MoonPhaseName now = moonPhaseName(c.daysSinceUnixEpochUtc);
+    const MoonPhaseName now = lunarDateOf(c).phase;   // tonight, by the calendar (a night keeps its evening's date)
     for (size_t i = 0; i < songs.size(); ++i) {
         const auto& s = songs[i];
         const int k = static_cast<int>(i);
@@ -535,7 +535,7 @@ WorldStatus LiveSession::worldStatus() const {
     if (world_->lunarPhase) st.songLunarPhase = moonPhaseId(*world_->lunarPhase);
     // The night song stands in for every phase without its own song: tonight's phase.
     else if (world_->plays == WorldManifest::Plays::Night && haveContext_)
-        st.songLunarPhase = moonPhaseId(moonPhaseName(lastContext_.daysSinceUnixEpochUtc));
+        st.songLunarPhase = moonPhaseId(lunarDateOf(lastContext_).phase);
     if (dimension_) {
         st.id = dimension_->id;
         st.name = dimension_->name;

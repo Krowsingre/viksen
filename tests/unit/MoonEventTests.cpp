@@ -18,6 +18,8 @@ MoonEventContext at(double days, bool night, int offsetMinutes = 0) {
     c.daysUtc = days;
     c.night = night;
     c.utcOffsetMinutes = offsetMinutes;
+    double h = std::fmod(days * 24.0 + offsetMinutes / 60.0, 24.0);
+    c.localHour = static_cast<int>(h < 0 ? h + 24.0 : h);
     return c;
 }
 MoonEventContext at(double days, bool night, int offsetMinutes, double lat, double lon) {
@@ -69,8 +71,12 @@ TEST_CASE("moon/Blue and Black Moons follow the local month; Harvest follows the
     // ...but already 1 January at UTC+14, where it is the month's first.
     CHECK(!has(activeMoonEvents(at(21549.5, true, 14 * 60)), MoonEvent::BlueMoon));
     CHECK(has(activeMoonEvents(at(21061.875, true, 60)), MoonEvent::BlackMoon));   // 31 Aug 2027
-    CHECK(has(activeMoonEvents(at(21076.875, true, 60, 51.5, -0.1)), MoonEvent::HarvestMoon));    // 15 Sep 2027, London
-    CHECK(!has(activeMoonEvents(at(21076.875, true, 600, -33.9, 151.2)), MoonEvent::HarvestMoon)); // not in Sydney
+    // Full moon 15 Sep 2027 23:03 UTC: 16 Sep in London (00:03 BST), so its night is the 16th.
+    CHECK(has(activeMoonEvents(at(21077.875, true, 60, 51.5, -0.1)), MoonEvent::HarvestMoon));     // 16 Sep 2027 evening, London
+    CHECK(!has(activeMoonEvents(at(21076.875, true, 60, 51.5, -0.1)), MoonEvent::HarvestMoon));    // not the evening before
+    CHECK(has(activeMoonEvents(at(21077.0, true, 60, 51.5, -0.1)), MoonEvent::HarvestMoon) == false);   // 01:00 BST on the 16th: still the 15th's night
+    CHECK(has(activeMoonEvents(at(21078.0, true, 60, 51.5, -0.1)), MoonEvent::HarvestMoon));      // 01:00 BST on the 17th: still the 16th's night
+    CHECK(!has(activeMoonEvents(at(21077.875, true, 600, -33.9, 151.2)), MoonEvent::HarvestMoon)); // not in Sydney
     CHECK(has(activeMoonEvents(at(20899.416667, true, 600, -33.9, 151.2)), MoonEvent::HarvestMoon)); // 22 Mar 2027 there
     CHECK(has(activeMoonEvents(at(21106.875, true, 60)), MoonEvent::HuntersMoon));  // 15 Oct 2027
 }

@@ -30,17 +30,17 @@ public:
     void markDiscovered(const std::string& dimensionId, MoonPhaseName phase);
     bool isDiscovered(const std::string& dimensionId, MoonPhaseName phase) const;
 
-    // Call regularly (e.g. once a second). `songPhase`: the lunar phase the playing song
-    // belongs to (nullopt for songs that are not lunar-phase songs). `audible`: the
+    // Call regularly (e.g. once a second). `today`: the lunar date the listener lives on
+    // (lunarDateOf; its phase is the phase now). `songPhase`: the lunar phase the playing
+    // song belongs to (nullopt for songs that are not lunar-phase songs). `audible`: the
     // Dimension is playing and not muted or paused. Returns a discovery when one happens.
-    std::optional<PhaseDiscovery> update(double nowDaysUtc, double dtSeconds, const std::string& dimensionId,
+    std::optional<PhaseDiscovery> update(double nowDaysUtc, double dtSeconds, const LunarDate& today, const std::string& dimensionId,
                                          std::optional<MoonPhaseName> songPhase, bool audible);
 
     // Qualifying seconds so far for this Dimension in the current phase (for UI hints).
-    double progressSeconds(const std::string& dimensionId, double nowDaysUtc) const;
+    double progressSeconds(const std::string& dimensionId, const LunarDate& today) const;
 
 private:
-    static long lunation(double daysUtc);   // index of the lunar cycle containing this moment
     std::set<std::pair<std::string, int>> discovered_;
     std::map<std::tuple<std::string, int, long>, double> seconds_;   // (dimension, phase, lunation)
     double lastNow_ = -1e18;
