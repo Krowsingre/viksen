@@ -184,14 +184,21 @@ struct MoonPage: View {
     var body: some View {
         List {
             Section {
-                Label("\(Lunar.phaseName(engine.moonPhaseID)) · lunar day \(engine.lunarDay) of 30",
+                Label("\(Lunar.phaseName(engine.moonPhaseID)) · lunar day \(engine.lunarDayLabel)",
                       systemImage: Lunar.symbol(engine.moonPhaseID))
                 Picker("Night", selection: Bindable(engine.nightClock).rule) {
                     ForEach(NightClock.Rule.allCases) { Text($0.title).tag($0) }
                 }
             } footer: { Text(nightFooter) }
             Section {
-                Text("Viksen follows the lunar calendar, worked out on this \(Platform.deviceNoun). The fuller the moon, the longer and wider the echoes and reverb that carry the music from one part to the next, and the wider the room blend; near the new moon, changes are closer and drier.")
+                Picker("Lunar day count", selection: Bindable(engine).lunarDayStyle) {
+                    ForEach(LunarDayStyle.allCases) { Text($0.title).tag($0) }
+                }
+            } footer: {
+                Text("How the lunar day is numbered. Traditional lunar calendars count the day of the new moon as day 1; the Moon's age counts it as day 0. Only the number changes: the phases, their songs and the Moon Chart follow the moon itself.")
+            }
+            Section {
+                Text("Viksen follows the lunar calendar, worked out on this \(Platform.deviceNoun) in your time zone: New Moon, First Quarter, Full Moon and Last Quarter are the days they happen on, and the days between are the crescent and gibbous phases. A night belongs to the day it began on, so a phase's song plays its whole night. The fuller the moon, the longer and wider the echoes and reverb that carry the music from one part to the next, and the wider the room blend; near the new moon, changes are closer and drier.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
         }

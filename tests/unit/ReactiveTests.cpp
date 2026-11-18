@@ -191,9 +191,11 @@ TEST_CASE("worlds/lunar calendar matches published moon phases") {
     CHECK(lunarDay(19733.4979 + 0.6) <= 2);
     CHECK(moonPhaseName(19740.1618) == MoonPhaseName::FirstQuarter);
     CHECK(moonPhaseName(19984.1069) == MoonPhaseName::Full);
-    CHECK(isFullMoon(19984.1069));
+    CHECK(std::fabs(mainPhaseNear(19984.0, MainPhase::Full) - 19984.1069) < 5.0 / 1440.0);   // within 5 minutes
     CHECK(moonPhaseName(20101.9354) == MoonPhaseName::Full);
-    CHECK(!isFullMoon(20101.9354 + 7.0));
+    CHECK(moonPhaseName(20101.9354 + 7.0) != MoonPhaseName::Full);
+    CHECK(std::fabs(mainPhaseNear(19733.0, MainPhase::New) - 19733.4979) < 5.0 / 1440.0);
+    CHECK(std::fabs(mainPhaseNear(19740.0, MainPhase::FirstQuarter) - 19740.1618) < 5.0 / 1440.0);
     const int d = lunarDay(19984.1069);
     CHECK(d >= 14 && d <= 17);
     CHECK(std::string(moonPhaseId(MoonPhaseName::WaningGibbous)) == "waningGibbous");

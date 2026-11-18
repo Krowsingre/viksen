@@ -203,7 +203,6 @@ bool centralSolarEclipse(double newDays) {
 }
 
 constexpr double kMoonRiseAltitude = -0.3;   // centre, topocentric, refraction ignored (~ upper limb on the horizon)
-constexpr double kNightWindow = 0.75;         // days either side of the exact moment: "the closest night"
 
 } // namespace
 
@@ -273,18 +272,24 @@ std::vector<MoonEvent> activeMoonEvents(const MoonEventContext& c) {
     const bool located = c.latitude && c.longitude;
     bool on[kMoonEventCount] = {};
 
-    // Full-moon events.
+    // The lunar date tonight (a night keeps its evening's date).
+    const LocalDateFn dateOf = c.localDateOf ? c.localDateOf : fixedOffsetDates(c.utcOffsetMinutes);
+    const LunarDate tonight = lunarDateOn(livingDate(t, c.night, c.localHour, dateOf), dateOf);
+    auto monthOf = [&](double moment) { return localMonth(static_cast<double>(dateOf(moment)) + 0.5, 0); };
+
+    // Full-moon events: on the Full Moon night.
     const double F = nearestSyzygy(t, true);
     const double distF = moonDistanceKm(F);
-    if (c.night && std::fabs(t - F) <= kNightWindow) {
-        if (distF < kSupermoonKm) on[static_cast<int>(MoonEvent::Supermoon)] = true;
-        if (distF > kMicromoonKm) on[static_cast<int>(MoonEvent::Micromoon)] = true;
-        const double prevF = nearestSyzygy(F - kSynodic, true);
-        if (localMonth(prevF, c.utcOffsetMinutes) == localMonth(F, c.utcOffsetMinutes))
-            on[static_cast<int>(MoonEvent::BlueMoon)] = true;
+    if (c.night && tonight.main == MainPhase::Full) {
+        const double full = tonight.mainAtDaysUtc;
+        const double distTonight = moonDistanceKm(full);
+        if (distTonight < kSupermoonKm) on[static_cast<int>(MoonEvent::Supermoon)] = true;
+        if (distTonight > kMicromoonKm) on[static_cast<int>(MoonEvent::Micromoon)] = true;
+        const double prevF = nearestSyzygy(full - kSynodic, true);
+        if (monthOf(prevF) == monthOf(full)) on[static_cast<int>(MoonEvent::BlueMoon)] = true;
         // Harvest: the full moon nearest the autumn equinox (March in the south); Hunter's: the next.
         const bool south = c.latitude && *c.latitude < 0;
-        if (std::fabs(F - equinoxNear(F, south)) <= kSynodic / 2) on[static_cast<int>(MoonEvent::HarvestMoon)] = true;
+        if (std::fabs(full - equinoxNear(full, south)) <= kSynodic / 2) on[static_cast<int>(MoonEvent::HarvestMoon)] = true;
         if (std::fabs(prevF - equinoxNear(prevF, south)) <= kSynodic / 2) on[static_cast<int>(MoonEvent::HuntersMoon)] = true;
     }
     // Rising Supermoon: the first hour after the supermoon rises here.
@@ -301,12 +306,12 @@ std::vector<MoonEvent> activeMoonEvents(const MoonEventContext& c) {
                 on[static_cast<int>(*kind)] = true;
         }
     }
-    // New-moon events.
+    // New-moon events: on the New Moon night.
     const double N = nearestSyzygy(t, false);
-    if (c.night && std::fabs(t - N) <= kNightWindow) {
-        const double prevN = nearestSyzygy(N - kSynodic, false);
-        if (localMonth(prevN, c.utcOffsetMinutes) == localMonth(N, c.utcOffsetMinutes))
-            on[static_cast<int>(MoonEvent::BlackMoon)] = true;
+    if (c.night && tonight.main == MainPhase::New) {
+        const double nw = tonight.mainAtDaysUtc;
+        const double prevN = nearestSyzygy(nw - kSynodic, false);
+        if (monthOf(prevN) == monthOf(nw)) on[static_cast<int>(MoonEvent::BlackMoon)] = true;
     }
     // Solar eclipse (central somewhere), while the Moon covers part of the Sun here.
     if (located && std::fabs(t - N) <= 0.3 && centralSolarEclipse(N)) {

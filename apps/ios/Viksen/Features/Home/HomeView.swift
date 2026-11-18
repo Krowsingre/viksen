@@ -177,7 +177,7 @@ private struct LunarDayLine: View {
             HStack(spacing: 14) {
                 Rectangle().fill(lavender.opacity(0.35)).frame(width: 64, height: 0.6)
                 Image(systemName: Lunar.symbol(engine.moonPhaseID)).font(.system(size: 18)).foregroundStyle(Theme.gold)
-                Text("LUNAR DAY \(engine.lunarDay)").font(.system(size: 13, design: .serif)).tracking(3)
+                Text("LUNAR DAY \(engine.lunarDayLabel)").font(.system(size: 13, design: .serif)).tracking(3)
                 Rectangle().fill(lavender.opacity(0.35)).frame(width: 64, height: 0.6)
             }
             .foregroundStyle(lavender)

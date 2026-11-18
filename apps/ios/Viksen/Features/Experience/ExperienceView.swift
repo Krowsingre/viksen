@@ -125,7 +125,7 @@ struct StatusSection: View {
                       systemImage: "info.circle")
                     .font(.footnote).foregroundStyle(.secondary)
             }
-            Label("\(Lunar.phaseName(engine.moonPhaseID)) · lunar day \(engine.lunarDay)",
+            Label("\(Lunar.phaseName(engine.moonPhaseID)) · lunar day \(engine.lunarDayLabel)",
                   systemImage: Lunar.symbol(engine.moonPhaseID))
                 .font(.footnote)
                 .foregroundStyle(.secondary)

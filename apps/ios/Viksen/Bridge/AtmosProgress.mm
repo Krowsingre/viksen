@@ -1,4 +1,5 @@
 #import "AtmosProgress.h"
+#import "AtmosLunar.h"
 
 #include "core/progress/DiscoveryTracker.h"
 #include "core/progress/MoonEvents.h"
@@ -7,13 +8,17 @@
 
 using namespace atmos::core;
 
-static double nowDaysUtc() { return [[NSDate date] timeIntervalSince1970] / 86400.0; }
+static double nowDaysUtc() { return AtmosNowDaysUtc(); }
+static BOOL sNight = NO;   // after dark (the listener's Night rule), set by the app every second
 
 @implementation AtmosProgress {
     ProgressLog _log;
     DiscoveryTracker _tracker;
     SecretTracker _secrets;
 }
+
++ (BOOL)night { return sNight; }
++ (void)setNight:(BOOL)night { sNight = night; }
 
 - (instancetype)initWithJSON:(NSString *)json {
     if ((self = [super init])) {
@@ -48,7 +53,7 @@ static double nowDaysUtc() { return [[NSDate date] timeIntervalSince1970] / 8640
                     audible:(BOOL)audible dtSeconds:(double)dt {
     const double now = nowDaysUtc();
     const auto phase = moonPhaseFromId(std::string(songPhaseId.UTF8String ?: ""));
-    const auto found = _tracker.update(now, dt, std::string(dimensionID.UTF8String ?: ""), phase, audible);
+    const auto found = _tracker.update(now, dt, AtmosLunarNow(sNight), std::string(dimensionID.UTF8String ?: ""), phase, audible);
     if (!found) return nil;
     _log.add({ProgressKind::PhaseDiscovered, found->dimensionId, moonPhaseId(found->phase), found->discoveredAtDaysUtc});
     return @(moonPhaseId(found->phase));
@@ -71,7 +76,7 @@ static double nowDaysUtc() { return [[NSDate date] timeIntervalSince1970] / 8640
 - (NSInteger)globalSecretsFound { return _log.globalSecretsFound(); }
 
 - (double)phaseProgressSeconds:(NSString *)dimensionID {
-    return _tracker.progressSeconds(std::string(dimensionID.UTF8String ?: ""), nowDaysUtc());
+    return _tracker.progressSeconds(std::string(dimensionID.UTF8String ?: ""), AtmosLunarNow(sNight));
 }
 
 - (NSDictionary<NSString *, NSDate *> *)discoveryDates:(NSString *)dimensionID {
@@ -89,24 +94,25 @@ static double nowDaysUtc() { return [[NSDate date] timeIntervalSince1970] / 8640
 }
 
 + (NSDateInterval *)nextWindowForPhase:(NSString *)phaseId {
+    // The lunar calendar's dates for this phase: the run of local dates now (if it is this
+    // phase tonight) or the next run, from the first date's midnight to the morning after
+    // the last (a night keeps its evening's date).
     const auto want = moonPhaseFromId(std::string(phaseId.UTF8String ?: ""));
     if (!want) return nil;
-    const double step = 1.0 / 96.0;   // 15 minutes
-    double t = nowDaysUtc();
-    const double limit = t + 31;
-    if (moonPhaseName(t) == *want) {   // in the sky now: find where this window began
-        while (moonPhaseName(t - step) == *want && t > nowDaysUtc() - 5) t -= step;
+    const long today = AtmosLunarNow(sNight).date;
+    long start = today;
+    if (lunarDateOn(start, AtmosLocalDateOf).phase == *want) {
+        while (start > today - 10 && lunarDateOn(start - 1, AtmosLocalDateOf).phase == *want) --start;
     } else {
-        while (moonPhaseName(t) != *want && t < limit) t += step;
-        if (t >= limit) return nil;
+        while (start < today + 32 && lunarDateOn(start, AtmosLocalDateOf).phase != *want) ++start;
+        if (start >= today + 32) return nil;
     }
-    double end = t;
-    while (moonPhaseName(end) == *want && end < t + 6) end += step;
-    return [[NSDateInterval alloc] initWithStartDate:[NSDate dateWithTimeIntervalSince1970:t * 86400.0]
-                                             endDate:[NSDate dateWithTimeIntervalSince1970:end * 86400.0]];
+    long end = start;
+    while (end < start + 10 && lunarDateOn(end + 1, AtmosLocalDateOf).phase == *want) ++end;
+    return [[NSDateInterval alloc] initWithStartDate:AtmosStartOfLocalDate(start) endDate:AtmosStartOfLocalDate(end + 1)];
 }
 
-+ (NSString *)currentPhaseId { return @(moonPhaseId(moonPhaseName(nowDaysUtc()))); }
++ (NSString *)currentPhaseId { return @(moonPhaseId(AtmosLunarNow(sNight).phase)); }
 
 + (NSArray<NSString *> *)activeMoonEventsAtNight:(BOOL)night utcOffsetMinutes:(NSInteger)utcOffsetMinutes
                                         latitude:(NSNumber *)latitude longitude:(NSNumber *)longitude {
@@ -114,6 +120,8 @@ static double nowDaysUtc() { return [[NSDate date] timeIntervalSince1970] / 8640
     c.daysUtc = nowDaysUtc();
     c.night = night;
     c.utcOffsetMinutes = static_cast<int>(utcOffsetMinutes);
+    c.localDateOf = AtmosLocalDateOf;
+    c.localHour = static_cast<int>([[NSCalendar currentCalendar] component:NSCalendarUnitHour fromDate:[NSDate date]]);
     if (latitude && longitude) { c.latitude = latitude.doubleValue; c.longitude = longitude.doubleValue; }
     NSMutableArray *out = [NSMutableArray array];
     for (MoonEvent e : activeMoonEvents(c)) [out addObject:@(moonEventId(e))];

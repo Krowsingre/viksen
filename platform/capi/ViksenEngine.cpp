@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstring>
 #include <ctime>
 #include <filesystem>
@@ -198,6 +199,18 @@ void vk_tick(vk_engine* e, double intensity, vk_meters* out) {
     if (intensity >= 0) ctx.intensity = std::min(1.0, intensity);
     ctx.localHour = local.tm_hour;
     ctx.daysSinceUnixEpochUtc = days;
+    // The listener's calendar: this computer's time zone, with daylight saving.
+    ctx.localDateOf = [](double d) {
+        const std::time_t s = static_cast<std::time_t>(std::floor(d * 86400.0));
+        std::tm lt{};
+#if defined(_WIN32)
+        localtime_s(&lt, &s);
+#else
+        localtime_r(&s, &lt);
+#endif
+        return daysFromCivil(lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday);
+    };
+    ctx.lunar = lunarDateOf(ctx);
     e->session.updateWorld(dt, ctx);
     if (!out) return;
     const EngineMeters m = engine.meters();
@@ -218,8 +231,8 @@ void vk_tick(vk_engine* e, double intensity, vk_meters* out) {
     out->quiet = st.quiet; out->loud = st.loud; out->still = st.still; out->moving = st.moving;
     out->loudness = st.loudness;
     out->room_memory_voices = engine.roomMemory().activeVoices();
-    out->lunar_day = lunarDay(days);
-    const std::string phase = moonPhaseId(moonPhaseName(days));
+    out->lunar_day = ctx.lunar->day;
+    const std::string phase = moonPhaseId(ctx.lunar->phase);
     const size_t n = std::min(phase.size(), sizeof(out->moon_phase) - 1);
     std::memcpy(out->moon_phase, phase.data(), n);
     out->moon_phase[n] = '\0';

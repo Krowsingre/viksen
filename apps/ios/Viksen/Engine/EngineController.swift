@@ -57,7 +57,13 @@ final class EngineController {
     private(set) var micLive = false
     private(set) var limiting = false
     private(set) var moonPhaseID = ""
-    private(set) var lunarDay = 0
+    private(set) var lunarDay = 0   // traditional count from the engine (new moon's date = 1)
+    /// How the lunar day is shown (Settings > The Moon). Display only.
+    var lunarDayStyle: LunarDayStyle = LunarDayStyle(rawValue: UserDefaults.standard.string(forKey: "lunarDayStyle") ?? "") ?? .traditional {
+        didSet { UserDefaults.standard.set(lunarDayStyle.rawValue, forKey: "lunarDayStyle") }
+    }
+    /// The lunar day as the listener chose to see it.
+    var lunarDayLabel: Int { lunarDayStyle == .moonAge ? max(0, lunarDay - 1) : lunarDay }
     private(set) var worlds: [AtmosWorldInfo] = []
     private(set) var route = AtmosRouteInfo()
     private(set) var statusMessage: String?
@@ -302,6 +308,7 @@ final class EngineController {
             }
             songTime = activeDimensionID == nil ? nil : time
             let audible = worldStatus.playing
+            AtmosProgress.night = nightClock.isNight   // a night keeps its evening's lunar date
             // Only tonight's lunar song, after dark, counts. TestFlight-only check of the
             // counter: any song counts, at any hour.
             let testing = AppBuild.isTestFlight && UserDefaults.standard.bool(forKey: "test.anySongIsLunar")

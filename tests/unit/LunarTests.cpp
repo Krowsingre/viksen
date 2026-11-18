@@ -47,10 +47,11 @@ TEST_CASE("worlds/lunar: phase instants match published times within minutes") {
     }
 }
 
-TEST_CASE("worlds/lunar: named phases are octants centred on the principal phases") {
+TEST_CASE("worlds/lunar: a main phase names the one date that holds it; the days between are the in-between phases") {
     const double full = daysUtc(2025, 3, 14, 6, 55);
     CHECK(moonPhaseName(full) == MoonPhaseName::Full);
-    CHECK(moonPhaseName(full + 1.5) == MoonPhaseName::Full);        // inside the ~3.7-day window
+    CHECK(moonPhaseName(full - 0.25) == MoonPhaseName::Full);       // same (UTC) date
+    CHECK(moonPhaseName(full + 1.0) == MoonPhaseName::WaningGibbous); // the next date already wanes
     CHECK(moonPhaseName(full + 2.5) == MoonPhaseName::WaningGibbous);
     CHECK(moonPhaseName(full - 2.5) == MoonPhaseName::WaxingGibbous);
     const double newMoon = daysUtc(2025, 1, 29, 12, 36);
@@ -71,7 +72,7 @@ TEST_CASE("worlds/discovery: 3 audible minutes in the right phase, per Dimension
         std::optional<PhaseDiscovery> found;
         for (int i = 0; i < seconds; ++i) {
             now += 1.0 / 86400.0;
-            if (auto d = t.update(now, 1.0, dim, song, audible)) found = d;
+            if (auto d = t.update(now, 1.0, lunarDateOn(static_cast<long>(std::floor(now))), dim, song, audible)) found = d;
         }
         return found;
     };
@@ -93,16 +94,16 @@ TEST_CASE("worlds/discovery: minutes from an earlier moon cycle do not carry ove
     DiscoveryTracker t;
     const auto F = MoonPhaseName::Full;
     double now = daysUtc(2025, 3, 14, 6, 55);
-    for (int i = 0; i < 150; ++i) { now += 1.0 / 86400.0; t.update(now, 1.0, "core", F, true); }
+    for (int i = 0; i < 150; ++i) { now += 1.0 / 86400.0; t.update(now, 1.0, lunarDateOn(static_cast<long>(std::floor(now))), "core", F, true); }
     now = daysUtc(2025, 4, 13, 0, 22);                        // next full moon (2025-04-13 00:22 UTC)
-    CHECK(t.progressSeconds("core", now) == 0.0);
+    CHECK(t.progressSeconds("core", lunarDateOn(static_cast<long>(std::floor(now)))) == 0.0);
     std::optional<PhaseDiscovery> d;
-    for (int i = 0; i < 150; ++i) { now += 1.0 / 86400.0; if (auto x = t.update(now, 1.0, "core", F, true)) d = x; }
+    for (int i = 0; i < 150; ++i) { now += 1.0 / 86400.0; if (auto x = t.update(now, 1.0, lunarDateOn(static_cast<long>(std::floor(now))), "core", F, true)) d = x; }
     CHECK(!d.has_value());                                    // 150 + 150 seconds across two cycles is not 3 minutes in one
     // Clock set back an hour: nothing counts until real time passes the latest moment seen.
     const double latest = now;
     now -= 1.0 / 24.0;
-    for (int i = 0; i < 300; ++i) { now += 1.0 / 86400.0; if (auto x = t.update(now, 1.0, "core", F, true)) d = x; }
+    for (int i = 0; i < 300; ++i) { now += 1.0 / 86400.0; if (auto x = t.update(now, 1.0, lunarDateOn(static_cast<long>(std::floor(now))), "core", F, true)) d = x; }
     CHECK(!d.has_value());
     CHECK(now < latest);
 }

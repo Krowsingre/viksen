@@ -6,6 +6,7 @@
 // Stored in World manifests as JSON, e.g.
 //   {"all": [{"type":"moonPhase","phase":"full"}, {"type":"timeWindow","from":23,"to":5}, {"type":"quiet"}]}
 
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -15,11 +16,47 @@
 
 namespace atmos::core {
 
+enum class MoonPhaseName { New = 0, WaxingCrescent, FirstQuarter, WaxingGibbous, Full, WaningGibbous, LastQuarter, WaningCrescent };
+
+// ---- The lunar calendar the app lives by (owner, 2026-11-18), as calendars print it:
+// - New Moon, First Quarter, Full Moon and Last Quarter are moments; the local calendar
+//   day that holds the moment carries that name (one day each).
+// - The days between are Waxing Crescent, Waxing Gibbous, Waning Gibbous and Waning
+//   Crescent (usually 5-7 days each).
+// - Lunar day: the local date of the new moon is day 1, counting up at each local
+//   midnight (29 or 30 days a month, none skipped or repeated). The number is only a
+//   label; the app acts on the phases and events (the listener can show it as the
+//   Moon's age, day 0 at new moon).
+// - A night belongs to the date it began on: after midnight, until morning, it is still
+//   the evening's date (so a phase's songs play its whole night).
+// Dates are the listener's local calendar (time zone and daylight saving): the app gives
+// LocalDateFn; without one, UTC dates are used.
+using LocalDateFn = std::function<long(double daysUtc)>;   // a moment -> its local date (days since 1970-01-01)
+LocalDateFn fixedOffsetDates(int utcOffsetMinutes);
+long daysFromCivil(int year, int month, int day);         // a calendar date -> days since 1970-01-01
+
+enum class MainPhase { New = 0, FirstQuarter, Full, LastQuarter };
+double mainPhaseNear(double daysUtc, MainPhase p);         // the exact moment of that phase closest to daysUtc
+
+struct LunarDate {
+    long date = 0;                       // local date (days since 1970-01-01)
+    MoonPhaseName phase = MoonPhaseName::New;
+    std::optional<MainPhase> main;       // the main phase whose moment falls on this date
+    double mainAtDaysUtc = 0;            // ...and that moment
+    int day = 1;                         // lunar day, traditional (new moon's date = 1), 1..30
+    long lunation = 0;                   // the local date of this lunar month's new moon
+};
+LunarDate lunarDateOn(long localDate, const LocalDateFn& dateOf = {});
+// The date the app lives on at this moment (the night rule above).
+long livingDate(double daysUtc, bool night, int localHour, const LocalDateFn& dateOf = {});
+
 struct ConditionContext {
     int localHour = 12;                // 0..23
     bool micActive = false;            // mic-derived states are meaningful
     std::optional<double> intensity;   // exercise intensity 0..1 when Health/Watch is on
     double daysSinceUnixEpochUtc = 0;  // current time, for the moon phase
+    LocalDateFn localDateOf;           // the listener's calendar (empty: UTC)
+    std::optional<LunarDate> lunar;    // today's lunar date, when the app has worked it out already
     bool night = false;
     // Headphones in. The music adapts on every output (owner, 2026-11-05); headphones add
     // the 3D presentation and the room blend. Microphone moods (quiet, loud) need the mic,
@@ -68,20 +105,20 @@ struct ConditionSet {
 std::optional<ConditionSet> parseConditions(const Json& j, std::string* error = nullptr);
 Json conditionsToJson(const ConditionSet& s);
 
-// ---- Lunar calendar (astronomical: Meeus; phase instants within a few minutes, UTC).
-// Each named phase is one eighth of the Moon-Sun elongation, centred on the principal
-// phases (New = 337.5..22.5 degrees, Full = 157.5..202.5 degrees).
+// The lunar date the context lives on (ctx.lunar if given, else worked out from the
+// context's time, night and calendar).
+LunarDate lunarDateOf(const ConditionContext& c);
+
+// ---- The Moon itself (astronomical: Meeus; phase moments within a few minutes).
 constexpr double kSynodicMonthDays = 29.530588853;
 
-enum class MoonPhaseName { New = 0, WaxingCrescent, FirstQuarter, WaxingGibbous, Full, WaningGibbous, LastQuarter, WaningCrescent };
-
 double moonElongationDegrees(double daysSinceUnixEpochUtc); // Moon minus Sun longitude, [0,360)
-double moonPhase(double daysSinceUnixEpochUtc);          // [0,1): 0 new, 0.5 full (astronomical, UTC)
-double lunarAgeDays(double daysSinceUnixEpochUtc);       // [0, 29.53) days since new moon
-int lunarDay(double daysSinceUnixEpochUtc);              // 1..30 (day 1 starts at new moon)
-MoonPhaseName moonPhaseName(double daysSinceUnixEpochUtc); // eight named phases
+double moonPhase(double daysSinceUnixEpochUtc);          // [0,1): 0 new, 0.5 full (the Moon's shape now)
+// The calendar on that moment's UTC date (no time zone, no night rule): for tools and
+// tests; the app uses lunarDateOf(context).
+int lunarDay(double daysSinceUnixEpochUtc);              // 1..30
+MoonPhaseName moonPhaseName(double daysSinceUnixEpochUtc);
 const char* moonPhaseId(MoonPhaseName p);                // "new", "waxingCrescent", ...
 std::optional<MoonPhaseName> moonPhaseFromId(const std::string& id);
-bool isFullMoon(double daysSinceUnixEpochUtc, double toleranceDays = 1.0);
 
 } // namespace atmos::core

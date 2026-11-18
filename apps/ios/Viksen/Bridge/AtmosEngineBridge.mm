@@ -1,3 +1,4 @@
+#import "AtmosLunar.h"
 #import "AtmosEngineBridge.h"
 
 #import <AVFoundation/AVFoundation.h>
@@ -113,6 +114,9 @@ NSError* makeError(const std::string& msg) {
     std::unique_ptr<atmos::desktop::MiniaudioHost> _host;
 #endif
     CFTimeInterval _lastMeterTime;
+    atmos::core::LunarDate _lunar;     // today's lunar date (the calendar), worked out when the date changes
+    long _lunarKey;                    // the living date it was worked out for (+1 so 0 means none)
+    NSInteger _lunarZone;              // ...and the time zone offset then (travel changes dates)
     double _intensity;
 }
 
@@ -384,6 +388,16 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
         ctx.localHour = static_cast<int>([[NSCalendar currentCalendar] component:NSCalendarUnitHour fromDate:[NSDate date]]);
         ctx.daysSinceUnixEpochUtc = [NSDate date].timeIntervalSince1970 / 86400.0;
         ctx.night = self.night;
+        // The lunar calendar: this device's time zone, a night keeping its evening's date.
+        ctx.localDateOf = AtmosLocalDateOf;
+        const long living = atmos::core::livingDate(ctx.daysSinceUnixEpochUtc, ctx.night, ctx.localHour, AtmosLocalDateOf);
+        const NSInteger zone = [NSTimeZone localTimeZone].secondsFromGMT;
+        if (_lunarKey != living + 1 || _lunarZone != zone) {
+            _lunar = atmos::core::lunarDateOn(living, AtmosLocalDateOf);
+            _lunarKey = living + 1;
+            _lunarZone = zone;
+        }
+        ctx.lunar = _lunar;
         ctx.headphones = self.headphones;
         ctx.raining = self.raining;
         ctx.storming = self.storming;
@@ -421,9 +435,8 @@ static bool validBus(AtmosBusId bus) { return bus >= 0 && bus < atmos::kNumBuses
     s.motionAvailable = st.motionAvailable;
     s.loudness = st.loudness;
     s.activity = st.activity;
-    const double days = [NSDate date].timeIntervalSince1970 / 86400.0;
-    s.moonPhaseId = @(atmos::core::moonPhaseId(atmos::core::moonPhaseName(days)));
-    s.lunarDay = atmos::core::lunarDay(days);
+    s.moonPhaseId = @(atmos::core::moonPhaseId(_lunar.phase));
+    s.lunarDay = _lunar.day;   // traditional count; the app shows it in the listener's chosen style
     return s;
 }
 
